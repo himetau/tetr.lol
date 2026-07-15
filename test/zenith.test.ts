@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { FLOORS, floorIndexAt, attackFor, ZenithRun } from '../src/core/zenith';
 import { Board } from '../src/core/board';
 import { Game } from '../src/core/game';
+import { mulberry32 } from '../src/core/rng';
 
 describe('zenith mechanics', () => {
   it('maps altitude to the right floor', () => {
@@ -64,6 +65,22 @@ describe('zenith mechanics', () => {
     run.onLockNoClear();
     const out = run.onClear(1, 'none', false);                // break -> surge
     expect(out.surged).toBeGreaterThan(0);
+  });
+
+  it('the well column is persistent: clean on low floors, messy on high', () => {
+    const changesPerRow = (altitude: number) => {
+      const run = new ZenithRun(altitude, 'brutal', false, mulberry32(7));
+      const holes: number[] = [];
+      for (let i = 0; i < 4000 && holes.length < 400; i++) holes.push(...run.tick(100));
+      let changes = 0;
+      for (let i = 1; i < holes.length; i++) if (holes[i] !== holes[i - 1]) changes++;
+      return changes / (holes.length - 1);
+    };
+    const low = changesPerRow(0);     // F1: one well for long stretches
+    const high = changesPerRow(1700); // F10: proper cheese
+    expect(low).toBeLessThan(0.1);
+    expect(high).toBeGreaterThan(0.2);
+    expect(high).toBeGreaterThan(low * 3);
   });
 
   it('garbage eventually activates and returns hole columns', () => {
