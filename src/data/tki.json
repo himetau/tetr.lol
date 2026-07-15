@@ -1,0 +1,90 @@
+{
+  "source": "https://four.lol/openers/tki/",
+  "targets": [
+    {
+      "name": "Basic Shape",
+      "rows": [
+        "L__ZZ_S___",
+        "L___ZZSSOO",
+        "LL_IIIISOO"
+      ]
+    },
+    {
+      "name": "Using TKI",
+      "rows": [
+        "___JJJ____",
+        "L__ZZJS___",
+        "LTTTZZSSOO",
+        "LLTIIIISOO"
+      ]
+    },
+    {
+      "name": "Using TKI",
+      "rows": [
+        "_______J__",
+        "L__ZZ_SJJJ",
+        "LTTTZZSSOO",
+        "LLTIIIISOO"
+      ]
+    },
+    {
+      "name": "Follow-up Variations",
+      "rows": [
+        "_________J",
+        "_________J",
+        "L__ZZ_S_JJ",
+        "LTTTZZSSOO",
+        "LLTIIIISOO"
+      ]
+    },
+    {
+      "name": "Follow-up Variations",
+      "rows": [
+        "S_________",
+        "SS__ZZ_LLL",
+        "JSTTTZZLOO",
+        "JJJTIIIIOO"
+      ]
+    },
+    {
+      "name": "Follow-up Variations",
+      "rows": [
+        "___S______",
+        "L__SSOOZZ_",
+        "LTTTSOOJZZ",
+        "LLTIIIIJJJ"
+      ]
+    },
+    {
+      "name": "Follow-up Variations",
+      "rows": [
+        "_____S____",
+        "L__ZZSS_OO",
+        "LTTTZZSJOO",
+        "LLTIIIIJJJ"
+      ]
+    },
+    {
+      "name": "Follow-up Variations",
+      "rows": [
+        "_____S____",
+        "L____SS___",
+        "LZZTTTSJJJ",
+        "LLZZTIIIIJ"
+      ]
+    },
+    {
+      "name": "Flat top continuation",
+      "rows": [
+        "___SZZ____",
+        "L__SSZZ___",
+        "LTTTSJJJOO",
+        "LLTIIIIJOO"
+      ]
+    }
+  ],
+  "lstStart": [
+    "_______X__",
+    "X__XX_XXXX"
+  ]
+}
