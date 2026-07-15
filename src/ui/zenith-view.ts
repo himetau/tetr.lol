@@ -355,6 +355,7 @@ export class ZenithView {
     this.lockTimerMs = 0;
     this.moveResets = 0;
     this.lowestY = Infinity;
+    this.renderer.lockProgress = 0;
   }
 
   private applyGravity(dtMs: number): void {
@@ -373,6 +374,7 @@ export class ZenithView {
     }
     const grounded = this.game.ghostY() === a.y;
     if (!grounded) {
+      this.renderer.lockProgress = 0;
       this.gravAcc += r.gravityCps() * (dtMs / 1000);
       while (this.gravAcc >= 1) {
         this.gravAcc--;
@@ -381,6 +383,8 @@ export class ZenithView {
     } else {
       this.gravAcc = 0;
       this.lockTimerMs += dtMs;
+      // the grounded piece dims as its lock timer runs (tetr.io cue)
+      this.renderer.lockProgress = this.lockTimerMs / r.lockMs();
       // lock delay; stalling is bounded by the 15-move reset budget
       if (this.lockTimerMs >= r.lockMs()) {
         if (settings.soundFx) lockSound(); // gravity lock, not a hard drop

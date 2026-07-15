@@ -20,6 +20,12 @@ describe('zenith mechanics', () => {
     }
   });
 
+  it('base mode locks at the standard 500ms; per-floor lock delay is Gravity-mod only', () => {
+    expect(new ZenithRun(850, 'normal', false).lockMs()).toBe(500);
+    expect(new ZenithRun(1700, 'normal', false).lockMs()).toBe(500);
+    expect(new ZenithRun(850, 'normal', true).lockMs()).toBe(FLOORS[6].lockMs);
+  });
+
   it('attack table: spins out-attack plain clears', () => {
     expect(attackFor(2, 'full', 0, false)).toBe(4);   // TSD
     expect(attackFor(2, 'none', 0, false)).toBe(1);   // double

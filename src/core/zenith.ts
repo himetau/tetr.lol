@@ -21,7 +21,7 @@ export interface FloorDef {
   from: number;          // altitude (m) where the floor starts
   baseGravity: number;   // G, base mode (approximation)
   modGravity: number;    // G, with the Gravity mod (documented)
-  lockMs: number;
+  lockMs: number;        // Gravity mod only — base mode is a flat 500ms
   messiness: number;     // chance each extra row in one attack re-rolls its hole
   attackEveryMs: number; // mean gap between incoming attacks at normal pressure
   attackMax: number;     // attack size is 1..attackMax lines
@@ -115,7 +115,9 @@ export class ZenithRun {
   }
 
   lockMs(): number {
-    return this.floor().lockMs;
+    // the shortened per-floor lock delays belong to the Gravity mod, like
+    // its gravity column; base tetr.io locks at the standard 500ms
+    return this.gravityMod ? this.floor().lockMs : 500;
   }
 
   /** queued lines not yet active (shown as "incoming") */

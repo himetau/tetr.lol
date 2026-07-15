@@ -33,11 +33,13 @@ that runs the built app via the system electron package.
   Tip: hold T when it comes early. Add `?seed=N` to the URL to pin a bag.
 - **Freeplay** — empty board, generic engine grading.
 - **Quick play** — a single-player simulator of TETR.IO QUICK PLAY (Zenith
-  Tower): pick a starting floor (0–1650m), get that floor's lock delay and
-  gravity (base curve is approximate; the documented 0.48G→3.18G curve is
-  behind the Gravity-mod toggle), simulated incoming garbage with per-floor
-  messiness and a pressure knob, climb-speed ranks, B2B surge, and altitude
-  scoring. Incoming garbage shows on a red meter on the board's left edge
+  Tower): pick a starting floor (0–1650m). Base mode uses the standard
+  500ms lock delay (guideline Extended Placement Lock Down, 15 move
+  resets, grounded piece dims as the timer runs) and a mild approximate
+  gravity curve; the documented per-floor speed table (0.48G→3.18G, lock
+  30f→16f) is behind the Gravity-mod toggle. Simulated incoming garbage
+  with per-floor messiness and a pressure knob, climb-speed ranks, B2B
+  surge, and altitude scoring. Incoming garbage shows on a red meter on the board's left edge
   (solid = enters on your next lock, pulsing = telegraphed), with a B2B ×N
   counter above it. Attack cadence is calibrated against 1000 real QUICK
   PLAY records from the TETRA CHANNEL API (tools/calibrate-zenith.mjs;

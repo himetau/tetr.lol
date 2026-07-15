@@ -13,6 +13,8 @@ export class FieldRenderer {
   private cell = 26;
   /** transient highlight cells: [x, y, color] with alpha fade handled by caller */
   highlight: { cells: [number, number][]; color: string } | null = null;
+  /** 0..1 lock-delay progress of the grounded piece — dims it, tetr.io style */
+  lockProgress = 0;
 
   constructor(cellSize = 26) {
     this.canvas = document.createElement('canvas');
@@ -107,8 +109,9 @@ export class FieldRenderer {
           if (y <= VISIBLE_H) this.drawCell(x, y, color, 0.25);
         }
       }
+      const alpha = 1 - 0.45 * Math.min(1, Math.max(0, this.lockProgress));
       for (const [x, y] of cellsAt(a.type, a.rot, a.x, a.y)) {
-        if (y <= VISIBLE_H) this.drawCell(x, y, color);
+        if (y <= VISIBLE_H) this.drawCell(x, y, color, alpha);
       }
     }
   }
