@@ -57,6 +57,8 @@ export class Game {
   canHold = true;
   pieceIndex = 0;
   onLock: ((ev: LockEvent) => void) | null = null;
+  /** successful piece movement (lock-delay reset hook for gravity modes) */
+  onMove: ((kind: 'shift' | 'rotate' | 'drop') => void) | null = null;
   topOut = false;
 
   private bag: SevenBag;
@@ -129,6 +131,7 @@ export class Game {
     a.x += dx;
     a.y += dy;
     this.lastMoveWasRotation = false;
+    this.onMove?.(dy < 0 ? 'drop' : 'shift');
     return true;
   }
 
@@ -152,6 +155,7 @@ export class Game {
     a.rot = res.rot;
     this.lastMoveWasRotation = true;
     this.lastKickIndex = res.kickIndex;
+    this.onMove?.('rotate');
     return true;
   }
 

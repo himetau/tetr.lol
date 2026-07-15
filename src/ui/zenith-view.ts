@@ -4,6 +4,7 @@
 // No grading here: this mode is for feeling out the speed, not the loop.
 
 import { Game, type LockEvent } from '../core/game';
+import { cellsAt } from '../core/pieces';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
 import { settings, onSettingsChange } from './settings';
@@ -24,7 +25,11 @@ export class ZenithView {
   private pendingGarbage: number[] = [];
   private gravAcc = 0;
   private lockTimerMs = 0;
-  private groundMs = 0;
+  // guideline Extended Placement Lock Down: the timer resets on successful
+  // moves/rotations, at most 15 times; falling to a new lowest row restores
+  // the budget
+  private moveResets = 0;
+  private lowestY = Infinity;
   private pieces = 0;
   private tsds = 0;
 
@@ -53,10 +58,16 @@ export class ZenithView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.input.onAction = (a) => {
-      if (a === 'left' || a === 'right' || a === 'rotateCW' || a === 'rotateCCW' || a === 'rotate180') {
-        this.lockTimerMs = 0; // successful-or-not; capped by groundMs
-      }
+      if (a === 'hold') this.resetLockdown();
       if (settings.soundFx && this.run) actionSound(a);
+    };
+    // lock-delay resets come from *successful* moves only (guideline EPLD)
+    this.game.onMove = (kind) => {
+      if (kind === 'drop') return; // soft drop never resets the timer
+      if (this.moveResets < 15) {
+        this.moveResets++;
+        this.lockTimerMs = 0;
+      }
     };
     this.renderer = new FieldRenderer(this.cellSize());
     this.root = this.build();
@@ -237,8 +248,7 @@ export class ZenithView {
     this.run = new ZenithRun(this.startAltitude, this.pressure, this.gravityMod);
     this.pendingGarbage = [];
     this.gravAcc = 0;
-    this.lockTimerMs = 0;
-    this.groundMs = 0;
+    this.resetLockdown();
     this.pieces = 0;
     this.tsds = 0;
     this.lastIncoming = 0;
@@ -303,8 +313,7 @@ export class ZenithView {
     }
     saveStats();
     this.gravAcc = 0;
-    this.lockTimerMs = 0;
-    this.groundMs = 0;
+    this.resetLockdown();
 
     if (r) {
       if (ev.linesCleared > 0) {
@@ -341,14 +350,29 @@ export class ZenithView {
 
   // ---- per-frame ----
 
+  /** New piece in play: fresh lock timer, move budget, and lowest-row mark. */
+  private resetLockdown(): void {
+    this.lockTimerMs = 0;
+    this.moveResets = 0;
+    this.lowestY = Infinity;
+  }
+
   private applyGravity(dtMs: number): void {
     const r = this.run;
     const a = this.game.active;
     if (!r || !a) return;
+    // reaching a new lowest row restores the move-reset budget (guideline).
+    // Measured on the lowest CELL, not the piece origin — rotation states
+    // have different cell offsets and would fake "lower" on a flat floor.
+    let bottom = Infinity;
+    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
+    if (bottom < this.lowestY) {
+      this.lowestY = bottom;
+      this.moveResets = 0;
+      this.lockTimerMs = 0;
+    }
     const grounded = this.game.ghostY() === a.y;
     if (!grounded) {
-      this.lockTimerMs = 0;
-      this.groundMs = 0;
       this.gravAcc += r.gravityCps() * (dtMs / 1000);
       while (this.gravAcc >= 1) {
         this.gravAcc--;
@@ -357,9 +381,8 @@ export class ZenithView {
     } else {
       this.gravAcc = 0;
       this.lockTimerMs += dtMs;
-      this.groundMs += dtMs;
-      // lock delay, with a hard cap so wiggling cannot stall forever
-      if (this.lockTimerMs >= r.lockMs() || this.groundMs >= 3 * r.lockMs()) {
+      // lock delay; stalling is bounded by the 15-move reset budget
+      if (this.lockTimerMs >= r.lockMs()) {
         if (settings.soundFx) lockSound(); // gravity lock, not a hard drop
         this.game.hardDrop();
       }
