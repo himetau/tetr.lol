@@ -13,7 +13,7 @@ import { settings, onSettingsChange } from './settings';
 import { EngineClient } from './engine-client';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
 import { matchOpener, type OpenerPlacement } from '../engine/opener';
-import { mistakeSound, lockSound, clearSound } from './sound';
+import { mistakeSound, actionSound, clearSound, b2bBreakSound, topoutSound } from './sound';
 import { stats, saveStats, accuracy, emptyGrades, recordSession, type Mode } from './stats';
 import { PIECE_COLORS } from '../core/pieces';
 
@@ -48,6 +48,8 @@ export class GameView {
   private chip!: HTMLElement;
   private toast!: HTMLElement;
   private fieldPanel!: HTMLElement;
+  private b2bTag!: HTMLElement;
+  private b2b = 0;
   private holdBox!: HTMLElement;
   private queueBox!: HTMLElement;
   private statStrip!: HTMLElement;
@@ -79,6 +81,9 @@ export class GameView {
     this.input = new InputHandler(this.game);
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
+    this.input.onAction = (a) => {
+      if (settings.soundFx) actionSound(a);
+    };
     this.renderer = new FieldRenderer(this.cellSize());
     this.root = this.build();
     this.game.onLock = (ev) => this.onLock(ev);
@@ -146,7 +151,15 @@ export class GameView {
 
     this.fieldPanel = document.createElement('div');
     this.fieldPanel.className = 'field-panel';
-    this.fieldPanel.appendChild(this.renderer.canvas);
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    const strip = document.createElement('div');
+    strip.className = 'board-strip';
+    this.b2bTag = document.createElement('div');
+    this.b2bTag.className = 'b2b-tag';
+    strip.appendChild(this.b2bTag);
+    row.append(strip, this.renderer.canvas);
+    this.fieldPanel.appendChild(row);
     this.chip = document.createElement('div');
     this.chip.className = 'grade-chip';
     this.toast = document.createElement('div');
@@ -198,6 +211,8 @@ export class GameView {
     this.game.reset(undefined, seed);
     this.openerPhase = this.mode === 'lst';
     this.session = { pieces: 0, tsds: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now() };
+    this.b2b = 0;
+    this.b2bTag.textContent = '';
     this.openerHistory = [];
     stats.modes[this.mode].drills++;
     saveStats();
@@ -273,10 +288,17 @@ export class GameView {
   }
 
   private onLock(ev: LockEvent): void {
-    if (settings.soundFx) {
-      if (ev.linesCleared > 0) clearSound(ev.linesCleared, ev.spin === 'full');
-      else lockSound();
+    // B2B chain: spins and quads keep it, a plain clear breaks it
+    if (ev.linesCleared > 0) {
+      if (ev.spin !== 'none' || ev.linesCleared === 4) {
+        this.b2b++;
+      } else {
+        if (this.b2b > 0 && settings.soundFx) b2bBreakSound();
+        this.b2b = 0;
+      }
+      if (settings.soundFx) clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
     }
+    this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
     this.lastLock = ev;
     this.session.pieces++;
     stats.modes[this.mode].pieces++;
@@ -312,13 +334,14 @@ export class GameView {
         return;
       }
       // off-book: fall through to engine grading, flagged
-      this.engine.gradeLock(ev, { lstBias: false });
+      this.engine.gradeLock(ev, { lstBias: false, neural: settings.neuralEval });
       this.refreshAll();
       return;
     }
 
-    this.engine.gradeLock(ev, { lstBias: this.mode === 'lst' });
+    this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
     if (this.game.topOut) {
+      if (settings.soundFx) topoutSound();
       if (settings.autoRetryTopOut) {
         this.showToast('Top out — retrying…');
         clearTimeout(this.retryTimer);

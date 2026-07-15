@@ -14,6 +14,12 @@ const ok = (name, cond, extra = '') => {
   if (!cond) fails.push(name);
 };
 
+const sfxRequests = new Set();
+page.on('request', (req) => {
+  const m = /\/sfx\/([a-z0-9_]+)\.ogg/.exec(req.url());
+  if (m) sfxRequests.add(m[1]);
+});
+
 await page.goto('http://localhost:5199/');
 await page.waitForSelector('canvas', { timeout: 10000 });
 
@@ -38,9 +44,13 @@ ok('quick: starts at F7 altitude', a0 >= 850 && a0 < 860, `alt=${a0}`);
 // drop pieces for a while; altitude climbs passively, garbage arrives.
 // topping out under brutal pressure is a legitimate end — the results
 // overlay then carries the evidence instead of the live HUD.
+ok('quick: garbage meter present', (await page.locator('.gmeter').count()) === 1);
+ok('quick: b2b tag present', (await page.locator('.b2b-tag').count()) === 1);
+
 let lastAlt = a0;
 let taken = 0;
 let ended = false;
+let meterFilled = false;
 for (let i = 0; i < 40 && !ended; i++) {
   await page.keyboard.press('Space');
   await page.waitForTimeout(450);
@@ -50,8 +60,16 @@ for (let i = 0; i < 40 && !ended; i++) {
     if (!Number.isNaN(alt)) lastAlt = alt;
     const hud = await page.locator('.zenith-hud').textContent();
     taken = Number(/taken\s*(\d+)/.exec(hud)?.[1] ?? taken);
+    const h = await page.evaluate(() => {
+      const q = document.querySelector('.gm-queued');
+      const a = document.querySelector('.gm-active');
+      return (q?.clientHeight ?? 0) + (a?.clientHeight ?? 0);
+    });
+    if (h > 0) meterFilled = true;
   }
 }
+ok('quick: garbage meter filled during run', meterFilled);
+ok('quick: piece sfx requested', sfxRequests.has('harddrop'), [...sfxRequests].join(','));
 ok('quick: altitude climbed', lastAlt > a0, `alt ${a0} -> ${lastAlt}`);
 ok('quick: garbage arrived', taken > 0 || ended, `taken=${taken} ended=${ended}`);
 if (ended) {

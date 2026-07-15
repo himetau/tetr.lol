@@ -10,6 +10,7 @@ export interface AppSettings {
   stopOnMistake: boolean;
   soundOnMistake: boolean;
   soundFx: boolean;
+  neuralEval: boolean;
   autoRetryTopOut: boolean;
   feedbackLevel: 'all' | 'mistakes' | 'off';
 }
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   stopOnMistake: false,
   soundOnMistake: true,
   soundFx: true,
+  neuralEval: true,
   autoRetryTopOut: false,
   feedbackLevel: 'all',
 };

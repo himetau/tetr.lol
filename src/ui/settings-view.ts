@@ -56,6 +56,9 @@ export function settingsView(): HTMLElement {
   trainer.appendChild(toggleRow('Sound effects', 'piece lock and line-clear sounds', settings.soundFx, (v) => {
     settings.soundFx = v;
   }));
+  trainer.appendChild(toggleRow('Neural evaluator', 'learned correction on top of the heuristic grading', settings.neuralEval, (v) => {
+    settings.neuralEval = v;
+  }));
   trainer.appendChild(toggleRow('Auto-retry on top out', 'start a fresh drill automatically', settings.autoRetryTopOut, (v) => {
     settings.autoRetryTopOut = v;
   }));

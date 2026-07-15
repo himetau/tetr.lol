@@ -6,9 +6,15 @@
 // of your Climb Speed", targeting factor rising over a run, fatigue from
 // 8:00, all clears sending 3.
 //
-// Approximated (real pressure comes from live opponents and is undocumented):
-// base-mode gravity curve, incoming attack rate/size per floor, messiness,
-// climb-rank thresholds and decay. Tunable in the tables below.
+// Approximated: base-mode gravity curve, attack size distribution,
+// messiness, climb-rank thresholds and decay. Tunable in the tables below.
+//
+// Calibrated (2026-07-15, tools/calibrate-zenith.mjs): attackEveryMs comes
+// from a monotone least-squares fit of garbage received vs time-per-floor
+// over 1000 real QUICK PLAY records from the TETRA CHANNEL API (top-1000
+// leaderboard, alt 1736–6085m, R²≈0.59): ≈5 lines/min on F1 rising to
+// ≈70 lines/min on F10 at 'normal' pressure. Elite-lobby data — 'calm'
+// approximates casual lobbies.
 
 export interface FloorDef {
   name: string;
@@ -22,16 +28,16 @@ export interface FloorDef {
 }
 
 export const FLOORS: FloorDef[] = [
-  { name: 'Hall of Beginnings',   from: 0,    baseGravity: 0.02, modGravity: 0.48, lockMs: 500, messiness: 0.05, attackEveryMs: 11000, attackMax: 2 },
-  { name: 'The Hotel',            from: 50,   baseGravity: 0.03, modGravity: 0.78, lockMs: 483, messiness: 0.05, attackEveryMs: 9500,  attackMax: 2 },
-  { name: 'The Casino',           from: 150,  baseGravity: 0.05, modGravity: 1.08, lockMs: 467, messiness: 0.30, attackEveryMs: 8000,  attackMax: 3 },
-  { name: 'The Arena',            from: 300,  baseGravity: 0.08, modGravity: 1.38, lockMs: 450, messiness: 0.30, attackEveryMs: 7000,  attackMax: 4 },
-  { name: 'The Museum',           from: 450,  baseGravity: 0.12, modGravity: 1.68, lockMs: 433, messiness: 0.35, attackEveryMs: 6000,  attackMax: 5 },
-  { name: 'Abandoned Offices',    from: 650,  baseGravity: 0.17, modGravity: 1.98, lockMs: 400, messiness: 0.35, attackEveryMs: 5200,  attackMax: 5 },
-  { name: 'The Laboratory',       from: 850,  baseGravity: 0.24, modGravity: 2.28, lockMs: 367, messiness: 0.40, attackEveryMs: 4600,  attackMax: 6 },
-  { name: 'The Core',             from: 1100, baseGravity: 0.33, modGravity: 2.58, lockMs: 333, messiness: 0.40, attackEveryMs: 4000,  attackMax: 6 },
-  { name: 'Corruption',           from: 1350, baseGravity: 0.45, modGravity: 2.88, lockMs: 300, messiness: 0.45, attackEveryMs: 3500,  attackMax: 7 },
-  { name: 'Platform of the Gods', from: 1650, baseGravity: 0.60, modGravity: 3.18, lockMs: 267, messiness: 0.50, attackEveryMs: 3000,  attackMax: 8 },
+  { name: 'Hall of Beginnings',   from: 0,    baseGravity: 0.02, modGravity: 0.48, lockMs: 500, messiness: 0.05, attackEveryMs: 16900, attackMax: 2 },
+  { name: 'The Hotel',            from: 50,   baseGravity: 0.03, modGravity: 0.78, lockMs: 483, messiness: 0.05, attackEveryMs: 7400,  attackMax: 2 },
+  { name: 'The Casino',           from: 150,  baseGravity: 0.05, modGravity: 1.08, lockMs: 467, messiness: 0.30, attackEveryMs: 5200,  attackMax: 3 },
+  { name: 'The Arena',            from: 300,  baseGravity: 0.08, modGravity: 1.38, lockMs: 450, messiness: 0.30, attackEveryMs: 4700,  attackMax: 4 },
+  { name: 'The Museum',           from: 450,  baseGravity: 0.12, modGravity: 1.68, lockMs: 433, messiness: 0.35, attackEveryMs: 4500,  attackMax: 5 },
+  { name: 'Abandoned Offices',    from: 650,  baseGravity: 0.17, modGravity: 1.98, lockMs: 400, messiness: 0.35, attackEveryMs: 3600,  attackMax: 5 },
+  { name: 'The Laboratory',       from: 850,  baseGravity: 0.24, modGravity: 2.28, lockMs: 367, messiness: 0.40, attackEveryMs: 3400,  attackMax: 6 },
+  { name: 'The Core',             from: 1100, baseGravity: 0.33, modGravity: 2.58, lockMs: 333, messiness: 0.40, attackEveryMs: 3400,  attackMax: 6 },
+  { name: 'Corruption',           from: 1350, baseGravity: 0.45, modGravity: 2.88, lockMs: 300, messiness: 0.45, attackEveryMs: 3300,  attackMax: 7 },
+  { name: 'Platform of the Gods', from: 1650, baseGravity: 0.60, modGravity: 3.18, lockMs: 267, messiness: 0.50, attackEveryMs: 2800,  attackMax: 8 },
 ];
 
 export function floorIndexAt(altitude: number): number {

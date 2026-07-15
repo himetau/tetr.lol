@@ -10,6 +10,7 @@ import { detectSpin } from '../core/spin';
 import type { SpinKind } from '../core/spin';
 import type { Rot } from '../core/pieces';
 import { collidesFast } from './masks';
+import { neuralValue } from './neural';
 
 export interface EvalBreakdown {
   holes: number;          // buried empty cells (T-slot cells excluded)
@@ -231,6 +232,16 @@ export function evaluateBoard(board: Board, lstBias = false): EvalResult {
     } else {
       lstScore += WEIGHTS.lstLoopDead;
     }
+    // learned correction on top of the hand-tuned weights (zero when the
+    // net is disabled or untrained)
+    const avgHeight = heights.reduce((a, h) => a + h, 0) / BOARD_W;
+    lstScore += neuralValue([
+      holeSplit.deep + holeSplit.shallowOther, holeSplit.deep, slots.length,
+      slots.filter((s) => s.clears2).length, bumpiness, maxHeight,
+      badOverhangs, deepWells,
+      site ? 1 : 0, site ? Math.min(site.missing, 20) : 20, site?.roofReady ? 1 : 0,
+      heights[LST_SPIN_COL], avgHeight, holeSplit.shallowSpin,
+    ]);
   }
 
   // in LST mode a shallow overhang cell in the spin region is often the
@@ -252,6 +263,49 @@ export function evaluateBoard(board: Board, lstBias = false): EvalResult {
     WEIGHTS.deepWell * deepWells;
 
   return { score, b };
+}
+
+/** Feature vector for the learned evaluator — must stay in sync with the
+ * inline extraction in evaluateBoard and tools/train-lst-eval.ts. */
+export function lstFeatureVector(board: Board): number[] {
+  const slots = findTSlots(board).filter((s) => s.x === LST_SPIN_COL);
+  const tslotCells = new Set<number>();
+  for (const s of slots) {
+    for (const [cx, cy] of cellsAt('T', 2, s.x, s.y)) tslotCells.add(cx * 32 + cy);
+  }
+  const heights: number[] = [];
+  for (let x = 0; x < BOARD_W; x++) heights.push(board.columnHeight(x));
+  let bumpiness = 0;
+  for (let x = 0; x < BOARD_W - 1; x++) bumpiness += Math.abs(heights[x] - heights[x + 1]);
+  const maxHeight = Math.max(...heights);
+  let badOverhangs = 0;
+  for (let x = 0; x < BOARD_W; x++) {
+    for (let y = 1; y < heights[x]; y++) {
+      if (board.filled(x, y) && !board.filled(x, y - 1)) {
+        const nearSlot =
+          tslotCells.has(x * 32 + (y - 1)) ||
+          tslotCells.has((x - 1) * 32 + (y - 1)) ||
+          tslotCells.has((x + 1) * 32 + (y - 1));
+        if (!nearSlot) badOverhangs++;
+      }
+    }
+  }
+  let deepWells = 0;
+  for (let x = 0; x < BOARD_W; x++) {
+    const l = x === 0 ? 99 : heights[x - 1];
+    const r = x === BOARD_W - 1 ? 99 : heights[x + 1];
+    if (Math.min(l, r) - heights[x] >= 3) deepWells++;
+  }
+  const holeSplit = countHoles(board, tslotCells);
+  const site = findLstSite(board);
+  const avgHeight = heights.reduce((a, h) => a + h, 0) / BOARD_W;
+  return [
+    holeSplit.deep + holeSplit.shallowOther, holeSplit.deep, slots.length,
+    slots.filter((s) => s.clears2).length, bumpiness, maxHeight,
+    badOverhangs, deepWells,
+    site ? 1 : 0, site ? Math.min(site.missing, 20) : 20, site?.roofReady ? 1 : 0,
+    heights[LST_SPIN_COL], avgHeight, holeSplit.shallowSpin,
+  ];
 }
 
 /** Reward/penalty for the line-clear action itself. */

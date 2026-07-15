@@ -8,7 +8,7 @@ import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
-import { lockSound, clearSound, garbageSound, mistakeSound } from './sound';
+import { lockSound, clearSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, topoutSound } from './sound';
 import { stats, saveStats, recordSession } from './stats';
 
 export class ZenithView {
@@ -39,7 +39,11 @@ export class ZenithView {
   private hud!: HTMLElement;
   private toast!: HTMLElement;
   private overlay!: HTMLElement;
+  private b2bTag!: HTMLElement;
+  private gmActive!: HTMLElement;
+  private gmQueued!: HTMLElement;
   private toastTimer = 0;
+  private lastIncoming = 0;
 
   private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
   private keyup = (e: KeyboardEvent) => this.input.keyUp(e.code, performance.now());
@@ -52,6 +56,7 @@ export class ZenithView {
       if (a === 'left' || a === 'right' || a === 'rotateCW' || a === 'rotateCCW' || a === 'rotate180') {
         this.lockTimerMs = 0; // successful-or-not; capped by groundMs
       }
+      if (settings.soundFx && this.run) actionSound(a);
     };
     this.renderer = new FieldRenderer(this.cellSize());
     this.root = this.build();
@@ -107,7 +112,22 @@ export class ZenithView {
 
     this.fieldPanel = document.createElement('div');
     this.fieldPanel.className = 'field-panel';
-    this.fieldPanel.appendChild(this.renderer.canvas);
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    const strip = document.createElement('div');
+    strip.className = 'board-strip';
+    this.b2bTag = document.createElement('div');
+    this.b2bTag.className = 'b2b-tag';
+    const meter = document.createElement('div');
+    meter.className = 'gmeter';
+    this.gmQueued = document.createElement('div');
+    this.gmQueued.className = 'gm-queued';
+    this.gmActive = document.createElement('div');
+    this.gmActive.className = 'gm-active';
+    meter.append(this.gmQueued, this.gmActive);
+    strip.append(this.b2bTag, meter);
+    row.append(strip, this.renderer.canvas);
+    this.fieldPanel.appendChild(row);
     this.toast = document.createElement('div');
     this.toast.className = 'reason-toast';
     this.overlay = document.createElement('div');
@@ -221,6 +241,10 @@ export class ZenithView {
     this.groundMs = 0;
     this.pieces = 0;
     this.tsds = 0;
+    this.lastIncoming = 0;
+    this.b2bTag.textContent = '';
+    this.gmActive.style.height = '0px';
+    this.gmQueued.style.height = '0px';
     this.input.enabled = true;
     stats.modes.quick.drills++;
     saveStats();
@@ -282,14 +306,14 @@ export class ZenithView {
     this.lockTimerMs = 0;
     this.groundMs = 0;
 
-    if (settings.soundFx) {
-      if (ev.linesCleared > 0) clearSound(ev.linesCleared, ev.spin === 'full');
-      else lockSound();
-    }
-
     if (r) {
       if (ev.linesCleared > 0) {
+        const b2bBefore = r.b2b;
         const out = r.onClear(ev.linesCleared, ev.spin, ev.boardAfter.isEmpty());
+        if (settings.soundFx) {
+          if (b2bBefore > 0 && r.b2b === 0) b2bBreakSound();
+          clearSound(ev.linesCleared, ev.spin === 'full', r.b2b, ev.boardAfter.isEmpty());
+        }
         if (out.surged > 0) this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
         else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
@@ -304,7 +328,7 @@ export class ZenithView {
     }
 
     if (this.game.topOut) {
-      if (settings.soundOnMistake) mistakeSound();
+      if (settings.soundFx) topoutSound();
       this.endRunToResults();
     }
     this.refreshPanes();
@@ -336,6 +360,7 @@ export class ZenithView {
       this.groundMs += dtMs;
       // lock delay, with a hard cap so wiggling cannot stall forever
       if (this.lockTimerMs >= r.lockMs() || this.groundMs >= 3 * r.lockMs()) {
+        if (settings.soundFx) lockSound(); // gravity lock, not a hard drop
         this.game.hardDrop();
       }
     }
@@ -350,6 +375,10 @@ export class ZenithView {
       this.input.update(t);
       const holes = r.tick(dt);
       if (holes.length > 0) this.pendingGarbage.push(...holes);
+      // telegraph sound when new garbage gets queued against you
+      const inc = r.incomingLines();
+      if (inc > this.lastIncoming && settings.soundFx) garbageQueuedSound(inc - this.lastIncoming);
+      this.lastIncoming = inc;
       this.applyGravity(dt);
       this.updateHud();
     }
@@ -375,6 +404,16 @@ export class ZenithView {
     if (!r) return;
     const fi = floorIndexAt(r.altitude);
     const incoming = r.incomingLines() + this.pendingGarbage.length;
+
+    // tetr.io-style meter on the board's left edge: solid red = active
+    // (enters on your next lock), translucent = still telegraphed
+    const cell = this.cellSize();
+    const active = Math.min(this.pendingGarbage.length, 20);
+    const queued = Math.min(r.incomingLines(), 20 - active);
+    this.gmActive.style.height = `${active * cell}px`;
+    this.gmQueued.style.height = `${queued * cell}px`;
+    this.b2bTag.textContent = r.b2b >= 1 ? `B2B ×${r.b2b}` : '';
+
     this.hud.innerHTML =
       `<div class="alt">${r.altitude.toFixed(1)}<small>m</small></div>` +
       `<div class="floor">F${fi + 1} · ${FLOORS[fi].name}</div>` +

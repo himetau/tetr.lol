@@ -27,6 +27,8 @@ export interface GradeRequest {
   pieceIndex: number;
   /** bias evaluation toward the canonical LST structure (spin column 2) */
   lstBias?: boolean;
+  /** learned evaluator on top of the heuristic (default on) */
+  neural?: boolean;
 }
 
 export interface AltInfo {

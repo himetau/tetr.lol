@@ -18,10 +18,11 @@ export class EngineClient {
     };
   }
 
-  gradeLock(ev: LockEvent, opts: { lstBias?: boolean; depth?: number; beamWidth?: number } = {}): void {
-    const { lstBias = false, depth = 4, beamWidth = 14 } = opts;
+  gradeLock(ev: LockEvent, opts: { lstBias?: boolean; neural?: boolean; depth?: number; beamWidth?: number } = {}): void {
+    const { lstBias = false, neural = true, depth = 4, beamWidth = 14 } = opts;
     const req: GradeRequest = {
       lstBias,
+      neural,
       rows: Array.from(ev.boardBefore.rows),
       queue: ev.queueBefore,
       hold: ev.holdBefore,

@@ -37,7 +37,12 @@ that runs the built app via the system electron package.
   gravity (base curve is approximate; the documented 0.48G→3.18G curve is
   behind the Gravity-mod toggle), simulated incoming garbage with per-floor
   messiness and a pressure knob, climb-speed ranks, B2B surge, and altitude
-  scoring. No grading — this mode is for feeling out the speed.
+  scoring. Incoming garbage shows on a red meter on the board's left edge
+  (solid = enters on your next lock, pulsing = telegraphed), with a B2B ×N
+  counter above it. Attack cadence is calibrated against 1000 real QUICK
+  PLAY records from the TETRA CHANNEL API (tools/calibrate-zenith.mjs;
+  ≈5 lines/min on F1 up to ≈70 on F10 at normal pressure). No grading —
+  this mode is for feeling out the speed.
 - **Patterns** — the full four.lol diagram library, rendered in-app; click a
   card to open it in the fumen viewer.
 
@@ -52,6 +57,17 @@ alternative. Forced burns (queue provably can't sustain the loop, or the
 loop is already dead) are not punished. Every verdict is double-checked by
 a deeper second-opinion search over the top candidates, and a clean
 best/good verdict never carries advisory scolding.
+
+A **learned evaluator** (14→16→1 MLP, `tools/train-lst-eval.ts`) adds a
+residual correction on top of the hand-tuned weights in LST mode. It is
+trained on engine self-play from the post-TKI board against Monte-Carlo
+discounted returns, so a zero net is a strict no-op; toggle it off under
+Settings → Neural evaluator. Retrain with
+`npx tsx tools/train-lst-eval.ts 400` after changing eval features.
+
+Piece/clear/garbage **sounds** are real TETR.IO samples extracted from a
+tetrio-plus `.tpse` soundpack via `tools/extract-tpse-sfx.mjs` into
+`public/sfx/` (personal use).
 
 **Stats** keeps per-session history (5+ graded placements) with accuracy
 trend charts, quick-play altitude per run, and a session log — all local.
@@ -85,5 +101,5 @@ src/ui/       vanilla-TS views, canvas renderer, worker client
 tools/        gen-lst-db.ts + four.lol page-data snapshots
 ```
 
-Planned next: neural evaluator trained on generated LST games, more openers
-(DT cannon), quick-play garbage model calibrated against real replay data.
+Planned next: more openers (DT cannon), deeper neural evaluator (bigger
+self-play corpus, temporal-difference training).

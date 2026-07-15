@@ -243,6 +243,39 @@ h1, h2, h3 { font-family: ui-serif, Georgia, 'Times New Roman', serif; font-weig
 }
 .field-panel canvas { display: block; border-radius: var(--radius-sm); }
 
+/* board-left strip: incoming-garbage meter + B2B counter (tetr.io style) */
+.field-row { display: flex; align-items: stretch; gap: 5px; }
+.board-strip { width: 15px; position: relative; flex-shrink: 0; }
+.gmeter {
+  position: absolute;
+  inset: 0 3px 0 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.gm-active, .gm-queued { width: 100%; transition: height 0.15s ease; height: 0; }
+.gm-active { background: var(--bad); }
+.gm-queued { background: var(--bad); opacity: 0.4; animation: gm-pulse 0.9s ease-in-out infinite; }
+@keyframes gm-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.6; }
+}
+.b2b-tag {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  color: var(--warn);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--warn) 45%, transparent);
+}
+
 /* grade chip + feedback */
 .grade-chip {
   position: absolute;
