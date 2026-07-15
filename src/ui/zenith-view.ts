@@ -22,7 +22,6 @@ export class ZenithView {
   private unsubSettings: () => void;
 
   private run: ZenithRun | null = null;
-  private pendingGarbage: number[] = [];
   private gravAcc = 0;
   private lockTimerMs = 0;
   // guideline Extended Placement Lock Down: the timer resets on successful
@@ -246,7 +245,6 @@ export class ZenithView {
     this.overlay.replaceChildren();
     this.game.reset();
     this.run = new ZenithRun(this.startAltitude, this.pressure, this.gravityMod);
-    this.pendingGarbage = [];
     this.gravAcc = 0;
     this.resetLockdown();
     this.pieces = 0;
@@ -327,10 +325,11 @@ export class ZenithView {
         else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
         r.onLockNoClear();
-        // garbage enters while you are not clearing
-        if (this.pendingGarbage.length > 0) {
-          const rows = this.pendingGarbage.splice(0, 8);
+        // garbage rises while you are not clearing (cancelable until here)
+        const rows = r.riseGarbage(8);
+        if (rows.length > 0) {
           this.game.addGarbage(rows);
+          this.lastIncoming = r.incomingLines();
           if (settings.soundFx) garbageSound(rows.length);
         }
       }
@@ -400,8 +399,7 @@ export class ZenithView {
     const r = this.run;
     if (r && !this.game.topOut) {
       this.input.update(t);
-      const holes = r.tick(dt);
-      if (holes.length > 0) this.pendingGarbage.push(...holes);
+      r.tick(dt);
       // telegraph sound when new garbage gets queued against you
       const inc = r.incomingLines();
       if (inc > this.lastIncoming && settings.soundFx) garbageQueuedSound(inc - this.lastIncoming);
@@ -430,13 +428,14 @@ export class ZenithView {
     // frame that locks the final piece still calls this from loop())
     if (!r) return;
     const fi = floorIndexAt(r.altitude);
-    const incoming = r.incomingLines() + this.pendingGarbage.length;
+    const incoming = r.incomingLines();
 
     // tetr.io-style meter on the board's left edge: solid red = active
-    // (enters on your next lock), translucent = still telegraphed
+    // (rises on your next non-clearing lock), translucent = telegraphed —
+    // both remain cancelable until they rise
     const cell = this.cellSize();
-    const active = Math.min(this.pendingGarbage.length, 20);
-    const queued = Math.min(r.incomingLines(), 20 - active);
+    const active = Math.min(r.activeLines(), 20);
+    const queued = Math.min(incoming - r.activeLines(), 20 - active);
     this.gmActive.style.height = `${active * cell}px`;
     this.gmQueued.style.height = `${queued * cell}px`;
     this.b2bTag.textContent = r.b2b >= 1 ? `B2B ×${r.b2b}` : '';

@@ -71,7 +71,10 @@ describe('zenith mechanics', () => {
     const changesPerRow = (altitude: number) => {
       const run = new ZenithRun(altitude, 'brutal', false, mulberry32(7));
       const holes: number[] = [];
-      for (let i = 0; i < 4000 && holes.length < 400; i++) holes.push(...run.tick(100));
+      for (let i = 0; i < 4000 && holes.length < 400; i++) {
+        run.tick(100);
+        holes.push(...run.riseGarbage(8));
+      }
       let changes = 0;
       for (let i = 1; i < holes.length; i++) if (holes[i] !== holes[i - 1]) changes++;
       return changes / (holes.length - 1);
@@ -83,15 +86,30 @@ describe('zenith mechanics', () => {
     expect(high).toBeGreaterThan(low * 3);
   });
 
-  it('garbage eventually activates and returns hole columns', () => {
+  it('garbage eventually activates and rises with valid hole columns', () => {
     const run = new ZenithRun(850, 'brutal', false, () => 0.5);
     const holes: number[] = [];
-    for (let i = 0; i < 600 && holes.length === 0; i++) holes.push(...run.tick(100));
+    for (let i = 0; i < 600 && holes.length === 0; i++) {
+      run.tick(100);
+      if (run.activeLines() > 0) holes.push(...run.riseGarbage(8));
+    }
     expect(holes.length).toBeGreaterThan(0);
     for (const h of holes) {
       expect(h).toBeGreaterThanOrEqual(0);
       expect(h).toBeLessThan(10);
     }
+  });
+
+  it('active garbage stays cancelable until it actually rises (tetr.io)', () => {
+    const run = new ZenithRun(850, 'brutal', false, () => 0.5);
+    let guard = 0;
+    while (run.activeLines() === 0 && guard++ < 600) run.tick(100);
+    expect(run.activeLines()).toBeGreaterThan(0);
+    // a TSD cancels the ACTIVE garbage, not just the telegraphed queue
+    const before = run.activeLines();
+    const out = run.onClear(2, 'full', false);
+    expect(out.canceled).toBeGreaterThan(0);
+    expect(run.activeLines()).toBeLessThan(before);
   });
 });
 

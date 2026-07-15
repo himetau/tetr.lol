@@ -68,7 +68,8 @@ const PRESSURE_GAP: Record<Pressure, number> = { calm: 1.7, normal: 1, brutal: 0
 
 interface QueuedAttack {
   lines: number;
-  entersAtMs: number; // when the garbage becomes active (enters on next lock)
+  entersAtMs: number; // telegraph ends; rises on a non-clearing lock after this
+  rising?: boolean;   // started entering the board (well re-roll happened)
 }
 
 export interface ClearOutcome {
@@ -125,9 +126,14 @@ export class ZenithRun {
     return this.gravityMod ? this.floor().lockMs : 500;
   }
 
-  /** queued lines not yet active (shown as "incoming") */
+  /** all queued lines (cancelable until they actually rise) */
   incomingLines(): number {
     return this.incoming.reduce((n, a) => n + a.lines, 0);
+  }
+
+  /** lines whose telegraph elapsed — they rise on your next non-clearing lock */
+  activeLines(): number {
+    return this.incoming.reduce((n, a) => n + (a.entersAtMs <= this.timeMs ? a.lines : 0), 0);
   }
 
   private gapMs(): number {
@@ -140,11 +146,8 @@ export class ZenithRun {
     this.incoming.push({ lines, entersAtMs: this.timeMs + delay });
   }
 
-  /**
-   * Advance the clock. Returns hole columns for garbage rows that became
-   * active this tick (insert them on the next lock).
-   */
-  tick(dtMs: number): number[] {
+  /** Advance the clock (climb, decay, fatigue, attack scheduling). */
+  tick(dtMs: number): void {
     this.timeMs += dtMs;
 
     // passive climb: +0.25 m/s per rank
@@ -186,20 +189,35 @@ export class ZenithRun {
       this.nextAttackAtMs = this.timeMs + this.gapMs() * (0.6 + 0.8 * this.rng());
     }
 
-    // activate garbage whose telegraph elapsed
+  }
+
+  /**
+   * Rise garbage into the board (call on a non-clearing lock), up to `cap`
+   * rows. Only attacks whose telegraph elapsed rise; everything still in
+   * the queue — telegraphed or active — stays cancelable until this moment,
+   * exactly like tetr.io.
+   */
+  riseGarbage(cap: number): number[] {
     const holes: number[] = [];
-    while (this.incoming.length > 0 && this.incoming[0].entersAtMs <= this.timeMs) {
-      const atk = this.incoming.shift()!;
-      // the well column is persistent, like tetr.io: it only has a CHANCE
-      // to move — per row with the floor's messiness, ×2.5 between attacks
-      const m = this.floor().messiness;
-      if (this.rng() < Math.min(1, m * 2.5)) this.moveHole();
-      for (let i = 0; i < atk.lines; i++) {
-        if (i > 0 && this.rng() < m) this.moveHole();
-        holes.push(this.holeCol);
+    const m = this.floor().messiness;
+    while (holes.length < cap && this.incoming.length > 0 && this.incoming[0].entersAtMs <= this.timeMs) {
+      const atk = this.incoming[0];
+      // the well column is persistent: it only has a CHANCE to move — per
+      // row with the floor's messiness, ×2.5 between separate attacks
+      if (!atk.rising) {
+        atk.rising = true;
+        if (this.rng() < Math.min(1, m * 2.5)) this.moveHole();
+      } else if (this.rng() < m) {
+        this.moveHole();
       }
-      this.garbageTaken += atk.lines;
+      while (atk.lines > 0 && holes.length < cap) {
+        holes.push(this.holeCol);
+        atk.lines--;
+        if (atk.lines > 0 && this.rng() < m) this.moveHole();
+      }
+      if (atk.lines === 0) this.incoming.shift();
     }
+    this.garbageTaken += holes.length;
     return holes;
   }
 
