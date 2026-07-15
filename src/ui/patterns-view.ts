@@ -43,11 +43,12 @@ export function patternsView(): HTMLElement {
   const page = document.createElement('div');
   page.className = 'page';
   page.innerHTML = `<h1>Pattern library</h1>
-    <p class="sub">every diagram from <a href="https://four.lol/stacking/lst/" target="_blank">four.lol/stacking/lst</a>
-    and <a href="https://four.lol/openers/tki/" target="_blank">four.lol/openers/tki</a> — click a diagram to open it in the fumen viewer</p>`;
+    <p class="sub">every diagram from <a href="https://four.lol/stacking/lst/" target="_blank">four.lol/stacking/lst</a>,
+    <a href="https://four.lol/openers/tki/" target="_blank">four.lol/openers/tki</a>
+    and <a href="https://four.lol/stacking/4-wide/" target="_blank">four.lol/stacking/4-wide</a> — click a diagram to open it in the fumen viewer</p>`;
 
-  const data = patterns as unknown as { tki: Section[]; lst: Section[] };
-  for (const [title, sections] of [['LST Stacking', data.lst], ['TKI Opener', data.tki]] as [string, Section[]][]) {
+  const data = patterns as unknown as { tki: Section[]; lst: Section[]; fourwide?: Section[] };
+  for (const [title, sections] of [['LST Stacking', data.lst], ['TKI Opener', data.tki], ['4-Wide', data.fourwide ?? []]] as [string, Section[]][]) {
     const h = document.createElement('h1');
     h.textContent = title;
     h.style.fontSize = '20px';

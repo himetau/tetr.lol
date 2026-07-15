@@ -29,6 +29,8 @@ export interface GradeRequest {
   lstBias?: boolean;
   /** learned evaluator on top of the heuristic (default on) */
   neural?: boolean;
+  /** grade against the center 4-wide combo book instead (engine/fourwide.ts) */
+  fourwide?: boolean;
 }
 
 export interface AltInfo {

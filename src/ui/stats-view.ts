@@ -7,16 +7,18 @@ import { stats, accuracy, gradeAccuracy, type Mode } from './stats';
 
 const MODE_LABEL: Record<Mode, string> = {
   lst: 'LST drill (TKI → loop)',
+  fourwide: '4-wide drill (combo book)',
   free: 'Freeplay',
   quick: 'Quick play',
 };
 
-const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', free: 'Freeplay', quick: 'Quick play' };
+const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: 'Freeplay', quick: 'Quick play' };
 
 // validated against the app card surfaces (light #faf8f2 / dark #30302e):
 // all checks pass incl. CVD separation and 3:1 contrast
 const SERIES_VAR: Record<Mode, string> = {
   lst: 'var(--series-lst)',
+  fourwide: 'var(--series-fourwide)',
   free: 'var(--series-free)',
   quick: 'var(--series-lst)',
 };
@@ -94,7 +96,8 @@ export function statsView(): HTMLElement {
   const table = document.createElement('table');
   table.className = 'stats';
   table.innerHTML = `<tr><th>mode</th><th>drills</th><th>pieces</th><th>TSD</th><th>best</th><th>good</th><th>inacc</th><th>mistake</th><th>killer</th><th>accuracy</th></tr>`;
-  for (const m of ['lst', 'free', 'quick'] as Mode[]) {
+  for (const m of ['lst', 'fourwide', 'free', 'quick'] as Mode[]) {
+    if (m === 'fourwide' && stats.modes[m].drills === 0) continue;
     const s = stats.modes[m];
     if (m === 'quick' && s.drills === 0) continue;
     const g = s.grades;
@@ -120,7 +123,9 @@ export function statsView(): HTMLElement {
       const tr = document.createElement('tr');
       const result = s.mode === 'quick'
         ? `${Math.round(s.altitude ?? 0)}m`
-        : `${(gradeAccuracy(s.grades) * 100).toFixed(0)}% accuracy`;
+        : s.mode === 'fourwide' && s.maxCombo !== undefined
+          ? `${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · combo ×${s.maxCombo}`
+          : `${(gradeAccuracy(s.grades) * 100).toFixed(0)}% accuracy`;
       tr.innerHTML = `<td>${fmtDate(s.at)}</td><td>${SHORT_LABEL[s.mode]}</td><td>${s.pieces}</td><td>${s.tsds}</td><td><b>${result}</b></td>`;
       t.appendChild(tr);
     }

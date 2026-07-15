@@ -31,6 +31,12 @@ export function settingsView(): HTMLElement {
   handling.appendChild(sliderRow('SDF', 'soft drop factor — 41 = instant', 5, 41, 1, settings.handling.sdf, (v) => {
     settings.handling.sdf = v;
   }));
+  handling.appendChild(sliderRow('DCD', 'DAS cut delay (ms) — pauses DAS after a rotate/hold/drop; 0 = off', 0, 100, 1, settings.handling.dcdMs, (v) => {
+    settings.handling.dcdMs = v;
+  }));
+  handling.appendChild(toggleRow('Cancel DAS on direction change', 'off = DAS carries, so a charged flick bounces wall-to-wall (tetr.io default)', settings.handling.cancelDasOnDirChange, (v) => {
+    settings.handling.cancelDasOnDirChange = v;
+  }));
   page.appendChild(handling);
 
   // ---- keybinds ----

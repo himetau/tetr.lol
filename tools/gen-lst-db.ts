@@ -1,6 +1,7 @@
 // Regenerates src/data/tki.json and src/data/lst-patterns.json from the
 // four.lol page data snapshots in tools/data/ (Gatsby page-data JSON for
-// https://four.lol/openers/tki/ and https://four.lol/stacking/lst/).
+// https://four.lol/openers/tki/, https://four.lol/stacking/lst/ and
+// https://four.lol/stacking/4-wide/).
 //
 // Run: npm run gen:lst-db
 
@@ -23,7 +24,7 @@ interface Section {
   patterns: Pattern[];
 }
 
-function extract(name: 'tki' | 'lst'): Section[] {
+function extract(name: 'tki' | 'lst' | '4wide'): Section[] {
   const pd = JSON.parse(readFileSync(join(here, 'data', `${name}-pd.json`), 'utf8'));
   const body: string = pd.result.data.mdx.body;
   const re = /mdx\(\s*"(h[23])",\s*\{[^}]*\},\s*"((?:[^"\\]|\\.)*)"\)|data:\s*"(v115@[^"]+)"/g;
@@ -49,6 +50,7 @@ function extract(name: 'tki' | 'lst'): Section[] {
 
 const tkiSections = extract('tki');
 const lstSections = extract('lst');
+const fourwideSections = extract('4wide');
 
 // ---- TKI targets ------------------------------------------------------
 // Pre-TSD flat-top shapes (bag-order variants) that the opener drill grades
@@ -104,6 +106,7 @@ writeFileSync(
       source: 'https://four.lol/stacking/lst/',
       tki: tkiSections,
       lst: lstSections,
+      fourwide: fourwideSections,
     },
     null,
     2,
@@ -111,4 +114,4 @@ writeFileSync(
 );
 
 console.log(`tki.json: ${dedupedTargets.length} targets`);
-console.log(`lst-patterns.json: tki ${tkiSections.length} sections, lst ${lstSections.length} sections`);
+console.log(`lst-patterns.json: tki ${tkiSections.length} sections, lst ${lstSections.length} sections, 4wide ${fourwideSections.length} sections`);

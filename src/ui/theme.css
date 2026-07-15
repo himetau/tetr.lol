@@ -16,6 +16,7 @@
   /* chart series — validated (CVD + contrast) against --bg-raised */
   --series-lst: #c96442;
   --series-free: #2a78d6;
+  --series-fourwide: #3f8a4e;
   --field-bg: #2e2c26;
   --field-grid: #3a382f;
   --shadow: 0 1px 3px rgba(61, 57, 41, 0.08), 0 4px 16px rgba(61, 57, 41, 0.06);
@@ -37,6 +38,7 @@
   --line: #3d3c38;
   --series-lst: #d06a4a;
   --series-free: #3987e5;
+  --series-fourwide: #4a9a5a;
   --field-bg: #1b1b19;
   --field-grid: #292824;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);

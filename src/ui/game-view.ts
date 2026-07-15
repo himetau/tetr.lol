@@ -3,7 +3,9 @@
 //
 // LST drill = the full flow: build the TKI opener yourself (book-checked
 // per piece), the first TSD drops you into the LST loop (engine-graded with
-// LST-structure bias). Freeplay = empty board, generic grading.
+// LST-structure bias). 4-wide drill = center well between infinite wall
+// columns, graded against the 4-wide combo book (engine/fourwide.ts).
+// Freeplay = empty board, generic grading.
 
 import { Game, type LockEvent } from '../core/game';
 import { Board } from '../core/board';
@@ -13,6 +15,7 @@ import { settings, onSettingsChange } from './settings';
 import { EngineClient } from './engine-client';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
 import { matchOpener, type OpenerPlacement } from '../engine/opener';
+import { buildFourwideStart, refillWalls } from '../engine/fourwide';
 import { mistakeSound, actionSound, clearSound, b2bBreakSound, topoutSound } from './sound';
 import { stats, saveStats, accuracy, emptyGrades, recordSession, type Mode } from './stats';
 import { PIECE_COLORS } from '../core/pieces';
@@ -43,6 +46,10 @@ export class GameView {
   private mode: Mode;
   private openerPhase = false;
   private paused = false;
+  private combo = 0;
+  private maxCombo = 0;
+  // combo value before each lock, popped on undo
+  private comboHistory: number[] = [];
 
   // feedback elements
   private chip!: HTMLElement;
@@ -199,6 +206,7 @@ export class GameView {
       tsds: s.tsds,
       grades: { ...s.grades },
       durationMs: Date.now() - s.startedAt,
+      ...(this.mode === 'fourwide' ? { maxCombo: this.maxCombo } : {}),
     });
   }
 
@@ -208,8 +216,11 @@ export class GameView {
     // ?seed=N pins the bag order (practice/testing)
     const seedParam = new URLSearchParams(location.search).get('seed');
     const seed = seedParam ? Number(seedParam) : undefined;
-    this.game.reset(undefined, seed);
+    this.game.reset(this.mode === 'fourwide' ? buildFourwideStart(seed).board : undefined, seed);
     this.openerPhase = this.mode === 'lst';
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.comboHistory = [];
     this.session = { pieces: 0, tsds: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now() };
     this.b2b = 0;
     this.b2bTag.textContent = '';
@@ -235,6 +246,10 @@ export class GameView {
       if (this.mode === 'lst') {
         this.openerPhase = !this.openerHistory.some((p) => p.wasTsd);
       }
+      while (this.comboHistory.length > this.game.pieceIndex) {
+        this.combo = this.comboHistory.pop() ?? 0;
+      }
+      if (this.mode === 'fourwide') this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
       this.lastLock = null;
       this.preview = null;
       this.session.pieces = this.game.pieceIndex;
@@ -288,6 +303,23 @@ export class GameView {
   }
 
   private onLock(ev: LockEvent): void {
+    this.comboHistory.push(this.combo);
+    if (this.mode === 'fourwide') {
+      // combo = consecutive clearing locks; the wall columns are infinite
+      this.combo = ev.linesCleared > 0 ? this.combo + 1 : 0;
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+      refillWalls(this.game.board);
+      this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
+      if (ev.linesCleared > 0 && settings.soundFx) clearSound(ev.linesCleared, false, this.combo, false);
+      this.lastLock = ev;
+      this.session.pieces++;
+      stats.modes[this.mode].pieces++;
+      saveStats();
+      this.engine.gradeLock(ev, { fourwide: true });
+      this.handleTopOut();
+      this.refreshAll();
+      return;
+    }
     // B2B chain: spins and quads keep it, a plain clear breaks it
     if (ev.linesCleared > 0) {
       if (ev.spin !== 'none' || ev.linesCleared === 4) {
@@ -340,19 +372,22 @@ export class GameView {
     }
 
     this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
-    if (this.game.topOut) {
-      if (settings.soundFx) topoutSound();
-      if (settings.autoRetryTopOut) {
-        this.showToast('Top out — retrying…');
-        clearTimeout(this.retryTimer);
-        this.retryTimer = window.setTimeout(() => {
-          if (this.game.topOut) this.resetDrill();
-        }, 900);
-      } else {
-        this.showToast('Top out — R to retry');
-      }
-    }
+    this.handleTopOut();
     this.refreshAll();
+  }
+
+  private handleTopOut(): void {
+    if (!this.game.topOut) return;
+    if (settings.soundFx) topoutSound();
+    if (settings.autoRetryTopOut) {
+      this.showToast('Top out — retrying…');
+      clearTimeout(this.retryTimer);
+      this.retryTimer = window.setTimeout(() => {
+        if (this.game.topOut) this.resetDrill();
+      }, 900);
+    } else {
+      this.showToast('Top out — R to retry');
+    }
   }
 
   private recordGrade(g: Grade): void {
@@ -379,7 +414,7 @@ export class GameView {
     if (fl === 'off' && !isBad) return;
     if (fl === 'mistakes' && !isBad) return;
 
-    let label = GRADE_LABEL[grade];
+    let label = this.gradeLabel(grade);
     if (this.lastLock?.spin === 'full' && this.lastLock.linesCleared >= 2) label = `TSD · ${label}`;
     if (r.book?.userMatched) label = `Book · ${r.book.solutions[0] ?? 'LST'}`;
     this.showChip(grade, label + (isBad ? openerNote : ''));
@@ -398,9 +433,17 @@ export class GameView {
         }
       }
     } else if (r.book && !r.book.sustainable) {
-      // not the player's fault, but they should know why the loop is ending
-      this.showToast('Book: this queue cannot sustain the loop — burn and rebuild');
+      // not the player's fault, but they should know why the chain is ending
+      this.showToast(this.mode === 'fourwide'
+        ? 'Book: this queue cannot keep the combo to the horizon — plan the break'
+        : 'Book: this queue cannot sustain the loop — burn and rebuild');
     }
+  }
+
+  /** grade chip label, with mode-appropriate wording for the worst grade */
+  private gradeLabel(g: Grade): string {
+    if (g === 'killer' && this.mode === 'fourwide') return 'Combo breaker';
+    return GRADE_LABEL[g];
   }
 
   // ---- docked alternatives panel ----
@@ -422,9 +465,9 @@ export class GameView {
     const head = document.createElement('div');
     head.className = `dock-grade ${GRADE_CLASS[grade]}`;
     const rankNote = r.userRank === 0 && grade !== 'best' && grade !== 'good'
-      ? 'breaks LST structure'
+      ? (this.mode === 'fourwide' ? 'breaks the combo book' : 'breaks LST structure')
       : `your move ranked #${Math.min(r.userRank + 1, r.alts.length)}`;
-    head.textContent = `${GRADE_LABEL[grade]} · ${rankNote}`;
+    head.textContent = `${this.gradeLabel(grade)} · ${rankNote}`;
     this.pathsBody.appendChild(head);
 
     for (const reason of r.reasons) {
@@ -497,6 +540,16 @@ export class GameView {
 
   private refreshSession(): void {
     const acc = accuracy(stats.modes[this.mode]);
+    if (this.mode === 'fourwide') {
+      this.statStrip.innerHTML =
+        `phase <b>4-wide combo</b><br>` +
+        `pieces <b>${this.session.pieces}</b><br>` +
+        `combo <b>${this.combo}</b><br>` +
+        `best combo <b>${this.maxCombo}</b><br>` +
+        `mistakes <b>${this.session.mistakes}</b><br>` +
+        `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
+      return;
+    }
     const phase = this.mode === 'lst' ? (this.openerPhase ? 'TKI opener' : 'LST loop') : 'freeplay';
     this.statStrip.innerHTML =
       `phase <b>${phase}</b><br>` +

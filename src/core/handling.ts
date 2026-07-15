@@ -1,14 +1,25 @@
-// tetr.io-style handling: DAS/ARR in milliseconds processed on the render
-// loop with real timestamps, so sub-frame repeat rates (ARR < 16ms) work.
-// ARR 0 = instant slide to wall; SDF >= 41 = instant soft drop (tetr.io "∞").
+// tetr.io-faithful handling. DAS/ARR/DCD in milliseconds processed on the
+// render loop with real timestamps, so sub-frame repeat rates (ARR < 16ms)
+// work. ARR 0 = instant slide to wall; SDF >= 41 = instant soft drop ("∞").
+//
+// The DAS charge is a single directional meter that is PRESERVED across a
+// direction change while a key is still held (tetr.io's default) — so when
+// the meter is already full and you flick to the other side, the piece
+// bounces wall-to-wall instantly instead of re-charging from zero. A full
+// release (no direction held) drops the charge; the next press starts fresh.
+// `cancelDasOnDirChange` reproduces tetr.io's toggle that zeroes the meter on
+// every direction change instead. `dcdMs` (DAS Cut Delay) caps the charge
+// after a rotate / hold / hard drop so the next input can't instantly DAS.
 
 import type { Game } from './game';
 
 export interface HandlingSettings {
   dasMs: number;
   arrMs: number;
-  sdf: number;        // soft drop factor; >= 41 means instant
+  sdf: number;         // soft drop factor; >= 41 means instant
   softDropCps: number; // base soft-drop cells/sec at SDF 1
+  dcdMs: number;       // DAS cut delay (ms); 0 = disabled
+  cancelDasOnDirChange: boolean; // zero the DAS charge on every direction change
 }
 
 export interface Keybinds {
@@ -30,6 +41,8 @@ export const DEFAULT_HANDLING: HandlingSettings = {
   arrMs: 10,
   sdf: 41,
   softDropCps: 30,
+  dcdMs: 0,
+  cancelDasOnDirChange: false, // tetr.io default: DAS carries, so flicks bounce
 };
 
 export const DEFAULT_KEYBINDS: Keybinds = {
@@ -68,8 +81,8 @@ export class InputHandler {
 
   private held = new Set<string>();
   private dirStack: Dir[] = [];       // most recent direction last
-  private dasStart = 0;               // when the current direction was pressed
-  private arrAccum = 0;
+  private dasTimer = 0;               // ms charged toward DAS in the active dir
+  private arrTimer = 0;               // ms accumulated toward the next ARR step
   private softDropHeld = false;
   private sdAccum = 0;
   private lastTime = 0;
@@ -84,7 +97,7 @@ export class InputHandler {
     return null;
   }
 
-  keyDown(code: string, time: number): void {
+  keyDown(code: string, _time: number): void {
     if (this.held.has(code)) return; // ignore key repeat
     this.held.add(code);
     if (!this.enabled) return;
@@ -94,11 +107,18 @@ export class InputHandler {
       case 'left':
       case 'right': {
         const dir: Dir = action === 'left' ? -1 : 1;
+        const wasIdle = this.dirStack.length === 0;
         this.dirStack = this.dirStack.filter((d) => d !== dir);
         this.dirStack.push(dir);
-        this.dasStart = time;
-        this.arrAccum = 0;
-        this.step(dir);
+        if (wasIdle) {
+          // fresh press from rest: charge starts from zero
+          this.dasTimer = 0;
+          this.arrTimer = 0;
+          this.step(dir);
+        } else {
+          // direction change with a key still held: bounce-aware
+          this.changeDirection();
+        }
         break;
       }
       case 'softDrop':
@@ -108,20 +128,23 @@ export class InputHandler {
         break;
       case 'hardDrop':
         this.game.hardDrop();
-        this.resetCharge(time);
+        this.applyCut();
         break;
       case 'rotateCW':
         this.game.rotate(1);
+        this.applyCut();
         break;
       case 'rotateCCW':
         this.game.rotate(-1);
+        this.applyCut();
         break;
       case 'rotate180':
         this.game.rotate(2);
+        this.applyCut();
         break;
       case 'hold':
         this.game.holdPiece();
-        this.resetCharge(time);
+        this.applyCut();
         break;
       default:
         break;
@@ -129,31 +152,56 @@ export class InputHandler {
     this.onAction?.(action);
   }
 
-  keyUp(code: string, time: number): void {
+  keyUp(code: string, _time: number): void {
     this.held.delete(code);
     const action = this.codeAction(code);
     if (action === 'left' || action === 'right') {
       const dir: Dir = action === 'left' ? -1 : 1;
       this.dirStack = this.dirStack.filter((d) => d !== dir);
-      // A still-held opposite direction re-charges DAS from now.
-      if (this.dirStack.length > 0) {
-        this.dasStart = time;
-        this.arrAccum = 0;
-        this.step(this.dirStack[this.dirStack.length - 1]);
-      }
+      // reverting to a still-held opposite direction is a direction change;
+      // the DAS charge carries (bounce) unless the toggle cancels it
+      if (this.dirStack.length > 0) this.changeDirection();
     } else if (action === 'softDrop') {
       this.softDropHeld = false;
     }
   }
 
-  /** After hard drop / hold, keep DAS charged (tetr.io keeps charge; DCD=0). */
-  private resetCharge(_time: number): void {
-    this.arrAccum = 0;
+  /** A direction change while a key stays held: tap one cell, keep the DAS
+   * charge so a full meter bounces the piece to the other wall. */
+  private changeDirection(): void {
+    const dir = this.dirStack[this.dirStack.length - 1];
+    if (dir === undefined) return;
+    this.step(dir);
+    this.arrTimer = 0;
+    if (this.settings.cancelDasOnDirChange) this.dasTimer = 0;
+    // already charged + instant ARR: bounce to the wall this frame, no delay
+    if (!this.settings.cancelDasOnDirChange
+      && this.dasTimer >= this.settings.dasMs
+      && this.settings.arrMs <= 0) {
+      this.slideToWall(dir);
+    }
+  }
+
+  /** DAS Cut Delay: after a rotate / hold / hard drop, cap the charge so the
+   * next auto-shift can't fire until DCD more ms have accrued. Off when 0. */
+  private applyCut(): void {
+    this.arrTimer = 0;
+    const dcd = this.settings.dcdMs;
+    if (dcd > 0) {
+      const cap = Math.max(0, this.settings.dasMs - dcd);
+      if (this.dasTimer > cap) this.dasTimer = cap;
+    }
   }
 
   private step(dir: Dir): void {
     if (dir === -1) this.game.moveLeft();
     else this.game.moveRight();
+    if (this.softDropHeld && this.settings.sdf >= 41) this.game.softDropToFloor();
+  }
+
+  private slideToWall(dir: Dir): void {
+    let moved = true;
+    while (moved) moved = dir === -1 ? this.game.moveLeft() : this.game.moveRight();
     if (this.softDropHeld && this.settings.sdf >= 41) this.game.softDropToFloor();
   }
 
@@ -165,17 +213,16 @@ export class InputHandler {
 
     const dir = this.dirStack[this.dirStack.length - 1];
     if (dir !== undefined) {
-      const heldFor = time - this.dasStart;
-      if (heldFor >= this.settings.dasMs) {
+      this.dasTimer += dt;
+      if (this.dasTimer >= this.settings.dasMs) {
         if (this.settings.arrMs <= 0) {
-          // instant: slide to wall
-          let moved = true;
-          while (moved) moved = dir === -1 ? this.game.moveLeft() : this.game.moveRight();
-          if (this.softDropHeld && this.settings.sdf >= 41) this.game.softDropToFloor();
+          this.slideToWall(dir);
         } else {
-          this.arrAccum += dt;
-          while (this.arrAccum >= this.settings.arrMs) {
-            this.arrAccum -= this.settings.arrMs;
+          // credit only the time spent past DAS (partial on the frame DAS
+          // completes, full dt afterwards) so the repeat rate stays exact
+          this.arrTimer += Math.min(dt, this.dasTimer - this.settings.dasMs);
+          while (this.arrTimer >= this.settings.arrMs) {
+            this.arrTimer -= this.settings.arrMs;
             this.step(dir);
           }
         }

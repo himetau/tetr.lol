@@ -31,6 +31,29 @@ that runs the built app via the system electron package.
   with engine grading biased toward the canonical LST structure (spin column
   stays column 3, plugging it is flagged as a loop killer). `R` rerolls.
   Tip: hold T when it comes early. Add `?seed=N` to the URL to pin a bag.
+- **4-wide drill** — center 4-wide combo practice: the well sits on columns
+  4–7 between "infinite" wall columns (they top themselves back up after
+  every clear), starting from a random book residual. Every placement is
+  graded against the 4-wide combo book: the 28 canonical 3-residual states
+  (the set DDRKirby's 4-wide trainer enumerates) with every continuation
+  re-derived by this engine's own SRS+ move generator
+  (`tools/gen-fourwide-db.ts` → 144 continuations). Advice is hold-aware
+  (parking a dead piece in an empty hold is a free non-lock) and
+  **bag-aware**: it works out the exact undealt remainder of the current
+  7-bag past your preview (`bagRemainder` — derivable from piece count and
+  queue) and ranks moves not just by whether they survive the visible queue
+  but by `guaranteedDepth`, a worst-case DP over every bag order that says
+  how many more pieces the combo is guaranteed to survive from each landing
+  state (a bag-exact version of DDRKirby's genericScore tie-break). Two
+  lines that both reach the preview horizon are separated by which one is
+  more bag-proof — this roughly triples sustained combo length over a plain
+  horizon score. A toast warns when the queue provably cannot reach the
+  horizon. Breaking the combo when a continuation existed is a **Combo
+  breaker**; after a break, recovery clears are graded too (landing back on
+  a canonical residual is Best). Combo counter sits on the board's left
+  edge. (Note: zero-lookahead center 4-wide is not truly infinite — an
+  adversarial bag always ends it eventually — so `guaranteedDepth` is a
+  ranking signal, not a promise of immortality.)
 - **Freeplay** — empty board, generic engine grading.
 - **Quick play** — a single-player simulator of TETR.IO QUICK PLAY (Zenith
   Tower): pick a starting floor (0–1650m). Base mode uses the standard
@@ -45,8 +68,8 @@ that runs the built app via the system electron package.
   PLAY records from the TETRA CHANNEL API (tools/calibrate-zenith.mjs;
   ≈5 lines/min on F1 up to ≈70 on F10 at normal pressure). No grading —
   this mode is for feeling out the speed.
-- **Patterns** — the full four.lol diagram library, rendered in-app; click a
-  card to open it in the fumen viewer.
+- **Patterns** — the full four.lol diagram library (LST, TKI and 4-wide
+  pages), rendered in-app; click a card to open it in the fumen viewer.
 
 The **paths panel** is docked on the right side of the drill: after every
 placement it shows your grade, the reasons, and the ranked alternatives —
@@ -100,7 +123,7 @@ src/core/     pure game logic (bitboard, SRS+ w/ 180, 7-bag, handling, spins)
 src/engine/   analysis (enumerate, eval, beam search, grading, opener book)
 src/data/     generated knowledge base from four.lol page data
 src/ui/       vanilla-TS views, canvas renderer, worker client
-tools/        gen-lst-db.ts + four.lol page-data snapshots
+tools/        gen scripts (gen-lst-db, gen-lst-cover, gen-fourwide-db) + data snapshots
 ```
 
 Planned next: more openers (DT cannon), deeper neural evaluator (bigger

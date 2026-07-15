@@ -2789,5 +2789,450 @@
         }
       ]
     }
+  ],
+  "fourwide": [
+    {
+      "heading": "Intro",
+      "patterns": [
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXII__XXX",
+                "XXXI___XXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8JeAgHNhwwHexwIewwMeAAAjfC8DeC8pfAPIeAPMeAAA",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXII__XXX",
+                "XXXI___XXX"
+              ]
+            },
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX___TXXX",
+                "XXXIITTXXX",
+                "XXXI__TXXX"
+              ]
+            },
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX___IXXX",
+                "XXXI__IXXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@zgC8DeF8DeF8DeH8RpG8AeRpC8JeAgHzgC8CeD8FeA8FeA8BeA8FeA8ywGeA8glwwMeAAAzgC8CeI8whD8CeB8whGeB8whHeA8whNeAAA",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXXOOXXX",
+                "XXXX_OOXXX"
+              ]
+            },
+            {
+              "rows": [
+                "XXX___XXXX",
+                "XXX___XXXX",
+                "XXXX__XXXX",
+                "XXXXTTTXXX",
+                "XXXXXTXXXX"
+              ]
+            },
+            {
+              "rows": [
+                "XXX___XXXX",
+                "XXXXXIXXXX",
+                "XXXXXIXXXX",
+                "XXXXXIXXXX",
+                "XXXXXIXXXX"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Center 4-Wide",
+      "patterns": [
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeH8BeG8CeC8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXX__XXX",
+                "XXXX___XXX"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Opening Bag",
+      "patterns": [
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeD8wwA8DeC8whxwDeC8whwwAtDeC8whBtR4BeC8whAtR4CeC8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XTX____XXX",
+                "ITT____XXX",
+                "ITZ____XXX",
+                "IZZSS__XXX",
+                "IZSS___XXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeE8whDeE8whDeD8AtwhDeC8BtwhDeC8AtR4wwCeC8R4ywBeC8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXI____XXX",
+                "XXI____XXX",
+                "XZI____XXX",
+                "ZZI____XXX",
+                "ZSST___XXX",
+                "SSTTT__XXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@jfC8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeilC8DeglRpE8Beg0RpD8Cei0JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____LLL",
+                "XXX____LOO",
+                "XXXXX__JOO",
+                "XXXX___JJJ"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Subsequent Bags",
+      "patterns": [
+        {
+          "fumen": "v115@jfC8DeC8whB8DeilwhA8AtDeglRpwhBtDeg0RpwhAtwwDei0whxwDeilwhQ4wwDeglRpwhR4Deg0RpwhwwQ4Dei0whxwDeilwhwwAtDeglRpwhBtB8Beg0RpwhAtB8Cei0JeAgHtfQ4AewDGeg0AewSGeg0QpwSGeAtQpAPGeAtAeAPGeAtwSAPGeQpwSgHGeQpAegH4eAAA",
+          "pages": [
+            {
+              "rows": [
+                "XXX____XXX",
+                "IXX____LLL",
+                "IXZ____LOO",
+                "IZZ____JOO",
+                "IZT____JJJ",
+                "ITT____LLL",
+                "IST____LOO",
+                "ISS____JOO",
+                "ITS____JJJ",
+                "ITT____LLL",
+                "ITZ____LOO",
+                "IZZXX__JOO",
+                "IZXX___JJJ"
+              ]
+            },
+            {
+              "rows": [
+                "XXX____XXX",
+                "XXI____LLL",
+                "SXI____LOO",
+                "SSI____JOO",
+                "TSI____JJJ",
+                "TTI____LLL",
+                "TZI____LOO",
+                "ZZI____JOO",
+                "ZTI____JJJ",
+                "ITT____LLL",
+                "ITZ____LOO",
+                "IZZXX__JOO",
+                "IZXX___JJJ"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@mgwhBeC8DeyhC8DeF8DeF8DeH8BeG8CeC8JeAgHmgQaAewhFfAAAngwhGfAAA",
+          "pages": [
+            {
+              "rows": [
+                "_______I__",
+                "XXX____III",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXX__XXX",
+                "XXXX___XXX"
+              ]
+            },
+            {
+              "rows": [
+                "_________I",
+                "XXX____III",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXX__XXX",
+                "XXXX___XXX"
+              ]
+            },
+            {
+              "rows": [
+                "________II",
+                "XXX____III",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXX__XXX",
+                "XXXX___XXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@dgxhHexhC8DeF8DeF8DeF8DeH8BeG8CeC8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "________II",
+                "________II",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXX____XXX",
+                "XXXXX__XXX",
+                "XXXX___XXX"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Side 4-Wide",
+      "patterns": [
+        {
+          "fumen": "v115@nfF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8AeI8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "_XXXXXXXXX"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Opening",
+      "patterns": [
+        {
+          "fumen": "v115@nfF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8DeF8AezhE8JeAgH",
+          "pages": [
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "_IIIIXXXXX"
+              ]
+            }
+          ]
+        },
+        {
+          "fumen": "v115@hghlDeR4CeglBtAeR4whh0AeglA8BtRpwhg0BeD8Rpwhg0ywE8whB8wwI8AeG8JeAgH7fF8DeF8DeF8DeF8DeF8DeF8Beh0D8xhCeg0BtA8xhQ4hlwwg0AeBtxwQ4glxwDexwQ4BewwQeAAA7fF8DeF8DeF8ZfAAA",
+          "pages": [
+            {
+              "rows": [
+                "__LL____SS",
+                "___LZZ_SSI",
+                "JJ_LXZZOOI",
+                "J__XXXXOOI",
+                "JTTTXXXXXI",
+                "XXTXXXXXXX",
+                "XX_XXXXXXX"
+              ]
+            },
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "__XXXXXXXX",
+                "___XXXXXXX",
+                "XXTXXXXXXX",
+                "XTTXXXXXXX",
+                "XXTXXXXXXX"
+              ]
+            },
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "____XXXXXX",
+                "__XXXXXXXX",
+                "___XXXXXXX"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Mid-Game",
+      "patterns": [
+        {
+          "fumen": "v115@LhF8DeF8AeI8JeAgHbhA8AAReAAAThB8FeAAAeAAQeAAA",
+          "pages": [
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "_XXXXXXXXX"
+              ]
+            },
+            {
+              "rows": [
+                "____XXXXXX",
+                "____XXXXXX",
+                "X_XXXXXXXX"
+              ]
+            },
+            {
+              "rows": [
+                "____XXXXXX",
+                "__XXXXXXXX",
+                "___XXXXXXX"
+              ]
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

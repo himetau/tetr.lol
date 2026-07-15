@@ -6,10 +6,11 @@ import { patternsView } from './patterns-view';
 import { statsView } from './stats-view';
 import type { Mode } from './stats';
 
-type ViewName = 'lst' | 'free' | 'quick' | 'patterns' | 'stats' | 'settings';
+type ViewName = 'lst' | 'fourwide' | 'free' | 'quick' | 'patterns' | 'stats' | 'settings';
 
 const NAV: { name: ViewName; label: string; ico: string }[] = [
   { name: 'lst', label: 'LST drill', ico: '◆' },
+  { name: 'fourwide', label: '4-wide drill', ico: '▯' },
   { name: 'free', label: 'Freeplay', ico: '●' },
   { name: 'quick', label: 'Quick play', ico: '▲' },
   { name: 'patterns', label: 'Patterns', ico: '▦' },
@@ -42,7 +43,7 @@ export function startApp(root: HTMLElement): void {
     activeBtn = buttons.get(name) ?? null;
     activeBtn?.classList.add('active');
 
-    if (name === 'lst' || name === 'free') {
+    if (name === 'lst' || name === 'fourwide' || name === 'free') {
       currentGame = new GameView(name as Mode);
       viewEl.appendChild(currentGame.root);
     } else if (name === 'quick') {
