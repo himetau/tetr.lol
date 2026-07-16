@@ -1,6 +1,6 @@
 import type { Grade } from '../engine/grade';
 
-export type Mode = 'lst' | 'fourwide' | 'free' | 'quick';
+export type Mode = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin';
 
 export interface ModeStats {
   pieces: number;
@@ -45,7 +45,7 @@ export function loadStats(): AllStats {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as AllStats & { modes: { tki?: ModeStats } };
-      for (const m of ['lst', 'fourwide', 'free', 'quick'] as Mode[]) {
+      for (const m of ['lst', 'fourwide', 'free', 'quick', 'allspin'] as Mode[]) {
         parsed.modes[m] = { ...emptyMode(), ...parsed.modes[m], grades: { ...emptyGrades(), ...parsed.modes[m]?.grades } };
       }
       parsed.sessions ??= [];
@@ -65,7 +65,7 @@ export function loadStats(): AllStats {
       return parsed;
     }
   } catch { /* fall through */ }
-  return { modes: { lst: emptyMode(), fourwide: emptyMode(), free: emptyMode(), quick: emptyMode() }, sessions: [] };
+  return { modes: { lst: emptyMode(), fourwide: emptyMode(), free: emptyMode(), quick: emptyMode(), allspin: emptyMode() }, sessions: [] };
 }
 
 export const stats = loadStats();

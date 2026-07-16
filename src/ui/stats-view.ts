@@ -10,9 +10,10 @@ const MODE_LABEL: Record<Mode, string> = {
   fourwide: '4-wide drill (combo book)',
   free: 'Freeplay',
   quick: 'Quick play',
+  allspin: 'All-Spin trainer',
 };
 
-const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: 'Freeplay', quick: 'Quick play' };
+const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: 'Freeplay', quick: 'Quick play', allspin: 'All-Spin' };
 
 // validated against the app card surfaces (light #faf8f2 / dark #30302e):
 // all checks pass incl. CVD separation and 3:1 contrast
@@ -21,6 +22,7 @@ const SERIES_VAR: Record<Mode, string> = {
   fourwide: 'var(--series-fourwide)',
   free: 'var(--series-free)',
   quick: 'var(--series-lst)',
+  allspin: 'var(--series-fourwide)',
 };
 
 const TREND_WINDOW = 40;

@@ -13,12 +13,15 @@ import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile, renderMiniBoard } from './board-canvas';
 import { settings, onSettingsChange } from './settings';
 import { EngineClient } from './engine-client';
+import { ColdClearClient, type CC2Move } from './cc2-client';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
 import { matchOpener, type OpenerPlacement } from '../engine/opener';
 import { buildFourwideStart, refillWalls } from '../engine/fourwide';
+import { genAllspin } from '../engine/allspin-gen';
 import { mistakeSound, actionSound, clearSound, b2bBreakSound, topoutSound } from './sound';
 import { stats, saveStats, accuracy, emptyGrades, recordSession, type Mode } from './stats';
-import { PIECE_COLORS } from '../core/pieces';
+import { PIECE_COLORS, type PieceType } from '../core/pieces';
+import type { SpinKind } from '../core/spin';
 
 const GRADE_LABEL: Record<Grade, string> = {
   best: '★ Best',
@@ -42,6 +45,10 @@ export class GameView {
   private input: InputHandler;
   private renderer: FieldRenderer;
   private engine = new EngineClient();
+  /** Cold Clear 2 (all-spin patched) — real bot analysis for the all-spin mode */
+  private cc2: ColdClearClient | null = null;
+  private cc2Query = 0;
+  private botMoving = false; // suppress grading while the bot plays its own move
   private rafId = 0;
   private mode: Mode;
   private openerPhase = false;
@@ -57,6 +64,7 @@ export class GameView {
   private fieldPanel!: HTMLElement;
   private b2bTag!: HTMLElement;
   private b2b = 0;
+  private maxB2b = 0;
   private holdBox!: HTMLElement;
   private queueBox!: HTMLElement;
   private statStrip!: HTMLElement;
@@ -113,6 +121,7 @@ export class GameView {
     cancelAnimationFrame(this.rafId);
     clearTimeout(this.retryTimer);
     this.unsubSettings();
+    this.cc2?.destroy();
     document.removeEventListener('keydown', this.keydown);
     document.removeEventListener('keyup', this.keyup);
   }
@@ -154,6 +163,9 @@ export class GameView {
       btn('Retry (R)', () => this.resetDrill()),
       btn('Undo (Ctrl+Z)', () => this.undo()),
     );
+    if (this.mode === 'allspin') {
+      controls.append(btn('▶ Watch bot (B)', () => void this.botPlay()));
+    }
     left.appendChild(controls);
 
     this.fieldPanel = document.createElement('div');
@@ -213,17 +225,34 @@ export class GameView {
   private resetDrill(): void {
     this.engine.cancel();
     this.flushSession();
-    // ?seed=N pins the bag order (practice/testing)
+    // ?seed=N pins the bag order (practice/testing); all-spin picks a fresh
+    // random board each drill unless a seed is pinned
     const seedParam = new URLSearchParams(location.search).get('seed');
-    const seed = seedParam ? Number(seedParam) : undefined;
-    this.game.reset(this.mode === 'fourwide' ? buildFourwideStart(seed).board : undefined, seed);
+    const seed = seedParam ? Number(seedParam) : this.mode === 'allspin' ? (Math.random() * 2 ** 31) | 0 : undefined;
+    if (this.mode === 'fourwide') {
+      this.game.reset(buildFourwideStart(seed).board, seed);
+    } else if (this.mode === 'allspin') {
+      const setup = genAllspin(seed ?? 1, ((seed ?? 1) & 1) === 1);
+      this.game.reset(setup.board, seed, [setup.spinPiece]);
+    } else {
+      this.game.reset(undefined, seed);
+    }
     this.openerPhase = this.mode === 'lst';
     this.combo = 0;
     this.maxCombo = 0;
     this.comboHistory = [];
     this.session = { pieces: 0, tsds: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now() };
     this.b2b = 0;
+    this.maxB2b = 0;
     this.b2bTag.textContent = '';
+    // all-spin is a keep-the-chain drill: start mid-B2B so every clear must be
+    // a spin/quad, and warm the Cold Clear worker so the first grade is quick
+    if (this.mode === 'allspin') {
+      this.b2b = 1;
+      this.maxB2b = 1;
+      this.b2bTag.textContent = 'B2B ×1';
+      if (!this.cc2) this.cc2 = new ColdClearClient();
+    }
     this.openerHistory = [];
     stats.modes[this.mode].drills++;
     saveStats();
@@ -271,6 +300,11 @@ export class GameView {
     const b: Keybinds = this.input.binds;
     const has = (codes: string[]) => codes.includes(desc);
 
+    if (this.mode === 'allspin' && e.code === 'KeyB' && desc === e.code) {
+      e.preventDefault();
+      void this.botPlay();
+      return;
+    }
     if (has(b.undo)) {
       e.preventDefault();
       this.undo();
@@ -304,6 +338,7 @@ export class GameView {
 
   private onLock(ev: LockEvent): void {
     this.comboHistory.push(this.combo);
+    const b2bBefore = this.b2b; // chain state going into this placement
     if (this.mode === 'fourwide') {
       // combo = consecutive clearing locks; the wall columns are infinite
       this.combo = ev.linesCleared > 0 ? this.combo + 1 : 0;
@@ -324,6 +359,7 @@ export class GameView {
     if (ev.linesCleared > 0) {
       if (ev.spin !== 'none' || ev.linesCleared === 4) {
         this.b2b++;
+        this.maxB2b = Math.max(this.maxB2b, this.b2b);
       } else {
         if (this.b2b > 0 && settings.soundFx) b2bBreakSound();
         this.b2b = 0;
@@ -334,10 +370,10 @@ export class GameView {
     this.lastLock = ev;
     this.session.pieces++;
     stats.modes[this.mode].pieces++;
-    if (ev.spin === 'full' && ev.linesCleared >= 2) {
+    if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
       this.session.tsds++;
       stats.modes[this.mode].tsds++;
-    } else if (ev.spin === 'full' && ev.linesCleared === 1) {
+    } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
       stats.modes[this.mode].tsses++;
     }
     saveStats();
@@ -371,9 +407,20 @@ export class GameView {
       return;
     }
 
-    this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
+    if (this.mode === 'allspin') {
+      if (this.botMoving) this.botMoveFeedback(ev);
+      else void this.gradeAllspin(ev, b2bBefore);
+    } else {
+      this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
+    }
     this.handleTopOut();
     this.refreshAll();
+    // all-spin: a cleared board earns a fresh random setup
+    if (this.mode === 'allspin' && ev.boardAfter.isEmpty() && !this.game.topOut) {
+      this.showToast('Board cleared — new setup');
+      clearTimeout(this.retryTimer);
+      this.retryTimer = window.setTimeout(() => this.resetDrill(), 700);
+    }
   }
 
   private handleTopOut(): void {
@@ -415,7 +462,10 @@ export class GameView {
     if (fl === 'mistakes' && !isBad) return;
 
     let label = this.gradeLabel(grade);
-    if (this.lastLock?.spin === 'full' && this.lastLock.linesCleared >= 2) label = `TSD · ${label}`;
+    if (this.mode !== 'allspin' && this.lastLock?.spin === 'full' && this.lastLock.linesCleared >= 2) label = `TSD · ${label}`;
+    else if (this.mode === 'allspin' && this.lastLock && this.lastLock.spin !== 'none' && this.lastLock.linesCleared > 0) {
+      label = `${this.lastLock.piece}-spin · ${label}`;
+    }
     if (r.book?.userMatched) label = `Book · ${r.book.solutions[0] ?? 'LST'}`;
     this.showChip(grade, label + (isBad ? openerNote : ''));
 
@@ -443,6 +493,7 @@ export class GameView {
   /** grade chip label, with mode-appropriate wording for the worst grade */
   private gradeLabel(g: Grade): string {
     if (g === 'killer' && this.mode === 'fourwide') return 'Combo breaker';
+    if (g === 'killer' && this.mode === 'allspin') return 'Blunder';
     return GRADE_LABEL[g];
   }
 
@@ -484,8 +535,10 @@ export class GameView {
       card.appendChild(renderMiniBoard(before, alt.cells, alt.piece, boardH, 11));
       const meta = document.createElement('div');
       meta.className = 'meta';
-      const tag = alt.spin === 'full' ? (alt.linesCleared >= 2 ? 'TSD' : alt.linesCleared === 1 ? 'TSS' : 'spin') :
-        alt.linesCleared > 0 ? `${alt.linesCleared} line${alt.linesCleared > 1 ? 's' : ''}` : '';
+      const tag = this.mode === 'allspin'
+        ? (alt.spin !== 'none' ? `spin ×${alt.linesCleared}` : alt.linesCleared === 4 ? 'quad' : alt.linesCleared > 0 ? `${alt.linesCleared} line${alt.linesCleared > 1 ? 's' : ''} · breaks B2B` : '')
+        : alt.spin === 'full' ? (alt.linesCleared >= 2 ? 'TSD' : alt.linesCleared === 1 ? 'TSS' : 'spin') :
+          alt.linesCleared > 0 ? `${alt.linesCleared} line${alt.linesCleared > 1 ? 's' : ''}` : '';
       meta.innerHTML = `<b style="color:${PIECE_COLORS[alt.piece]}">#${i + 1} ${alt.piece}${alt.usesHold ? ' (hold)' : ''}</b>` +
         `<span>${[alt.isBook ? 'book' : '', tag, alt.isUser ? 'yours' : ''].filter(Boolean).join(' · ')}</span>`;
       card.appendChild(meta);
@@ -499,6 +552,143 @@ export class GameView {
       });
       this.pathsBody.appendChild(card);
     });
+  }
+
+  // ---- all-spin: Cold Clear 2 (real bot) grading ----
+
+  /** Let Cold Clear play its own best move on the current board (watch it). */
+  private async botPlay(): Promise<void> {
+    if (this.mode !== 'allspin' || this.paused || !this.game.active) return;
+    if (!this.cc2) this.cc2 = new ColdClearClient();
+    const q = ++this.cc2Query;
+    const moves = await this.cc2.analyze(
+      Array.from(this.game.board.rows),
+      [this.game.active.type, ...this.game.preview()],
+      this.game.hold,
+      this.b2b > 0,
+      0,
+    );
+    if (q !== this.cc2Query || this.mode !== 'allspin' || !this.game.active) return;
+    const best = moves[0];
+    if (!best) return;
+    const spin: SpinKind = best.spin === 'f' ? 'full' : best.spin === 'm' ? 'mini' : 'none';
+    this.botMoving = true;
+    const ev = this.game.applyMove(best.piece as PieceType, pairsOf(best.cells), spin);
+    this.botMoving = false;
+    if (!ev) this.showToast('Bot could not reproduce that placement');
+    else this.handleTopOut();
+    this.refreshAll();
+  }
+
+  private botMoveFeedback(ev: LockEvent): void {
+    const tag = ev.spin !== 'none' && ev.linesCleared > 0 ? `${ev.piece}-spin ×${ev.linesCleared}`
+      : ev.linesCleared === 4 ? 'quad'
+      : ev.linesCleared > 0 ? `${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''}` : 'build';
+    this.showChip('best', `Cold Clear · ${tag}`);
+    this.dockNote(`Cold Clear played ${ev.piece}${ev.usedHold ? ' (hold)' : ''} — ${tag}`);
+  }
+
+  private async gradeAllspin(ev: LockEvent, b2bBefore: number): Promise<void> {
+    if (!this.cc2) this.cc2 = new ColdClearClient();
+    const q = ++this.cc2Query;
+    const moves = await this.cc2.analyze(
+      Array.from(ev.boardBefore.rows),
+      ev.queueBefore,
+      ev.holdBefore,
+      b2bBefore > 0,
+      0,
+    );
+    // a newer lock / undo / reset superseded this query
+    if (q !== this.cc2Query || this.lastLock !== ev) return;
+    const best = moves[0] ?? null;
+
+    const playerKeptB2b = ev.spin !== 'none' || ev.linesCleared === 4 || ev.linesCleared === 0;
+    const botKeptB2b = !best || best.spin !== 'n' || best.lines === 4 || best.lines === 0;
+    // where does the player's move rank in Cold Clear's ordered candidates?
+    const rank = moves.findIndex((m) => sameCells(ev.cells, pairsOf(m.cells)));
+
+    let grade: Grade;
+    const reasons: string[] = [];
+    if (!playerKeptB2b && botKeptB2b) {
+      grade = 'mistake';
+      reasons.push(`Broke back-to-back — cleared ${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''} without a spin`);
+    } else if (!playerKeptB2b) {
+      grade = 'good'; // the chain was unavoidably lost — even the bot breaks it
+    } else if (rank === 0) {
+      grade = 'best';
+    } else if (rank >= 1 && rank <= 3) {
+      grade = 'good';
+    } else if (rank >= 4) {
+      grade = 'inaccuracy'; // kept B2B but Cold Clear had clearly better lines
+    } else {
+      grade = 'mistake'; // not even among Cold Clear's top candidates
+    }
+    if (rank >= 1) reasons.push(`Your move was Cold Clear's #${rank + 1} choice`);
+    else if (rank < 0) reasons.push(`Your move was outside Cold Clear's top ${moves.length} lines`);
+    if (best && grade !== 'best') reasons.push(`Cold Clear: ${describeMove(best)}`);
+
+    this.recordGrade(grade);
+    this.renderAllspinDock(ev, moves, grade, reasons);
+
+    const fl = settings.feedbackLevel;
+    const isBad = grade === 'inaccuracy' || grade === 'mistake';
+    if ((fl === 'off' || fl === 'mistakes') && !isBad) return;
+
+    let label = this.gradeLabel(grade);
+    if (ev.spin !== 'none' && ev.linesCleared > 0) label = `${ev.piece}-spin · ${label}`;
+    this.showChip(grade, label);
+    if (isBad && reasons.length) this.showToast(reasons[0]);
+    // a broken chain is the sharp cue — flash / stop only for real mistakes
+    if (grade === 'mistake') {
+      this.fieldPanel.classList.remove('flash-bad');
+      void this.fieldPanel.offsetWidth; // restart animation
+      this.fieldPanel.classList.add('flash-bad');
+      if (settings.soundOnMistake) mistakeSound();
+      if (settings.stopOnMistake) {
+        this.paused = true;
+        this.input.enabled = false;
+        this.showToast(`${reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo`);
+      }
+    } else if (!isBad && best && reasons.length) {
+      this.showToast(reasons[0]); // show Cold Clear's line even on a fine move
+    }
+  }
+
+  private renderAllspinDock(ev: LockEvent, moves: CC2Move[], grade: Grade, reasons: string[]): void {
+    const before = ev.boardBefore;
+    this.pathsBody.replaceChildren();
+    const head = document.createElement('div');
+    head.className = `dock-grade ${GRADE_CLASS[grade]}`;
+    head.textContent = `${this.gradeLabel(grade)} · Cold Clear 2`;
+    this.pathsBody.appendChild(head);
+    for (const reason of reasons) {
+      const li = document.createElement('div');
+      li.className = 'dock-reason';
+      li.textContent = reason;
+      this.pathsBody.appendChild(li);
+    }
+    const boardH = Math.max(6, Math.min(12, before.maxHeight() + 4));
+    const addCard = (cells: [number, number][], piece: PieceType, top: string, bot: string, cls: string) => {
+      const card = document.createElement('div');
+      card.className = 'alt-card dock-card' + cls;
+      card.appendChild(renderMiniBoard(before, cells, piece, boardH, 11));
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = `<b style="color:${PIECE_COLORS[piece]}">${top}</b><span>${bot}</span>`;
+      card.appendChild(meta);
+      card.addEventListener('mouseenter', () => { this.preview = { board: before, cells }; card.classList.add('selected'); });
+      card.addEventListener('mouseleave', () => { this.preview = null; card.classList.remove('selected'); });
+      this.pathsBody.appendChild(card);
+    };
+    // Cold Clear's ranked options — an "easy" (hard-drop) tag on each move that
+    // needs no tuck, so you can pick a low-effort line that still keeps B2B
+    moves.slice(0, 6).forEach((m, i) => {
+      const ease = m.soft ? 'tuck' : 'easy';
+      addCard(pairsOf(m.cells), m.piece as PieceType, `#${i + 1} ${m.piece}${m.usesHold ? ' (hold)' : ''} · ${ease}`, describeMove(m), i === 0 ? ' is-book' : '');
+    });
+    const yourTag = ev.spin !== 'none' && ev.linesCleared > 0 ? `spin ×${ev.linesCleared}`
+      : ev.linesCleared > 0 ? `${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''}` : 'no clear';
+    addCard(ev.cells.map(([a, b]) => [a, b] as [number, number]), ev.piece, `Yours · ${ev.piece}`, yourTag, ' was-yours');
   }
 
   // ---- feedback chrome ----
@@ -550,6 +740,16 @@ export class GameView {
         `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
       return;
     }
+    if (this.mode === 'allspin') {
+      this.statStrip.innerHTML =
+        `phase <b>all-spin B2B</b><br>` +
+        `pieces <b>${this.session.pieces}</b><br>` +
+        `B2B <b>${this.b2b}</b><br>` +
+        `best B2B <b>${this.maxB2b}</b><br>` +
+        `mistakes <b>${this.session.mistakes}</b><br>` +
+        `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
+      return;
+    }
     const phase = this.mode === 'lst' ? (this.openerPhase ? 'TKI opener' : 'LST loop') : 'freeplay';
     this.statStrip.innerHTML =
       `phase <b>${phase}</b><br>` +
@@ -571,6 +771,32 @@ export class GameView {
       this.renderer.render(this.game);
     }
   }
+}
+
+/** flat [x0,y0,x1,y1,...] → [[x,y],...] */
+function pairsOf(flat: number[]): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; i + 1 < flat.length; i += 2) out.push([flat[i], flat[i + 1]]);
+  return out;
+}
+
+function sameCells(a: readonly (readonly [number, number])[], b: readonly (readonly [number, number])[]): boolean {
+  if (a.length !== b.length) return false;
+  const key = (c: readonly [number, number]) => c[0] * 64 + c[1];
+  const sa = a.map(key).sort((x, y) => x - y);
+  const sb = b.map(key).sort((x, y) => x - y);
+  return sa.every((v, i) => v === sb[i]);
+}
+
+/** "T (hold) on cols 4–6 spin — clears 2" */
+function describeMove(m: CC2Move): string {
+  const xs = m.cells.filter((_, i) => i % 2 === 0);
+  const lo = Math.min(...xs) + 1;
+  const hi = Math.max(...xs) + 1;
+  const cols = lo === hi ? `col ${lo}` : `cols ${lo}–${hi}`;
+  const spin = m.spin === 'f' ? ` ${m.lines >= 2 ? `${m.lines}-line ` : ''}spin` : m.spin === 'm' ? ' mini-spin' : m.lines === 4 ? ' quad' : '';
+  const act = m.lines > 0 ? ` — clears ${m.lines}` : ' — build';
+  return `${m.piece}${m.usesHold ? ' (hold)' : ''} on ${cols}${spin}${act}`;
 }
 
 function panel(label: string): HTMLElement {

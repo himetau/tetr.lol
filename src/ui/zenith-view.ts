@@ -9,7 +9,7 @@ import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
-import { lockSound, clearSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, topoutSound } from './sound';
+import { lockSound, clearSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, topoutSound, spinSound, comboBreakSound, goSound, damageAlertSound } from './sound';
 import { stats, saveStats, recordSession } from './stats';
 
 export class ZenithView {
@@ -57,7 +57,11 @@ export class ZenithView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.input.onAction = (a) => {
-      if (a === 'hold') this.resetLockdown();
+      if (a === 'hold') {
+        this.resetLockdown();
+        // the hold/next panes swap the instant you hold, like tetr.io
+        this.refreshPanes();
+      }
       if (settings.soundFx && this.run) actionSound(a);
     };
     // lock-delay resets come from *successful* moves only (guideline EPLD)
@@ -256,6 +260,7 @@ export class ZenithView {
     this.input.enabled = true;
     stats.modes.quick.drills++;
     saveStats();
+    if (settings.soundFx) goSound();
     this.refreshPanes();
     this.updateHud();
   }
@@ -303,15 +308,18 @@ export class ZenithView {
     const r = this.run;
     this.pieces++;
     stats.modes.quick.pieces++;
-    if (ev.spin === 'full' && ev.linesCleared >= 2) {
+    // tsd/tss stats are T-spins specifically, not the new all-spins
+    if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
       this.tsds++;
       stats.modes.quick.tsds++;
-    } else if (ev.spin === 'full' && ev.linesCleared === 1) {
+    } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
       stats.modes.quick.tsses++;
     }
     saveStats();
     this.gravAcc = 0;
     this.resetLockdown();
+    // a spin that didn't clear (a setup) still gets its own cue
+    if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
 
     if (r) {
       if (ev.linesCleared > 0) {
@@ -324,6 +332,8 @@ export class ZenithView {
         if (out.surged > 0) this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
         else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
+        // combo (>=2 consecutive clears) just ended without a clear
+        if (settings.soundFx && r.combo >= 1) comboBreakSound();
         r.onLockNoClear();
         // garbage rises while you are not clearing (cancelable until here)
         const rows = r.riseGarbage(8);
@@ -400,9 +410,13 @@ export class ZenithView {
     if (r && !this.game.topOut) {
       this.input.update(t);
       r.tick(dt);
-      // telegraph sound when new garbage gets queued against you
+      // telegraph sound when new garbage gets queued against you, plus a
+      // danger klaxon once a big wave (8+) is stacked up and still growing
       const inc = r.incomingLines();
-      if (inc > this.lastIncoming && settings.soundFx) garbageQueuedSound(inc - this.lastIncoming);
+      if (inc > this.lastIncoming && settings.soundFx) {
+        garbageQueuedSound(inc - this.lastIncoming);
+        if (inc >= 8 && this.lastIncoming < 8) damageAlertSound();
+      }
       this.lastIncoming = inc;
       this.applyGravity(dt);
       this.updateHud();

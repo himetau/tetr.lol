@@ -189,7 +189,47 @@ export class Game {
     return this.lock();
   }
 
-  private lock(): LockEvent | null {
+  /** Place the active piece exactly at `cells`, performing a hold first if the
+   * piece isn't in hand. Locks with the given spin kind (a trusted external
+   * verdict, e.g. from Cold Clear) rather than re-detecting it. For "watch the
+   * bot" playback. */
+  applyMove(piece: PieceType, cells: [number, number][], spin: SpinKind): LockEvent | null {
+    let a = this.active;
+    if (!a) return null;
+    if (a.type !== piece) {
+      if (!this.canHold || !this.holdPiece()) return null;
+      a = this.active;
+      if (!a || a.type !== piece) return null;
+    }
+    if (!this.placeActiveAt(cells)) return null;
+    return this.lock(spin);
+  }
+
+  /** Orient/position the active piece so its cells match `cells` exactly. */
+  private placeActiveAt(cells: [number, number][]): boolean {
+    const a = this.active;
+    if (!a) return false;
+    const want = cells.map(([x, y]) => x * 64 + y).sort((p, q) => p - q);
+    for (let rot = 0 as Rot; rot < 4; rot = (rot + 1) as Rot) {
+      const base = cellsAt(a.type, rot, 0, 0);
+      for (const [tx, ty] of cells) {
+        for (const [bx, by] of base) {
+          const ox = tx - bx;
+          const oy = ty - by;
+          const got = cellsAt(a.type, rot, ox, oy).map(([x, y]) => x * 64 + y).sort((p, q) => p - q);
+          if (got.length === want.length && got.every((v, i) => v === want[i])) {
+            a.rot = rot;
+            a.x = ox;
+            a.y = oy;
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private lock(spinOverride?: SpinKind): LockEvent | null {
     const a = this.active;
     const snap = this.current;
     if (!a || !snap) return null;
@@ -197,7 +237,7 @@ export class Game {
 
     const boardBefore = this.board.clone();
     const cells = cellsAt(a.type, a.rot, a.x, a.y);
-    const spin = detectSpin(this.board, a.type, a.rot, a.x, a.y, this.lastMoveWasRotation, this.lastKickIndex);
+    const spin = spinOverride ?? detectSpin(this.board, a.type, a.rot, a.x, a.y, this.lastMoveWasRotation, this.lastKickIndex);
     this.board.place(cells);
     for (const [cx, cy] of cells) {
       if (cy >= 0 && cy < BOARD_H) this.colors[cy][cx] = a.type;

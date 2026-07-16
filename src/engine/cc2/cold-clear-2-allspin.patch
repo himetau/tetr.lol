@@ -1,0 +1,202 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index c8f8a39..2b7eab0 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -31,6 +31,11 @@ serde_json = "1.0.64"
+ [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ structopt = "0.3.25"
+ 
++[target.'cfg(target_arch = "wasm32")'.dependencies]
++wasm-bindgen = "0.2"
++getrandom = { version = "0.2", features = ["js"] }
++instant = { version = "0.1", features = ["wasm-bindgen"] }
++
+ [features]
+ 
+ [dev-dependencies]
+diff --git a/src/api.rs b/src/api.rs
+new file mode 100644
+index 0000000..fcc87b6
+--- /dev/null
++++ b/src/api.rs
+@@ -0,0 +1,98 @@
++// wasm-bindgen wrapper: drive the Cold Clear 2 bot single-threaded from JS.
++// Bypasses the threaded BotSyncronizer/TBP harness — we build one bot per
++// query, think for a fixed number of work units, and read back the best move.
++
++use std::sync::Arc;
++
++use enumset::EnumSet;
++use wasm_bindgen::prelude::*;
++
++use crate::bot::{Bot, BotConfig, BotOptions};
++use crate::data::{Board, GameState, Piece, Placement};
++
++fn to_piece(c: char) -> Option<Piece> {
++    Some(match c {
++        'I' => Piece::I, 'O' => Piece::O, 'T' => Piece::T,
++        'L' => Piece::L, 'J' => Piece::J, 'S' => Piece::S, 'Z' => Piece::Z,
++        _ => return None,
++    })
++}
++fn piece_char(p: Piece) -> char {
++    match p { Piece::I=>'I', Piece::O=>'O', Piece::T=>'T', Piece::L=>'L', Piece::J=>'J', Piece::S=>'S', Piece::Z=>'Z' }
++}
++fn spin_char(s: crate::data::Spin) -> char {
++    match s { crate::data::Spin::None=>'n', crate::data::Spin::Mini=>'m', crate::data::Spin::Full=>'f' }
++}
++
++#[wasm_bindgen]
++pub struct ColdClear {
++    bot: Bot,
++    board: Board,
++    active: Piece,
++}
++
++#[wasm_bindgen]
++impl ColdClear {
++    /// `cols`: 10 column bitboards (bit y set => filled at row y, y up).
++    /// `queue`: upcoming pieces as letters, front = current piece.
++    /// `hold`: single hold-piece letter, or "" for empty.
++    #[wasm_bindgen(constructor)]
++    pub fn new(cols: &[u32], queue: &str, hold: &str, back_to_back: bool, combo: u8) -> Result<ColdClear, JsValue> {
++        let mut board = Board::default();
++        for x in 0..10usize.min(cols.len()) { board.cols[x] = cols[x] as u64; }
++        let mut q: Vec<Piece> = queue.chars().filter_map(to_piece).collect();
++        if q.is_empty() { return Err(JsValue::from_str("empty queue")); }
++        let active = q[0];
++        // mirror tbp create_bot: reserve = hold, else the first queued piece
++        let reserve = match hold.chars().next().and_then(to_piece) {
++            Some(h) => h,
++            None => q.remove(0),
++        };
++        let state = GameState { board, bag: EnumSet::all(), reserve, back_to_back, combo };
++        let config = Arc::new(BotConfig::default());
++        let bot = Bot::new(BotOptions { speculate: false, config }, state, &q);
++        Ok(ColdClear { bot, board, active })
++    }
++
++    /// Run `iters` units of search work (grows the tree).
++    pub fn work(&self, iters: u32) {
++        for _ in 0..iters { self.bot.do_work(); }
++    }
++
++    /// Ranked moves (best first) as a JSON array, or null if none. Each item:
++    /// piece, spin ('n'|'m'|'f'), lines, usesHold, soft (needs a soft-drop /
++    /// tuck — a more cognitively demanding placement), cells (8 ints), x, y.
++    pub fn suggest(&self) -> Option<String> {
++        let moves = self.bot.suggest();
++        if moves.is_empty() {
++            return None;
++        }
++        let items: Vec<String> = moves
++            .into_iter()
++            .take(18)
++            .map(|mv| {
++                let loc = mv.location;
++                let cells = loc.cells();
++                let mut b = self.board;
++                b.place(loc);
++                let lines = b.line_clears().count_ones();
++                // reachable by a pure hard drop? straight-drop from above the
++                // stack must land exactly at the final row.
++                let mut top = loc;
++                top.y = 32;
++                while top.obstructed(&self.board) && top.y < 40 {
++                    top.y += 1;
++                }
++                let landing = top.y - top.drop_distance(&self.board);
++                let soft = landing != loc.y;
++                let cell_json: Vec<i8> = cells.iter().flat_map(|&(x, y)| [x, y]).collect();
++                format!(
++                    "{{\"piece\":\"{}\",\"spin\":\"{}\",\"lines\":{},\"usesHold\":{},\"soft\":{},\"x\":{},\"y\":{},\"cells\":{:?}}}",
++                    piece_char(loc.piece), spin_char(mv.spin), lines,
++                    loc.piece != self.active, soft, loc.x, loc.y, cell_json,
++                )
++            })
++            .collect();
++        Some(format!("[{}]", items.join(",")))
++    }
++}
+diff --git a/src/dag/known.rs b/src/dag/known.rs
+index 72fac62..e6270d9 100644
+--- a/src/dag/known.rs
++++ b/src/dag/known.rs
+@@ -41,11 +41,10 @@ impl<'bump, E: Evaluation> Layer<'bump, E> {
+             None => return vec![],
+         };
+ 
+-        let mut candidates: Vec<&_> = vec![];
+-        candidates.extend(children.first());
++        let mut candidates: Vec<&_> = children.iter().collect();
+         candidates.sort_by(|a, b| a.cached_eval.partial_cmp(&b.cached_eval).unwrap().reverse());
+ 
+-        candidates.into_iter().map(|c| c.mv).collect()
++        candidates.into_iter().take(24).map(|c| c.mv).collect()
+     }
+ 
+     pub fn select(&self, game_state: &GameState, exploration: f64) -> SelectResult {
+diff --git a/src/dag/speculated.rs b/src/dag/speculated.rs
+index 0b96014..14b2909 100644
+--- a/src/dag/speculated.rs
++++ b/src/dag/speculated.rs
+@@ -48,11 +48,11 @@ impl<'bump, E: Evaluation> Layer<'bump, E> {
+ 
+         let mut candidates: Vec<&_> = vec![];
+         for piece in state.bag {
+-            candidates.extend(children[piece].first());
++            candidates.extend(children[piece].iter().take(8));
+         }
+         candidates.sort_by(|a, b| a.cached_eval.partial_cmp(&b.cached_eval).unwrap().reverse());
+ 
+-        candidates.into_iter().map(|c| c.mv).collect()
++        candidates.into_iter().take(24).map(|c| c.mv).collect()
+     }
+ 
+     pub fn select(&self, game_state: &GameState, exploration: f64) -> SelectResult {
+diff --git a/src/lib.rs b/src/lib.rs
+index dfa2cb0..cc5f367 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -18,6 +18,8 @@ mod tbp;
+ pub mod data;
+ mod map;
+ pub mod movegen;
++#[cfg(target_arch = "wasm32")]
++pub mod api;
+ mod sync;
+ 
+ pub async fn run(
+diff --git a/src/movegen.rs b/src/movegen.rs
+index 59ce9f2..70de336 100644
+--- a/src/movegen.rs
++++ b/src/movegen.rs
+@@ -263,9 +263,7 @@ fn rotate(
+         }
+ 
+         let spin;
+-        if target.piece != Piece::T {
+-            spin = Spin::None;
+-        } else {
++        if target.piece == Piece::T {
+             let corners = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+                 .iter()
+                 .filter(|&&(cx, cy)| board.occupied((cx + target.x, cy + target.y)))
+@@ -283,6 +281,17 @@ fn rotate(
+             } else {
+                 spin = Spin::Mini;
+             }
++        } else {
++            // all-spin: a non-T piece rotated into an immobile spot (cannot
++            // shift left/right/up/down) scores a spin, tetr.io all-spin style.
++            let blocked = |dx: i8, dy: i8| {
++                PieceLocation { x: target.x + dx, y: target.y + dy, ..target }.obstructed(board)
++            };
++            spin = if blocked(-1, 0) && blocked(1, 0) && blocked(0, -1) && blocked(0, 1) {
++                Spin::Full
++            } else {
++                Spin::None
++            };
+         }
+ 
+         return Some(Placement {

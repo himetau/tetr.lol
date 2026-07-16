@@ -65,6 +65,26 @@ export function b2bBreakSound(): void {
   sfx('btb_break', 0.55);
 }
 
+/** A piece was spun into place (T-spin or all-spin), clear or not. */
+export function spinSound(): void {
+  sfx('spin', 0.5);
+}
+
+/** A running combo just ended without a clear. */
+export function comboBreakSound(): void {
+  sfx('combobreak', 0.5);
+}
+
+/** Countdown "go" at the start of a run. */
+export function goSound(): void {
+  sfx('go', 0.55);
+}
+
+/** Warning klaxon when a big wave of garbage is queued against you. */
+export function damageAlertSound(): void {
+  sfx('damage_alert', 0.55);
+}
+
 /** Piece settled without player hard-dropping (gravity lock). */
 export function lockSound(): void {
   sfx('floor', 0.45);
