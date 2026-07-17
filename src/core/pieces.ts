@@ -53,14 +53,15 @@ export const PIECE_CELLS: Record<PieceType, Cell[][]> = {
   I: I_STATES,
 };
 
+// Sampled from the user's tetr.io skin sheet (tetrio-plus .tpse export)
 export const PIECE_COLORS: Record<PieceType, string> = {
-  I: '#67c7d1',
-  O: '#e0c568',
-  T: '#b085d6',
-  S: '#8fbf76',
-  Z: '#d98282',
-  J: '#7a93d6',
-  L: '#d9a06b',
+  I: '#42afe1',
+  O: '#f6d03c',
+  T: '#9739a2',
+  S: '#51b84d',
+  Z: '#eb4f65',
+  J: '#1165b5',
+  L: '#f38927',
 };
 
 export function cellsAt(type: PieceType, rot: Rot, x: number, y: number): Cell[] {

@@ -1,4 +1,4 @@
-// Minimal Electron shell for lst.trainer.
+// Minimal Electron shell for tetr.ai.
 // Loads the built app from dist/ (or ELECTRON_START_URL for the vite dev
 // server: ELECTRON_START_URL=http://localhost:5199 electron .)
 
@@ -12,7 +12,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 640,
     autoHideMenuBar: true,
-    backgroundColor: '#262624',
+    backgroundColor: '#1e1e2e',
     icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       contextIsolation: true,

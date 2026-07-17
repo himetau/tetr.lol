@@ -9,8 +9,14 @@ import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
-import { lockSound, clearSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, topoutSound, spinSound, comboBreakSound, goSound, damageAlertSound } from './sound';
+import {
+  lockSound, clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound,
+  b2bBreakSound, spinSound, comboBreakSound, countdownSound, goSound, damageAlertSound,
+  dangerSound, clutchSound, levelUpSound, personalBestSound, gameOverSound,
+} from './sound';
 import { stats, saveStats, recordSession } from './stats';
+import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { PIECE_COLORS } from '../core/pieces';
 
 export class ZenithView {
   readonly root: HTMLElement;
@@ -31,6 +37,7 @@ export class ZenithView {
   private lowestY = Infinity;
   private pieces = 0;
   private tsds = 0;
+  private tsses = 0;
 
   // launch options (kept across retries)
   private startAltitude = 0;
@@ -48,6 +55,14 @@ export class ZenithView {
   private gmQueued!: HTMLElement;
   private toastTimer = 0;
   private lastIncoming = 0;
+  // countdown before the run goes live (input + clock held until "go")
+  private countdownTimers: number[] = [];
+  private counting = false;
+  // immersion cues: floor advance, altitude PB, stack-danger alarm
+  private lastFloor = 0;
+  private bestAltitude = 0;
+  private pbPlayed = true;
+  private inDanger = false;
 
   private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
   private keyup = (e: KeyboardEvent) => this.input.keyUp(e.code, performance.now());
@@ -87,7 +102,8 @@ export class ZenithView {
   }
 
   destroy(): void {
-    this.endRun(true);
+    // leaving mid-climb abandons the run — only topped-out runs are recorded
+    this.endRun(false);
     cancelAnimationFrame(this.rafId);
     this.unsubSettings();
     document.removeEventListener('keydown', this.keydown);
@@ -161,7 +177,7 @@ export class ZenithView {
   // ---- launch / end overlays ----
 
   private showLaunch(): void {
-    this.endRun(true);
+    this.endRun(false);
     this.input.enabled = false;
     this.overlay.replaceChildren();
     this.overlay.classList.add('show');
@@ -244,7 +260,8 @@ export class ZenithView {
   }
 
   private startRun(): void {
-    this.endRun(true);
+    // retry restarts the run outright — an abandoned climb records nothing
+    this.endRun(false);
     this.overlay.classList.remove('show');
     this.overlay.replaceChildren();
     this.game.reset();
@@ -253,24 +270,75 @@ export class ZenithView {
     this.resetLockdown();
     this.pieces = 0;
     this.tsds = 0;
+    this.tsses = 0;
     this.lastIncoming = 0;
     this.b2bTag.textContent = '';
     this.gmActive.style.height = '0px';
     this.gmQueued.style.height = '0px';
-    this.input.enabled = true;
-    stats.modes.quick.drills++;
-    saveStats();
-    if (settings.soundFx) goSound();
+    this.lastFloor = floorIndexAt(this.startAltitude);
+    this.inDanger = false;
+    // PB jingle only when there is a real record to chase from below
+    this.bestAltitude = Math.max(0, ...stats.sessions.filter((s) => s.mode === 'quick').map((s) => s.altitude ?? 0));
+    this.pbPlayed = this.bestAltitude < Math.max(50, this.startAltitude + 10);
+    this.beginCountdown();
     this.refreshPanes();
     this.updateHud();
   }
 
-  /** Close out the active run; optionally persist it as a session. */
+  /** 3-2-1-go before the clock and input go live; retry/Esc cancels it. */
+  private beginCountdown(): void {
+    this.clearCountdown();
+    this.counting = true;
+    this.input.enabled = false;
+    const digit = document.createElement('div');
+    digit.className = 'zenith-count';
+    this.overlay.replaceChildren(digit);
+    this.overlay.classList.add('show', 'counting');
+    const step = (n: 1 | 2 | 3) => {
+      digit.textContent = String(n);
+      digit.classList.remove('tick');
+      void digit.offsetWidth; // restart the pop animation
+      digit.classList.add('tick');
+      if (settings.soundFx) countdownSound(n);
+    };
+    step(3);
+    this.countdownTimers = [
+      window.setTimeout(() => step(2), 450),
+      window.setTimeout(() => step(1), 900),
+      window.setTimeout(() => {
+        this.clearCountdown();
+        this.overlay.classList.remove('show');
+        this.overlay.replaceChildren();
+        this.input.enabled = true;
+        if (settings.soundFx) goSound();
+      }, 1350),
+    ];
+  }
+
+  private clearCountdown(): void {
+    for (const t of this.countdownTimers) clearTimeout(t);
+    this.countdownTimers = [];
+    this.counting = false;
+    this.overlay.classList.remove('counting');
+  }
+
+  /**
+   * Close out the active run. Only a naturally finished (topped-out) run
+   * persists — its pieces/TSDs fold into lifetime stats here, so abandoned
+   * runs leave no trace in the charts or totals.
+   */
   private endRun(persist: boolean): void {
+    this.clearCountdown();
     const r = this.run;
     this.run = null;
     this.input.enabled = false;
     if (!r || !persist || this.pieces < 5) return;
+    const m = stats.modes.quick;
+    m.pieces += this.pieces;
+    m.tsds += this.tsds;
+    m.tsses += this.tsses;
+    m.drills++;
+    saveStats();
     recordSession({
       at: new Date().toISOString(),
       mode: 'quick',
@@ -307,19 +375,20 @@ export class ZenithView {
   private onLock(ev: LockEvent): void {
     const r = this.run;
     this.pieces++;
-    stats.modes.quick.pieces++;
     // tsd/tss stats are T-spins specifically, not the new all-spins
     if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
       this.tsds++;
-      stats.modes.quick.tsds++;
     } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
-      stats.modes.quick.tsses++;
+      this.tsses++;
     }
-    saveStats();
     this.gravAcc = 0;
     this.resetLockdown();
     // a spin that didn't clear (a setup) still gets its own cue
     if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
+    if (settings.effects) {
+      this.renderer.fxLock(ev.cells);
+      this.renderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
+    }
 
     if (r) {
       if (ev.linesCleared > 0) {
@@ -328,6 +397,21 @@ export class ZenithView {
         if (settings.soundFx) {
           if (b2bBefore > 0 && r.b2b === 0) b2bBreakSound();
           clearSound(ev.linesCleared, ev.spin === 'full', r.b2b, ev.boardAfter.isEmpty());
+          // escalating combo jingle from the second consecutive clear
+          if (r.combo >= 1) comboSound(r.combo, ev.spin !== 'none' || ev.linesCleared === 4);
+          // blocked a big wave right before it hit
+          if (out.canceled >= 4) clutchSound();
+        }
+        if (settings.effects) {
+          if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
+          else this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+          const label = lockActionLabel(ev);
+          if (label) {
+            const sub = [r.b2b >= 2 ? `B2B ×${r.b2b}` : '', r.combo >= 1 ? `COMBO ×${r.combo}` : '']
+              .filter(Boolean).join('   ');
+            actionText(this.fieldPanel, label.main, sub, label.kind);
+          }
+          if (out.surged > 0) actionText(this.fieldPanel, 'SURGE', `${out.surged + out.sent + out.canceled} LINES`, 'surge');
         }
         if (out.surged > 0) this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
         else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
@@ -341,13 +425,25 @@ export class ZenithView {
           this.game.addGarbage(rows);
           this.lastIncoming = r.incomingLines();
           if (settings.soundFx) garbageSound(rows.length);
+          this.renderer.fxGarbage(rows.length);
         }
       }
     }
 
     if (this.game.topOut) {
-      if (settings.soundFx) topoutSound();
+      this.renderer.fxTopout(this.game.board, this.game.colors);
+      if (settings.soundFx) gameOverSound();
       this.endRunToResults();
+    } else if (r) {
+      // stack-danger alarm: sounds once as the board climbs into the red,
+      // re-arms after digging back down
+      const h = this.game.board.maxHeight();
+      if (h >= 16 && !this.inDanger) {
+        this.inDanger = true;
+        if (settings.soundFx) dangerSound();
+      } else if (h <= 12) {
+        this.inDanger = false;
+      }
     }
     this.refreshPanes();
   }
@@ -407,7 +503,7 @@ export class ZenithView {
     const dt = this.lastT ? Math.min(t - this.lastT, 100) : 0;
     this.lastT = t;
     const r = this.run;
-    if (r && !this.game.topOut) {
+    if (r && !this.counting && !this.game.topOut) {
       this.input.update(t);
       r.tick(dt);
       // telegraph sound when new garbage gets queued against you, plus a
@@ -420,6 +516,10 @@ export class ZenithView {
       this.lastIncoming = inc;
       this.applyGravity(dt);
       this.updateHud();
+      // red vignette bleeds in as the stack climbs toward the top
+      this.renderer.danger = Math.max(0, Math.min(1, (this.game.board.maxHeight() - 12) / 6));
+    } else {
+      this.renderer.danger = 0;
     }
     this.renderer.render(this.game);
   }
@@ -443,6 +543,18 @@ export class ZenithView {
     if (!r) return;
     const fi = floorIndexAt(r.altitude);
     const incoming = r.incomingLines();
+
+    if (fi > this.lastFloor) {
+      this.lastFloor = fi;
+      if (settings.soundFx) levelUpSound();
+      if (settings.effects) actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), 'floor');
+      else this.showToast(`Floor ${fi + 1} — ${FLOORS[fi].name}`);
+    }
+    if (!this.pbPlayed && r.altitude > this.bestAltitude) {
+      this.pbPlayed = true;
+      if (settings.soundFx) personalBestSound();
+      this.showToast(`New personal best — past ${Math.round(this.bestAltitude)}m!`);
+    }
 
     // tetr.io-style meter on the board's left edge: solid red = active
     // (rises on your next non-clearing lock), translucent = telegraphed —

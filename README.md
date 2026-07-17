@@ -1,4 +1,4 @@
-# lst.trainer
+# tetr.ai
 
 A practice client for **LST stacking** (via the **TKI opener**) with live,
 per-placement feedback: the engine enumerates every reachable placement,
@@ -20,7 +20,7 @@ npm run build      # production build (dist/)
 npm run gen:lst-db # regenerate src/data/*.json from tools/data snapshots
 ```
 
-`tools/install-desktop.sh` installs an app-menu launcher (`lst.trainer`)
+`tools/install-desktop.sh` installs an app-menu launcher (`tetr.ai`)
 that runs the built app via the system electron package.
 
 ## Modes
@@ -54,7 +54,8 @@ that runs the built app via the system electron package.
   edge. (Note: zero-lookahead center 4-wide is not truly infinite — an
   adversarial bag always ends it eventually — so `guaranteedDepth` is a
   ranking signal, not a promise of immortality.)
-- **Freeplay** — empty board, generic engine grading.
+- **40 Lines** — sprint on an empty board: the clock starts on your first
+  input and stops at 40 cleared lines, with generic engine grading throughout.
 - **Quick play** — a single-player simulator of TETR.IO QUICK PLAY (Zenith
   Tower): pick a starting floor (0–1650m). Base mode uses the standard
   500ms lock delay (guideline Extended Placement Lock Down, 15 move
@@ -93,6 +94,19 @@ Settings → Neural evaluator. Retrain with
 Piece/clear/garbage **sounds** are real TETR.IO samples extracted from a
 tetrio-plus `.tpse` soundpack via `tools/extract-tpse-sfx.mjs` into
 `public/sfx/` (personal use).
+
+The UI is a tetr.io-style **application shell** (dark-first, glassy panels,
+uppercase display type) with a juiced field: hard-drop beams, lock flashes,
+line-clear particles and screen shake, action-text popups ("QUAD",
+"T-SPIN DOUBLE", "B2B ×n", "ALL CLEAR", floor-ups and SURGE in Quick play),
+and a red danger vignette as the stack climbs. All of it sits behind
+Settings → Appearance → Board effects if you want a calmer field.
+
+Rotating **backgrounds** (tetr.io style) sit behind the app: built-in
+generated scenes by default, or your own pictures — Settings → Background →
+"Add images…" / "Add folder…" stores them locally (IndexedDB) and cycles
+through them; dim strength and cycle interval are sliders, and "aurora glow
+only" turns images off.
 
 **Stats** keeps per-session history (5+ graded placements) with accuracy
 trend charts, quick-play altitude per run, and a session log — all local.

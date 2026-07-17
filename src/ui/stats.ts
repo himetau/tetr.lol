@@ -22,6 +22,8 @@ export interface SessionRecord {
   altitude?: number;
   /** 4-wide drill: longest combo */
   maxCombo?: number;
+  /** 40 lines sprint: clear time — only present when the run reached 40 lines */
+  sprintMs?: number;
 }
 
 export interface AllStats {
@@ -29,6 +31,7 @@ export interface AllStats {
   sessions: SessionRecord[];
 }
 
+// predates the tetr.ai rename — kept so existing stats survive
 const KEY = 'lst-trainer-stats-v1';
 const MAX_SESSIONS = 300;
 
@@ -74,10 +77,25 @@ export function saveStats(): void {
   localStorage.setItem(KEY, JSON.stringify(stats));
 }
 
+/** Wipe everything the charts and tables draw from — a fresh start. */
+export function resetStats(): void {
+  for (const m of Object.keys(stats.modes) as Mode[]) stats.modes[m] = emptyMode();
+  stats.sessions.length = 0;
+  saveStats();
+}
+
 export function recordSession(rec: SessionRecord): void {
   stats.sessions.push(rec);
   if (stats.sessions.length > MAX_SESSIONS) stats.sessions.splice(0, stats.sessions.length - MAX_SESSIONS);
   saveStats();
+}
+
+/** "1:23.4" — sprint clock; tenths shown by default, off for axis ticks */
+export function fmtSprint(ms: number, tenths = true): string {
+  const t = ms / 1000;
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return tenths ? `${m}:${s.toFixed(1).padStart(4, '0')}` : `${m}:${String(Math.round(s)).padStart(2, '0')}`;
 }
 
 export function gradeAccuracy(g: Record<Grade, number>): number {

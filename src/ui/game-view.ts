@@ -5,21 +5,28 @@
 // per piece), the first TSD drops you into the LST loop (engine-graded with
 // LST-structure bias). 4-wide drill = center well between infinite wall
 // columns, graded against the 4-wide combo book (engine/fourwide.ts).
-// Freeplay = empty board, generic grading.
+// 40 Lines = sprint on an empty board: the clock starts on your first
+// input and the run ends at 40 cleared lines; placements get generic grading.
 
 import { Game, type LockEvent } from '../core/game';
 import { Board } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile, renderMiniBoard } from './board-canvas';
-import { settings, onSettingsChange } from './settings';
+import { settings, saveSettings, onSettingsChange, BOT_NODES, type OpponentKind } from './settings';
 import { EngineClient } from './engine-client';
 import { ColdClearClient, type CC2Move } from './cc2-client';
+import { GarbageQueue, ScheduledAttacker, versusAttack } from '../core/versus';
+import { BotPlayer } from './bot-player';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
 import { matchOpener, type OpenerPlacement } from '../engine/opener';
-import { buildFourwideStart, refillWalls } from '../engine/fourwide';
+import { buildFourwideStart, refillWalls, WELL_X, WELL_W } from '../engine/fourwide';
 import { genAllspin } from '../engine/allspin-gen';
-import { mistakeSound, actionSound, clearSound, b2bBreakSound, topoutSound } from './sound';
-import { stats, saveStats, accuracy, emptyGrades, recordSession, type Mode } from './stats';
+import {
+  gradeSound, actionSound, clearSound, comboSound, b2bBreakSound, topoutSound,
+  personalBestSound, garbageSound, garbageQueuedSound, damageAlertSound, clutchSound,
+} from './sound';
+import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { stats, saveStats, gradeAccuracy, emptyGrades, recordSession, fmtSprint, type Mode } from './stats';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
 
@@ -57,6 +64,26 @@ export class GameView {
   private maxCombo = 0;
   // combo value before each lock, popped on undo
   private comboHistory: number[] = [];
+  // 4-wide: best combo across all recorded sessions, for the PB jingle
+  private comboRecord = 0;
+  private pbPlayed = false;
+  // 40 lines sprint (free mode): clock starts on the first game input,
+  // sprintMs is set once the run reaches 40 lines (frozen final time)
+  private sprintStart = 0;
+  private sprintMs: number | null = null;
+  private clockAt = 0; // last live-clock repaint, throttles refreshSession
+  private lastT = 0;   // previous rAF timestamp, for opponent dt
+
+  // drill opponent (versus-style pressure): a scheduled attacker or a real
+  // Cold Clear bot playing a hidden board, feeding one incoming queue
+  private opp: { kind: 'garbage' | 'bot'; queue: GarbageQueue; sched: ScheduledAttacker | null; bot: BotPlayer | null } | null = null;
+  private vsClock = 0;       // pressure clock (pauses with the drill)
+  private vsSent = 0;
+  private vsTaken = 0;
+  private vsKos = 0;
+  private vsLastPending = 0; // for the telegraph sound
+  private gmActive!: HTMLElement;
+  private gmQueued!: HTMLElement;
 
   // feedback elements
   private chip!: HTMLElement;
@@ -84,8 +111,9 @@ export class GameView {
   private lastLock: LockEvent | null = null;
   private preview: { board: Board; cells: [number, number][] } | null = null;
 
-  // session counters
-  private session = { pieces: 0, tsds: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now() };
+  // session counters — lifetime stats only absorb these when the session
+  // ends ranked (no undo, no bot assist, run finished naturally)
+  private session = freshSession();
 
   private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
   private keyup = (e: KeyboardEvent) => this.onKeyUp(e);
@@ -122,6 +150,7 @@ export class GameView {
     clearTimeout(this.retryTimer);
     this.unsubSettings();
     this.cc2?.destroy();
+    this.opp?.bot?.destroy();
     document.removeEventListener('keydown', this.keydown);
     document.removeEventListener('keyup', this.keyup);
   }
@@ -166,6 +195,27 @@ export class GameView {
     if (this.mode === 'allspin') {
       controls.append(btn('▶ Watch bot (B)', () => void this.botPlay()));
     }
+    // drill opponent: nothing, quickplay-style garbage, or a hidden Cold
+    // Clear bot trading attacks with you (tunables live in Settings)
+    if (this.mode === 'fourwide' || this.mode === 'free' || this.mode === 'allspin') {
+      const drillMode = this.mode;
+      const sel = document.createElement('select');
+      sel.className = 'opp-select';
+      for (const [v, label] of [['off', 'no opponent'], ['garbage', 'vs garbage'], ['bot', 'vs cold clear']] as const) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = label;
+        sel.appendChild(o);
+      }
+      sel.value = settings.versus.drill[drillMode];
+      sel.addEventListener('change', () => {
+        settings.versus.drill[drillMode] = sel.value as OpponentKind;
+        saveSettings();
+        sel.blur();
+        this.resetDrill();
+      });
+      controls.append(sel);
+    }
     left.appendChild(controls);
 
     this.fieldPanel = document.createElement('div');
@@ -176,7 +226,15 @@ export class GameView {
     strip.className = 'board-strip';
     this.b2bTag = document.createElement('div');
     this.b2bTag.className = 'b2b-tag';
-    strip.appendChild(this.b2bTag);
+    // incoming-garbage meter (only fills when a drill opponent is on)
+    const meter = document.createElement('div');
+    meter.className = 'gmeter';
+    this.gmQueued = document.createElement('div');
+    this.gmQueued.className = 'gm-queued';
+    this.gmActive = document.createElement('div');
+    this.gmActive.className = 'gm-active';
+    meter.append(this.gmQueued, this.gmActive);
+    strip.append(this.b2bTag, meter);
     row.append(strip, this.renderer.canvas);
     this.fieldPanel.appendChild(row);
     this.chip = document.createElement('div');
@@ -207,10 +265,22 @@ export class GameView {
     return wrap;
   }
 
-  /** Persist the finished drill for the progress charts (short stubs are noise). */
-  private flushSession(): void {
+  /**
+   * Fold the session into lifetime stats and the progress charts — runs on
+   * retry, top out, and leaving the drill. Strict: a session touched by undo
+   * or the bot is unranked and records nothing; short stubs (<5 graded
+   * placements) are noise. Returns whether anything was recorded.
+   */
+  private flushSession(): boolean {
     const s = this.session;
-    if (s.graded < 5) return;
+    if (s.tainted || s.graded < 5) return false;
+    const m = stats.modes[this.mode];
+    m.pieces += s.pieces;
+    m.tsds += s.tsds;
+    m.tsses += s.tsses;
+    m.drills++;
+    for (const g of Object.keys(s.grades) as Grade[]) m.grades[g] += s.grades[g];
+    saveStats();
     recordSession({
       at: new Date().toISOString(),
       mode: this.mode,
@@ -219,12 +289,33 @@ export class GameView {
       grades: { ...s.grades },
       durationMs: Date.now() - s.startedAt,
       ...(this.mode === 'fourwide' ? { maxCombo: this.maxCombo } : {}),
+      ...(this.mode === 'free' && this.sprintMs !== null ? { sprintMs: this.sprintMs } : {}),
     });
+    return true;
   }
 
-  private resetDrill(): void {
+  /** Undo or bot assistance makes the session unranked — it won't be recorded. */
+  private taintSession(what: string): void {
+    if (!this.session.tainted) {
+      this.session.tainted = true;
+      this.showToast(`${what} — session unranked, R for a fresh ranked run`);
+    }
+    this.refreshSession();
+  }
+
+  /**
+   * 'restart' (retry / top out): the run is recorded — retry saves the
+   * session to stats the same as topping out, unless it's unranked or a
+   * <5-placement stub. 'continue' (all-spin cleared its setup): new board,
+   * same session.
+   */
+  private resetDrill(end: 'restart' | 'continue' = 'restart'): void {
     this.engine.cancel();
-    this.flushSession();
+    let note = '';
+    if (end === 'restart') {
+      if (this.flushSession()) note = 'Retry — session saved to stats';
+      else if (this.session.graded >= 5) note = 'Retry — unranked session discarded';
+    }
     // ?seed=N pins the bag order (practice/testing); all-spin picks a fresh
     // random board each drill unless a seed is pinned
     const seedParam = new URLSearchParams(location.search).get('seed');
@@ -241,21 +332,28 @@ export class GameView {
     this.combo = 0;
     this.maxCombo = 0;
     this.comboHistory = [];
-    this.session = { pieces: 0, tsds: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now() };
+    this.comboRecord = this.mode === 'fourwide'
+      ? Math.max(0, ...stats.sessions.filter((s) => s.mode === 'fourwide').map((s) => s.maxCombo ?? 0))
+      : 0;
+    this.pbPlayed = false;
+    if (end === 'restart') {
+      this.session = freshSession();
+      this.maxB2b = 0;
+      this.sprintStart = 0;
+      this.sprintMs = null;
+    }
     this.b2b = 0;
-    this.maxB2b = 0;
     this.b2bTag.textContent = '';
     // all-spin is a keep-the-chain drill: start mid-B2B so every clear must be
     // a spin/quad, and warm the Cold Clear worker so the first grade is quick
     if (this.mode === 'allspin') {
       this.b2b = 1;
-      this.maxB2b = 1;
+      this.maxB2b = Math.max(this.maxB2b, 1);
       this.b2bTag.textContent = 'B2B ×1';
       if (!this.cc2) this.cc2 = new ColdClearClient();
     }
+    this.setupOpponent(end === 'restart');
     this.openerHistory = [];
-    stats.modes[this.mode].drills++;
-    saveStats();
     this.lastLock = null;
     this.preview = null;
     this.paused = false;
@@ -264,9 +362,11 @@ export class GameView {
     this.clearDock();
     this.refreshPanes();
     this.refreshSession();
+    if (note) this.showToast(note);
   }
 
   private undo(): void {
+    if (this.sprintMs !== null) return; // a finished sprint is final — R restarts
     if (this.game.undo()) {
       this.engine.cancel();
       // opener history entries correspond 1:1 to opener-phase piece indices;
@@ -281,12 +381,11 @@ export class GameView {
       if (this.mode === 'fourwide') this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
       this.lastLock = null;
       this.preview = null;
-      this.session.pieces = this.game.pieceIndex;
       this.hideFeedback();
       this.clearDock();
       this.resume();
       this.refreshPanes();
-      this.refreshSession();
+      this.taintSession('Undo');
     }
   }
 
@@ -320,20 +419,42 @@ export class GameView {
       this.pathsDock.classList.toggle('collapsed');
       return;
     }
-    if (e.code === 'Escape' && this.paused) {
+    // a finished sprint stays frozen — only R starts the next run
+    if (e.code === 'Escape' && this.paused && this.sprintMs === null) {
       e.preventDefault();
       this.resume();
       return;
     }
     // combo chords are view-level only; never feed them to piece movement
     if (desc !== e.code) return;
-    if (Object.values(b).some((codes) => codes.includes(desc))) e.preventDefault();
+    if (Object.values(b).some((codes) => codes.includes(desc))) {
+      e.preventDefault();
+      // sprint clock starts on the first game input, not on drill reset
+      if (this.mode === 'free' && this.sprintStart === 0 && this.input.enabled) this.sprintStart = Date.now();
+    }
     this.input.keyDown(desc, performance.now());
     this.refreshPanes();
   }
 
   private onKeyUp(e: KeyboardEvent): void {
     this.input.keyUp(e.code, performance.now());
+  }
+
+  /** Canvas + popup juice for a lock: drop impact, clear bursts, action text. */
+  private fxOnLock(ev: LockEvent, b2b: number, combo: number): void {
+    if (!settings.effects) return;
+    const color = PIECE_COLORS[ev.piece];
+    this.renderer.fxLock(ev.cells);
+    this.renderer.fxDrop(ev.cells, color);
+    if (ev.linesCleared === 0) return;
+    if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
+    else this.renderer.fxClear(clearedRowsOf(ev), [color, '#ffffff']);
+    const label = lockActionLabel(ev);
+    if (label) {
+      const sub = [b2b >= 2 ? `B2B ×${b2b}` : '', combo >= 2 ? `COMBO ×${combo}` : '']
+        .filter(Boolean).join('   ');
+      actionText(this.fieldPanel, label.main, sub, label.kind);
+    }
   }
 
   private onLock(ev: LockEvent): void {
@@ -345,11 +466,19 @@ export class GameView {
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       refillWalls(this.game.board);
       this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
-      if (ev.linesCleared > 0 && settings.soundFx) clearSound(ev.linesCleared, false, this.combo, false);
+      if (ev.linesCleared > 0 && settings.soundFx) {
+        clearSound(ev.linesCleared, false, this.combo, false);
+        // escalating jingle from the second consecutive clear, like tetr.io
+        if (this.combo >= 2) comboSound(this.combo - 1, ev.spin !== 'none' || ev.linesCleared === 4);
+        if (!this.pbPlayed && this.comboRecord >= 3 && this.combo > this.comboRecord) {
+          this.pbPlayed = true;
+          personalBestSound();
+          this.showToast(`New combo record — ×${this.combo}`);
+        }
+      }
+      this.fxOnLock(ev, 0, this.combo);
       this.lastLock = ev;
       this.session.pieces++;
-      stats.modes[this.mode].pieces++;
-      saveStats();
       this.engine.gradeLock(ev, { fourwide: true });
       this.handleTopOut();
       this.refreshAll();
@@ -367,16 +496,15 @@ export class GameView {
       if (settings.soundFx) clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
     }
     this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
+    this.fxOnLock(ev, this.b2b, 0);
     this.lastLock = ev;
     this.session.pieces++;
-    stats.modes[this.mode].pieces++;
+    this.session.lines += ev.linesCleared;
     if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
       this.session.tsds++;
-      stats.modes[this.mode].tsds++;
     } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
-      stats.modes[this.mode].tsses++;
+      this.session.tsses++;
     }
-    saveStats();
 
     if (this.openerPhase) {
       const openerDone = ev.spin === 'full' && ev.linesCleared >= 2;
@@ -413,18 +541,40 @@ export class GameView {
     } else {
       this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
     }
+    if (this.mode === 'free' && this.sprintMs === null && this.session.lines >= 40 && !this.game.topOut) {
+      this.finishSprint();
+    }
     this.handleTopOut();
     this.refreshAll();
-    // all-spin: a cleared board earns a fresh random setup
+    // all-spin: a cleared board earns a fresh random setup (same session)
     if (this.mode === 'allspin' && ev.boardAfter.isEmpty() && !this.game.topOut) {
       this.showToast('Board cleared — new setup');
       clearTimeout(this.retryTimer);
-      this.retryTimer = window.setTimeout(() => this.resetDrill(), 700);
+      this.retryTimer = window.setTimeout(() => this.resetDrill('continue'), 700);
     }
+  }
+
+  /**
+   * 40 lines reached — freeze the clock and the field. The run is recorded
+   * (with its time) when the session flushes on retry or leaving the drill,
+   * so the last placement's async grade still lands first.
+   */
+  private finishSprint(): void {
+    this.sprintMs = Date.now() - (this.sprintStart || this.session.startedAt);
+    this.paused = true;
+    this.input.enabled = false;
+    const prev = stats.sessions
+      .filter((s) => s.mode === 'free' && s.sprintMs !== undefined)
+      .reduce((best, s) => Math.min(best, s.sprintMs!), Infinity);
+    const pb = !this.session.tainted && this.sprintMs < prev;
+    if (pb && prev !== Infinity && settings.soundFx) personalBestSound();
+    const tag = this.session.tainted ? ' (unranked)' : pb && prev !== Infinity ? ' — new record!' : '';
+    this.showToast(`40 lines — ${fmtSprint(this.sprintMs)}${tag} · R to retry`);
   }
 
   private handleTopOut(): void {
     if (!this.game.topOut) return;
+    this.renderer.fxTopout(this.game.board, this.game.colors);
     if (settings.soundFx) topoutSound();
     if (settings.autoRetryTopOut) {
       this.showToast('Top out — retrying…');
@@ -438,12 +588,10 @@ export class GameView {
   }
 
   private recordGrade(g: Grade): void {
-    stats.modes[this.mode].grades[g]++;
     this.session.grades[g]++;
     this.session.graded++;
     if (g === 'best') this.session.best++;
     if (g === 'mistake' || g === 'killer') this.session.mistakes++;
-    saveStats();
     this.refreshSession();
   }
 
@@ -455,6 +603,9 @@ export class GameView {
     if (this.openerPhase && (grade === 'best' || grade === 'good')) grade = 'inaccuracy';
     this.recordGrade(grade);
     this.renderDock(r, grade);
+    // the last grade of a finished sprint still counts, but must not clobber
+    // the result toast or re-pause the frozen field
+    if (this.sprintMs !== null) return;
 
     const fl = settings.feedbackLevel;
     const isBad = grade === 'inaccuracy' || grade === 'mistake' || grade === 'killer';
@@ -475,11 +626,11 @@ export class GameView {
         this.fieldPanel.classList.remove('flash-bad');
         void this.fieldPanel.offsetWidth; // restart animation
         this.fieldPanel.classList.add('flash-bad');
-        if (settings.soundOnMistake) mistakeSound();
+        if (settings.soundOnMistake) gradeSound(grade);
         if (settings.stopOnMistake) {
           this.paused = true;
           this.input.enabled = false;
-          this.showToast(`${r.reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo`);
+          this.showToast(`${r.reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo (unranks)`);
         }
       }
     } else if (r.book && !r.book.sustainable) {
@@ -559,6 +710,7 @@ export class GameView {
   /** Let Cold Clear play its own best move on the current board (watch it). */
   private async botPlay(): Promise<void> {
     if (this.mode !== 'allspin' || this.paused || !this.game.active) return;
+    this.taintSession('Bot assist');
     if (!this.cc2) this.cc2 = new ColdClearClient();
     const q = ++this.cc2Query;
     const moves = await this.cc2.analyze(
@@ -643,11 +795,11 @@ export class GameView {
       this.fieldPanel.classList.remove('flash-bad');
       void this.fieldPanel.offsetWidth; // restart animation
       this.fieldPanel.classList.add('flash-bad');
-      if (settings.soundOnMistake) mistakeSound();
+      if (settings.soundOnMistake) gradeSound('mistake');
       if (settings.stopOnMistake) {
         this.paused = true;
         this.input.enabled = false;
-        this.showToast(`${reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo`);
+        this.showToast(`${reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo (unranks)`);
       }
     } else if (!isBad && best && reasons.length) {
       this.showToast(reasons[0]); // show Cold Clear's line even on a fine move
@@ -729,7 +881,11 @@ export class GameView {
   }
 
   private refreshSession(): void {
-    const acc = accuracy(stats.modes[this.mode]);
+    // this session's accuracy (resets on retry), not the lifetime number
+    const acc = gradeAccuracy(this.session.grades);
+    const ranked = this.session.tainted
+      ? `<b class="unranked">unranked</b>`
+      : `<b>ranked ✓</b>`;
     if (this.mode === 'fourwide') {
       this.statStrip.innerHTML =
         `phase <b>4-wide combo</b><br>` +
@@ -737,7 +893,8 @@ export class GameView {
         `combo <b>${this.combo}</b><br>` +
         `best combo <b>${this.maxCombo}</b><br>` +
         `mistakes <b>${this.session.mistakes}</b><br>` +
-        `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
+        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
+        `session ${ranked}`;
       return;
     }
     if (this.mode === 'allspin') {
@@ -747,21 +904,40 @@ export class GameView {
         `B2B <b>${this.b2b}</b><br>` +
         `best B2B <b>${this.maxB2b}</b><br>` +
         `mistakes <b>${this.session.mistakes}</b><br>` +
-        `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
+        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
+        `session ${ranked}`;
       return;
     }
-    const phase = this.mode === 'lst' ? (this.openerPhase ? 'TKI opener' : 'LST loop') : 'freeplay';
+    if (this.mode === 'free') {
+      const clock = this.sprintMs ?? (this.sprintStart ? Date.now() - this.sprintStart : 0);
+      this.statStrip.innerHTML =
+        `phase <b>40 lines</b><br>` +
+        `lines <b>${Math.min(this.session.lines, 40)}/40</b><br>` +
+        `time <b>${fmtSprint(clock)}</b><br>` +
+        `pieces <b>${this.session.pieces}</b><br>` +
+        `mistakes <b>${this.session.mistakes}</b><br>` +
+        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
+        `session ${ranked}`;
+      return;
+    }
+    const phase = this.openerPhase ? 'TKI opener' : 'LST loop';
     this.statStrip.innerHTML =
       `phase <b>${phase}</b><br>` +
       `pieces <b>${this.session.pieces}</b><br>` +
       `TSDs <b>${this.session.tsds}</b><br>` +
       `mistakes <b>${this.session.mistakes}</b><br>` +
-      `accuracy <b>${(acc * 100).toFixed(0)}%</b>`;
+      `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
+      `session ${ranked}`;
   }
 
   private loop(t: number): void {
     this.rafId = requestAnimationFrame((tt) => this.loop(tt));
     if (!this.paused) this.input.update(t);
+    // live sprint clock while a 40 lines run is underway
+    if (this.mode === 'free' && this.sprintStart !== 0 && this.sprintMs === null && t - this.clockAt > 100) {
+      this.clockAt = t;
+      this.refreshSession();
+    }
     if (this.preview) {
       // render preview: boardBefore + alternative cells, no active piece
       this.renderer.highlight = { cells: this.preview.cells, color: '#e8b34c' };
@@ -771,6 +947,10 @@ export class GameView {
       this.renderer.render(this.game);
     }
   }
+}
+
+function freshSession() {
+  return { pieces: 0, tsds: 0, tsses: 0, lines: 0, mistakes: 0, best: 0, graded: 0, grades: emptyGrades(), startedAt: Date.now(), tainted: false };
 }
 
 /** flat [x0,y0,x1,y1,...] → [[x,y],...] */

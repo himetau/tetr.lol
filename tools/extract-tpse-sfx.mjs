@@ -11,7 +11,7 @@ import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-// every sound the app plays; keep in sync with src/ui/sound.ts SFX_NAMES
+// every sound the app plays; keep in sync with src/ui/sound.ts SfxName
 const WANTED = [
   'move', 'rotate', 'harddrop', 'softdrop', 'hold', 'floor', 'spin',
   'clearline', 'clearquad', 'clearspin', 'clearbtb', 'allclear',
@@ -19,6 +19,14 @@ const WANTED = [
   'garbage_in_small', 'garbage_in_medium', 'garbage_in_large',
   'garbagerise', 'garbagesmash', 'damage_alert',
   'topout', 'go',
+  // mistake cues
+  'no', 'failure',
+  // milestones & immersion
+  'personalbest', 'levelup', 'gameover', 'clutch', 'applause', 'hyperalert',
+  'countdown1', 'countdown2', 'countdown3',
+  // escalating combo jingles (plus "power" variants for spin/quad clears)
+  ...Array.from({ length: 16 }, (_, i) => `combo_${i + 1}`),
+  ...Array.from({ length: 16 }, (_, i) => `combo_${i + 1}_power`),
 ];
 
 const tpsePath = process.argv[2];

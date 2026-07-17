@@ -1,5 +1,8 @@
-import { settings, saveSettings, applyTheme, DEFAULT_SETTINGS } from './settings';
+import { settings, saveSettings, applyTheme, DEFAULT_SETTINGS, type VolumeSettings, type BotLevel, type OpponentKind } from './settings';
+import type { Pressure } from '../core/versus';
 import { keyDescriptor, type Keybinds } from '../core/handling';
+import { sfx } from './sound';
+import { addCustomImages, clearCustomImages, customImageCount, nextBackground } from './background';
 
 const BIND_LABELS: Record<keyof Keybinds, string> = {
   left: 'Move left',
@@ -56,12 +59,6 @@ export function settingsView(): HTMLElement {
   trainer.appendChild(toggleRow('Stop on mistake', 'pause and open alternatives when you misplace', settings.stopOnMistake, (v) => {
     settings.stopOnMistake = v;
   }));
-  trainer.appendChild(toggleRow('Mistake sound', 'short thud on mistakes', settings.soundOnMistake, (v) => {
-    settings.soundOnMistake = v;
-  }));
-  trainer.appendChild(toggleRow('Sound effects', 'piece lock and line-clear sounds', settings.soundFx, (v) => {
-    settings.soundFx = v;
-  }));
   trainer.appendChild(toggleRow('Neural evaluator', 'learned correction on top of the heuristic grading', settings.neuralEval, (v) => {
     settings.neuralEval = v;
   }));
@@ -69,6 +66,58 @@ export function settingsView(): HTMLElement {
     settings.autoRetryTopOut = v;
   }));
   page.appendChild(trainer);
+
+  // ---- versus / garbage pressure ----
+  const vs = card('Versus & garbage');
+  const v = settings.versus;
+  vs.appendChild(selectRow('Bot strength', 'Cold Clear search budget per move', v.botLevel, [
+    ['easy', 'easy'],
+    ['normal', 'normal'],
+    ['hard', 'hard'],
+    ['elite', 'elite'],
+  ], (val) => { v.botLevel = val as BotLevel; }));
+  vs.appendChild(sliderRow('Bot speed', 'pieces per second', 0.5, 4, 0.25, v.botPps, (val) => {
+    v.botPps = val;
+  }));
+  vs.appendChild(sliderRow('Garbage delay', 'telegraph time (ms) before an attack can rise', 500, 5000, 250, v.garbageDelayMs, (val) => {
+    v.garbageDelayMs = val;
+  }));
+  vs.appendChild(sliderRow('Messiness', 'chance (%) each garbage row moves the hole column', 0, 100, 5, v.messiness, (val) => {
+    v.messiness = val;
+  }));
+  vs.appendChild(sliderRow('Garbage cap', 'max rows rising on one non-clearing lock', 1, 12, 1, v.garbageCap, (val) => {
+    v.garbageCap = val;
+  }));
+  vs.appendChild(selectRow('Simulated pressure', 'attack pace when a drill uses "garbage" instead of the bot', v.pressure, [
+    ['calm', 'calm'],
+    ['normal', 'normal'],
+    ['brutal', 'brutal'],
+  ], (val) => { v.pressure = val as Pressure; }));
+  const oppOptions: [string, string][] = [['off', 'off'], ['garbage', 'garbage only'], ['bot', 'cold clear bot']];
+  vs.appendChild(selectRow('4-wide opponent', 'pressure during the 4-wide drill', v.drill.fourwide, oppOptions, (val) => {
+    v.drill.fourwide = val as OpponentKind;
+  }));
+  vs.appendChild(selectRow('40 lines opponent', 'pressure during the sprint — turns it into a dig race', v.drill.free, oppOptions, (val) => {
+    v.drill.free = val as OpponentKind;
+  }));
+  vs.appendChild(selectRow('All-Spin opponent', 'pressure during the all-spin drill', v.drill.allspin, oppOptions, (val) => {
+    v.drill.allspin = val as OpponentKind;
+  }));
+  page.appendChild(vs);
+
+  // ---- sound ----
+  const sound = card('Sound');
+  sound.appendChild(toggleRow('Sound effects', 'movement, clears, combos and milestones', settings.soundFx, (v) => {
+    settings.soundFx = v;
+  }));
+  sound.appendChild(toggleRow('Mistake sound', 'audio cue on mistakes and blunders', settings.soundOnMistake, (v) => {
+    settings.soundOnMistake = v;
+  }));
+  sound.appendChild(volumeRow('Master volume', 'scales every sound', 'master', () => sfx('clearline', 0.5, 'master')));
+  sound.appendChild(volumeRow('Movement', 'move, rotate, drop, hold', 'move', () => sfx('harddrop', 0.5, 'move')));
+  sound.appendChild(volumeRow('Clears & combos', 'line clears, spins, B2B and combo jingles', 'clear', () => sfx('clearquad', 0.55, 'clear')));
+  sound.appendChild(volumeRow('Alerts & events', 'garbage, danger, countdowns, mistakes, milestones', 'alert', () => sfx('levelup', 0.55, 'alert')));
+  page.appendChild(sound);
 
   // ---- appearance ----
   const appearance = card('Appearance');
@@ -81,7 +130,24 @@ export function settingsView(): HTMLElement {
   }));
   appearance.appendChild(toggleRow('Ghost piece', '', settings.ghost, (v) => { settings.ghost = v; }));
   appearance.appendChild(toggleRow('Grid', '', settings.grid, (v) => { settings.grid = v; }));
+  appearance.appendChild(toggleRow('Board effects', 'particles, screen shake and action text', settings.effects, (v) => { settings.effects = v; }));
   page.appendChild(appearance);
+
+  // ---- background ----
+  const bg = card('Background');
+  bg.appendChild(selectRow('Backdrop', 'rotates behind the app, like tetr.io', settings.background.mode, [
+    ['scenes', 'built-in scenes'],
+    ['custom', 'my images'],
+    ['aurora', 'aurora glow only'],
+  ], (v) => { settings.background.mode = v as typeof settings.background.mode; }));
+  bg.appendChild(sliderRow('Dim', 'overlay strength — lower shows more of the image', 0, 95, 5, settings.background.dim, (v) => {
+    settings.background.dim = v;
+  }));
+  bg.appendChild(sliderRow('Cycle', 'seconds between background changes', 15, 600, 15, settings.background.cycleSec, (v) => {
+    settings.background.cycleSec = v;
+  }));
+  bg.appendChild(bgImagesRow());
+  page.appendChild(bg);
 
   const reset = document.createElement('button');
   reset.className = 'btn';
@@ -148,6 +214,18 @@ function sliderRow(name: string, hint: string, min: number, max: number, step: n
   return r;
 }
 
+/** A 0–100% mixer slider that previews its channel when released. */
+function volumeRow(name: string, hint: string, key: keyof VolumeSettings, preview: () => void): HTMLElement {
+  const r = sliderRow(name, hint, 0, 100, 5, settings.volume[key], (v) => {
+    settings.volume[key] = v;
+  });
+  // preview on release ('change'), not while dragging ('input')
+  for (const input of r.querySelectorAll('input')) {
+    input.addEventListener('change', preview);
+  }
+  return r;
+}
+
 function toggleRow(name: string, hint: string, value: boolean, onChange: (v: boolean) => void): HTMLElement {
   const r = row(name, hint);
   const t = document.createElement('input');
@@ -177,6 +255,64 @@ function selectRow(name: string, hint: string, value: string, options: [string, 
     saveSettings();
   });
   r.appendChild(s);
+  return r;
+}
+
+/** Custom background images: add files or a whole folder, stored locally. */
+function bgImagesRow(): HTMLElement {
+  const r = row('My images', 'stored in this browser/app only — adding switches the backdrop to “my images”');
+  const label = r.querySelector('label.name') as HTMLElement;
+  const countEl = document.createElement('span');
+  countEl.className = 'hint';
+  label.appendChild(countEl);
+  const refresh = () => {
+    const n = customImageCount();
+    countEl.textContent = n === 0 ? 'no images added yet' : `${n} image${n > 1 ? 's' : ''} in the cycle`;
+  };
+  refresh();
+
+  const makePicker = (folder: boolean): HTMLInputElement => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    if (folder) input.webkitdirectory = true;
+    input.style.display = 'none';
+    input.addEventListener('change', () => {
+      void (async () => {
+        const added = await addCustomImages(input.files ?? []);
+        input.value = '';
+        if (added > 0 && settings.background.mode !== 'custom') {
+          settings.background.mode = 'custom';
+          const sel = r.closest('.card')?.querySelector('select');
+          if (sel) sel.value = 'custom';
+        }
+        if (added > 0) saveSettings();
+        refresh();
+      })();
+    });
+    return input;
+  };
+  const filePick = makePicker(false);
+  const folderPick = makePicker(true);
+
+  const mkBtn = (text: string, onClick: () => void) => {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = text;
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  r.append(
+    filePick,
+    folderPick,
+    mkBtn('Add images…', () => filePick.click()),
+    mkBtn('Add folder…', () => folderPick.click()),
+    mkBtn('Next ▸', () => nextBackground()),
+    mkBtn('Clear', () => {
+      void clearCustomImages().then(refresh);
+    }),
+  );
   return r;
 }
 
