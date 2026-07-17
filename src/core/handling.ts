@@ -156,9 +156,12 @@ export class InputHandler {
     const action = this.codeAction(code);
     if (action === 'left' || action === 'right') {
       const dir: Dir = action === 'left' ? -1 : 1;
+      const wasActive = this.dirStack[this.dirStack.length - 1] === dir;
       this.dirStack = this.dirStack.filter((d) => d !== dir);
-      // reverting to a still-held opposite direction is a direction change
-      if (this.dirStack.length > 0) this.changeDirection();
+      // reverting from the ACTIVE direction to a still-held opposite one is a
+      // direction change; releasing a buried key changes nothing and must not
+      // tap (e.g. wall-bounce: press right, then let go of left)
+      if (wasActive && this.dirStack.length > 0) this.changeDirection();
     } else if (action === 'softDrop') {
       this.softDropHeld = false;
     }

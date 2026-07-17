@@ -58,6 +58,20 @@ describe('handling — DAS bounce', () => {
     expect(g.active!.x).toBe(1);
   });
 
+  it('releasing the old, non-active key after a flick does not tap again', () => {
+    const { g, h } = harness({ dasMs: 100, arrMs: 0 });
+    h.keyDown('ArrowLeft', T0);
+    h.update(T0);
+    h.update(T0 + 120);            // DAS elapses -> left wall (x=0)
+    h.keyDown('ArrowRight', T0 + 130); // flick: single step to 1
+    expect(g.active!.x).toBe(1);
+
+    h.keyUp('ArrowLeft', T0 + 150);    // let go of the buried left key
+    expect(g.active!.x).toBe(1);   // right is still the active dir — no extra tap
+    h.update(T0 + 160);            // 40ms charged -> DAS not elapsed, no auto-shift
+    expect(g.active!.x).toBe(1);
+  });
+
   it('a full release drops the charge; the next fresh press starts from zero', () => {
     const { g, h } = harness({ dasMs: 100, arrMs: 0 });
     h.keyDown('ArrowRight', T0);
