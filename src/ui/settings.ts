@@ -140,6 +140,8 @@ export function loadSettings(): AppSettings {
     if (merged.binds.rotateCCW.length === 0) merged.binds.rotateCCW = ['KeyZ'];
     // migration: autoRestartTki never shipped a UI and was never read
     delete (merged as unknown as Record<string, unknown>).autoRestartTki;
+    // migration: cancelDasOnDirChange inverted into dasCarry (default off, no bounce)
+    delete (merged.handling as unknown as Record<string, unknown>).cancelDasOnDirChange;
     return merged;
   } catch {
     return structuredClone(DEFAULT_SETTINGS);

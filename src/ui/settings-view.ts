@@ -37,8 +37,8 @@ export function settingsView(): HTMLElement {
   handling.appendChild(sliderRow('DCD', 'DAS cut delay (ms) — pauses DAS after a rotate/hold/drop; 0 = off', 0, 100, 1, settings.handling.dcdMs, (v) => {
     settings.handling.dcdMs = v;
   }));
-  handling.appendChild(toggleRow('Cancel DAS on direction change', 'off = DAS carries, so a charged flick bounces wall-to-wall (tetr.io default)', settings.handling.cancelDasOnDirChange, (v) => {
-    settings.handling.cancelDasOnDirChange = v;
+  handling.appendChild(toggleRow('DAS carry across direction change', 'on = the charge is preserved, so a charged flick bounces wall-to-wall (tetr.io style); off = DAS re-charges', settings.handling.dasCarry, (v) => {
+    settings.handling.dasCarry = v;
   }));
   page.appendChild(handling);
 

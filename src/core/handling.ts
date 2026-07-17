@@ -2,14 +2,13 @@
 // render loop with real timestamps, so sub-frame repeat rates (ARR < 16ms)
 // work. ARR 0 = instant slide to wall; SDF >= 41 = instant soft drop ("∞").
 //
-// The DAS charge is a single directional meter that is PRESERVED across a
-// direction change while a key is still held (tetr.io's default) — so when
-// the meter is already full and you flick to the other side, the piece
-// bounces wall-to-wall instantly instead of re-charging from zero. A full
-// release (no direction held) drops the charge; the next press starts fresh.
-// `cancelDasOnDirChange` reproduces tetr.io's toggle that zeroes the meter on
-// every direction change instead. `dcdMs` (DAS Cut Delay) caps the charge
-// after a rotate / hold / hard drop so the next input can't instantly DAS.
+// The DAS charge is a single directional meter that resets on every
+// direction change: pressing (or releasing back to) the other direction taps
+// one cell and re-charges DAS from zero, so a flick never teleports the piece
+// wall-to-wall. `dasCarry` opts back into tetr.io's charge preservation,
+// where a full meter carries across the flick and the piece bounces
+// instantly. `dcdMs` (DAS Cut Delay) caps the charge after a rotate / hold /
+// hard drop so the next input can't instantly DAS.
 
 import type { Game } from './game';
 
@@ -19,7 +18,7 @@ export interface HandlingSettings {
   sdf: number;         // soft drop factor; >= 41 means instant
   softDropCps: number; // base soft-drop cells/sec at SDF 1
   dcdMs: number;       // DAS cut delay (ms); 0 = disabled
-  cancelDasOnDirChange: boolean; // zero the DAS charge on every direction change
+  dasCarry: boolean;   // preserve the DAS charge across direction changes (tetr.io bounce)
 }
 
 export interface Keybinds {
@@ -42,7 +41,7 @@ export const DEFAULT_HANDLING: HandlingSettings = {
   sdf: 41,
   softDropCps: 30,
   dcdMs: 0,
-  cancelDasOnDirChange: false, // tetr.io default: DAS carries, so flicks bounce
+  dasCarry: false, // DAS re-charges on a direction change; no instant bounce
 };
 
 export const DEFAULT_KEYBINDS: Keybinds = {
@@ -158,26 +157,24 @@ export class InputHandler {
     if (action === 'left' || action === 'right') {
       const dir: Dir = action === 'left' ? -1 : 1;
       this.dirStack = this.dirStack.filter((d) => d !== dir);
-      // reverting to a still-held opposite direction is a direction change;
-      // the DAS charge carries (bounce) unless the toggle cancels it
+      // reverting to a still-held opposite direction is a direction change
       if (this.dirStack.length > 0) this.changeDirection();
     } else if (action === 'softDrop') {
       this.softDropHeld = false;
     }
   }
 
-  /** A direction change while a key stays held: tap one cell, keep the DAS
-   * charge so a full meter bounces the piece to the other wall. */
+  /** A direction change while a key stays held: tap one cell, then re-charge
+   * DAS from zero — unless `dasCarry` keeps the meter (tetr.io bounce). */
   private changeDirection(): void {
     const dir = this.dirStack[this.dirStack.length - 1];
     if (dir === undefined) return;
     this.step(dir);
     this.arrTimer = 0;
-    if (this.settings.cancelDasOnDirChange) this.dasTimer = 0;
-    // already charged + instant ARR: bounce to the wall this frame, no delay
-    if (!this.settings.cancelDasOnDirChange
-      && this.dasTimer >= this.settings.dasMs
-      && this.settings.arrMs <= 0) {
+    if (!this.settings.dasCarry) {
+      this.dasTimer = 0;
+    } else if (this.dasTimer >= this.settings.dasMs && this.settings.arrMs <= 0) {
+      // carried full charge + instant ARR: bounce to the wall this frame
       this.slideToWall(dir);
     }
   }

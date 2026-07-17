@@ -18,8 +18,8 @@ function harness(overrides: Partial<typeof DEFAULT_HANDLING> = {}) {
 }
 
 describe('handling — DAS bounce', () => {
-  it('a charged flick slides straight to the opposite wall (DAS preserved)', () => {
-    const { g, h } = harness({ dasMs: 100, arrMs: 0, cancelDasOnDirChange: false });
+  it('with DAS carry on, a charged flick slides straight to the opposite wall', () => {
+    const { g, h } = harness({ dasMs: 100, arrMs: 0, dasCarry: true });
     h.keyDown('ArrowRight', T0);   // tap: x 4 -> 5
     h.update(T0);
     h.update(T0 + 120);            // DAS elapses -> slide to the right wall
@@ -30,8 +30,8 @@ describe('handling — DAS bounce', () => {
     expect(g.active!.x).toBe(0);   // bounced to the left wall in the same frame
   });
 
-  it('cancel-DAS-on-direction-change turns the flick into a single step', () => {
-    const { g, h } = harness({ dasMs: 100, arrMs: 0, cancelDasOnDirChange: true });
+  it('by default the flick is a single step: DAS re-charges on direction change', () => {
+    const { g, h } = harness({ dasMs: 100, arrMs: 0 });
     h.keyDown('ArrowRight', T0);
     h.update(T0);
     h.update(T0 + 120);
@@ -40,6 +40,22 @@ describe('handling — DAS bounce', () => {
     h.keyDown('ArrowLeft', T0 + 130);  // flick: charge is zeroed, only one cell moves
     expect(g.active!.x).toBe(7);
     expect(g.moveLeft()).toBe(true);   // still room — it did not slide
+  });
+
+  it('releasing back to a still-held direction also re-charges (no snap back)', () => {
+    const { g, h } = harness({ dasMs: 100, arrMs: 0 });
+    h.keyDown('ArrowRight', T0);
+    h.update(T0);
+    h.update(T0 + 120);            // DAS elapses -> right wall (x=8)
+    h.keyDown('ArrowLeft', T0 + 130); // flick: single step to 7, charge reset
+    h.update(T0 + 130);
+    h.update(T0 + 250);            // DAS re-charged -> slides to the left wall
+    expect(g.active!.x).toBe(0);
+
+    h.keyUp('ArrowLeft', T0 + 260);   // back to the still-held right key
+    expect(g.active!.x).toBe(1);   // one step only — no instant snap to x=8
+    h.update(T0 + 270);            // 20ms charged -> no auto-shift yet
+    expect(g.active!.x).toBe(1);
   });
 
   it('a full release drops the charge; the next fresh press starts from zero', () => {
