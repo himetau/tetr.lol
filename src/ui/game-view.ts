@@ -12,10 +12,10 @@ import { Game, type LockEvent } from '../core/game';
 import { Board } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile, renderMiniBoard } from './board-canvas';
-import { settings, saveSettings, onSettingsChange, BOT_NODES, type OpponentKind } from './settings';
+import { settings, saveSettings, onSettingsChange, botNodesOf, type OpponentKind } from './settings';
 import { EngineClient } from './engine-client';
 import { ColdClearClient, type CC2Move } from './cc2-client';
-import { GarbageQueue, ScheduledAttacker, versusAttack } from '../core/versus';
+import { GarbageQueue, ScheduledAttacker, versusAttack, scaleAttack } from '../core/versus';
 import { BotPlayer } from './bot-player';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
 import { matchOpener, type OpenerPlacement } from '../engine/opener';
@@ -71,6 +71,9 @@ export class GameView {
   // sprintMs is set once the run reaches 40 lines (frozen final time)
   private sprintStart = 0;
   private sprintMs: number | null = null;
+  // PPS window: first game input → most recent lock (doesn't decay while idle)
+  private playStart = 0;
+  private lastLockAt = 0;
   private clockAt = 0; // last live-clock repaint, throttles refreshSession
   private lastT = 0;   // previous rAF timestamp, for opponent dt
 
@@ -102,6 +105,7 @@ export class GameView {
   private chipTimer = 0;
   private toastTimer = 0;
   private retryTimer = 0;
+  private evalSel: HTMLSelectElement | null = null;
   private unsubSettings: () => void;
 
   // opener-phase placement history (popped on undo)
@@ -109,7 +113,7 @@ export class GameView {
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
-  private preview: { board: Board; cells: [number, number][] } | null = null;
+  private preview: { board: Board; colors: (PieceType | null)[][]; cells: [number, number][]; piece: PieceType } | null = null;
 
   // session counters — lifetime stats only absorb these when the session
   // ends ranked (no undo, no bot assist, run finished naturally)
@@ -155,7 +159,20 @@ export class GameView {
     document.removeEventListener('keyup', this.keyup);
   }
 
-  /** Re-apply settings to a live drill (zoom, handling, binds). */
+  /** Is placement evaluation on for this drill? (quick/versus have none) */
+  private evalOn(): boolean {
+    const m = this.mode;
+    return m === 'lst' || m === 'fourwide' || m === 'free' || m === 'allspin'
+      ? settings.evalDrill[m]
+      : false;
+  }
+
+  /** The paths dock only exists while evaluation is on. */
+  private applyEvalVisibility(): void {
+    this.pathsDock.style.display = this.evalOn() ? '' : 'none';
+  }
+
+  /** Re-apply settings to a live drill (zoom, handling, binds, evaluation). */
   private applySettings(): void {
     // reset-to-defaults replaces the nested objects; re-point the references
     this.input.settings = settings.handling;
@@ -164,7 +181,10 @@ export class GameView {
     const colW = `${Math.max(110, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
     this.leftCol.style.width = colW;
     this.rightCol.style.width = colW;
+    this.applyEvalVisibility();
+    if (this.evalSel) this.evalSel.value = this.evalOn() ? 'on' : 'off';
     this.refreshPanes();
+    this.refreshSession();
   }
 
   private build(): HTMLElement {
@@ -181,8 +201,7 @@ export class GameView {
     left.appendChild(this.holdBox);
     const sess = panel('Session');
     this.statStrip = document.createElement('div');
-    this.statStrip.style.fontSize = '12.5px';
-    this.statStrip.style.lineHeight = '1.9';
+    this.statStrip.className = 'sess-grid';
     sess.appendChild(this.statStrip);
     left.appendChild(sess);
     const controls = document.createElement('div');
@@ -215,6 +234,28 @@ export class GameView {
         this.resetDrill();
       });
       controls.append(sel);
+    }
+    // per-mode evaluation switch — same setting as in Settings → Trainer
+    if (this.mode === 'lst' || this.mode === 'fourwide' || this.mode === 'free' || this.mode === 'allspin') {
+      const gm = this.mode;
+      const evalSel = document.createElement('select');
+      evalSel.className = 'opp-select';
+      for (const [v, label] of [['on', 'evaluation on'], ['off', 'evaluation off']] as const) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = label;
+        evalSel.appendChild(o);
+      }
+      evalSel.value = settings.evalDrill[gm] ? 'on' : 'off';
+      this.evalSel = evalSel;
+      evalSel.addEventListener('change', () => {
+        settings.evalDrill[gm] = evalSel.value === 'on';
+        saveSettings(); // triggers applySettings → dock visibility + session refresh
+        evalSel.blur();
+        this.hideFeedback();
+        this.clearDock();
+      });
+      controls.append(evalSel);
     }
     left.appendChild(controls);
 
@@ -273,7 +314,8 @@ export class GameView {
    */
   private flushSession(): boolean {
     const s = this.session;
-    if (s.tainted || s.graded < 5) return false;
+    // with evaluation off there are no grades — piece count is the size gate
+    if (s.tainted || (this.evalOn() ? s.graded < 5 : s.pieces < 5)) return false;
     const m = stats.modes[this.mode];
     m.pieces += s.pieces;
     m.tsds += s.tsds;
@@ -281,14 +323,19 @@ export class GameView {
     m.drills++;
     for (const g of Object.keys(s.grades) as Grade[]) m.grades[g] += s.grades[g];
     saveStats();
+    // active play window only — idle time before the first input doesn't count
+    const activeMs = this.playStart ? Math.max(0, (this.lastLockAt || Date.now()) - this.playStart) : Date.now() - s.startedAt;
+    const pps = s.pieces >= 2 && activeMs > 0 ? Math.round((s.pieces / (activeMs / 1000)) * 100) / 100 : undefined;
     recordSession({
       at: new Date().toISOString(),
       mode: this.mode,
       pieces: s.pieces,
       tsds: s.tsds,
       grades: { ...s.grades },
-      durationMs: Date.now() - s.startedAt,
+      durationMs: activeMs,
+      ...(pps !== undefined ? { pps } : {}),
       ...(this.mode === 'fourwide' ? { maxCombo: this.maxCombo } : {}),
+      ...(this.mode === 'allspin' ? { maxB2b: this.maxB2b } : {}),
       ...(this.mode === 'free' && this.sprintMs !== null ? { sprintMs: this.sprintMs } : {}),
     });
     return true;
@@ -341,6 +388,8 @@ export class GameView {
       this.maxB2b = 0;
       this.sprintStart = 0;
       this.sprintMs = null;
+      this.playStart = 0;
+      this.lastLockAt = 0;
     }
     this.b2b = 0;
     this.b2bTag.textContent = '';
@@ -360,6 +409,7 @@ export class GameView {
     this.input.enabled = true;
     this.hideFeedback();
     this.clearDock();
+    this.applyEvalVisibility();
     this.refreshPanes();
     this.refreshSession();
     if (note) this.showToast(note);
@@ -392,6 +442,132 @@ export class GameView {
   private resume(): void {
     this.paused = false;
     this.input.enabled = true;
+  }
+
+  // ---- drill opponent (versus-style pressure) ----
+
+  /**
+   * (Re)build the pressure system from settings. `fresh` on retry/top-out;
+   * all-spin's board-cleared 'continue' keeps the live queue and bot. The
+   * bot worker survives retries — it just gets a fresh board and retuned
+   * pace/strength.
+   */
+  private setupOpponent(fresh: boolean): void {
+    if (!fresh && this.opp) return;
+    const kind: OpponentKind = (this.mode === 'fourwide' || this.mode === 'free' || this.mode === 'allspin')
+      ? settings.versus.drill[this.mode]
+      : 'off';
+    this.vsClock = 0;
+    this.vsSent = 0;
+    this.vsTaken = 0;
+    this.vsKos = 0;
+    this.vsLastPending = 0;
+    this.gmActive.style.height = '0px';
+    this.gmQueued.style.height = '0px';
+    if (kind === 'off') {
+      this.opp?.bot?.destroy();
+      this.opp = null;
+      return;
+    }
+    const v = settings.versus;
+    const cfg = {
+      delayMs: v.garbageDelayMs,
+      messiness: v.messiness / 100,
+      cap: v.garbageCap,
+      // 4-wide: holes stay inside the well so garbage rows remain clearable
+      holeMin: this.mode === 'fourwide' ? WELL_X : 0,
+      holeMax: this.mode === 'fourwide' ? WELL_X + WELL_W - 1 : 9,
+    };
+    const queue = new GarbageQueue(cfg);
+    if (kind === 'bot') {
+      let bot = this.opp?.bot ?? null;
+      if (bot) {
+        bot.configure({ pps: v.botPps, nodes: botNodesOf(v), rules: v.rules, attackScale: v.botAttackScale });
+        bot.reset((Math.random() * 2 ** 31) | 0);
+      } else {
+        // the bot plays a normal full-width board even in the 4-wide drill
+        bot = new BotPlayer({
+          pps: v.botPps,
+          nodes: botNodesOf(v),
+          garbage: { ...cfg, holeMin: 0, holeMax: 9 },
+          rules: v.rules,
+          attackScale: v.botAttackScale,
+        });
+      }
+      bot.onAttack = (lines) => queue.queue(lines, this.vsClock);
+      bot.onTopOut = () => {
+        this.vsKos++;
+        if (settings.soundFx) personalBestSound();
+        this.showToast(`KO! Cold Clear topped out ×${this.vsKos} — fresh bot board`);
+        this.opp?.bot?.reset((Math.random() * 2 ** 31) | 0);
+        this.refreshSession();
+      };
+      this.opp = { kind, queue, sched: null, bot };
+    } else {
+      this.opp?.bot?.destroy();
+      this.opp = { kind, queue, sched: new ScheduledAttacker(v.pressure), bot: null };
+    }
+  }
+
+  /** The pressure clock only runs while the player is actually drilling. */
+  private opponentLive(): boolean {
+    if (!this.opp || this.paused || this.game.topOut) return false;
+    if (this.mode === 'free' && (this.sprintStart === 0 || this.sprintMs !== null)) return false;
+    return true;
+  }
+
+  /** Per-frame: advance the opponent, collect its attacks, drive the meter. */
+  private tickOpponent(dt: number): void {
+    const o = this.opp;
+    if (!o) return;
+    if (!this.opponentLive()) return;
+    this.vsClock += dt;
+    if (o.sched) for (const lines of o.sched.tick(dt)) o.queue.queue(lines, this.vsClock);
+    o.bot?.update(dt);
+    const pending = o.queue.pending();
+    if (pending > this.vsLastPending && settings.soundFx) {
+      garbageQueuedSound(pending - this.vsLastPending);
+      if (pending >= 8 && this.vsLastPending < 8) damageAlertSound();
+    }
+    this.vsLastPending = pending;
+    const cell = this.cellSize();
+    const active = Math.min(o.queue.active(this.vsClock), 20);
+    const queued = Math.min(pending - active, 20 - active);
+    this.gmActive.style.height = `${active * cell}px`;
+    this.gmQueued.style.height = `${queued * cell}px`;
+  }
+
+  /**
+   * Versus bookkeeping for a player lock: a clear cancels incoming garbage
+   * first and sends the rest at the bot; a non-clearing lock lets active
+   * garbage rise into the board. `comboNow` is 0-based (0 = first clear).
+   */
+  private versusLock(ev: LockEvent, b2bBefore: number, comboNow: number): void {
+    const o = this.opp;
+    if (!o || !this.opponentLive()) return;
+    if (ev.linesCleared > 0) {
+      const v = settings.versus;
+      const atk = scaleAttack(
+        versusAttack(ev.linesCleared, ev.spin, comboNow, b2bBefore, ev.boardAfter.isEmpty(), v.rules),
+        v.attackScale,
+      );
+      const canceled = o.queue.cancel(atk);
+      const sent = atk - canceled;
+      if (sent > 0) {
+        this.vsSent += sent;
+        o.bot?.receiveAttack(sent);
+      }
+      if (canceled >= 4 && settings.soundFx) clutchSound();
+    } else {
+      const rows = o.queue.rise(this.vsClock);
+      if (rows.length > 0) {
+        this.game.addGarbage(rows);
+        this.vsTaken += rows.length;
+        if (settings.soundFx) garbageSound(rows.length);
+        this.renderer.fxGarbage(rows.length);
+      }
+    }
+    this.vsLastPending = o.queue.pending();
   }
 
   private onKeyDown(e: KeyboardEvent): void {
@@ -431,6 +607,8 @@ export class GameView {
       e.preventDefault();
       // sprint clock starts on the first game input, not on drill reset
       if (this.mode === 'free' && this.sprintStart === 0 && this.input.enabled) this.sprintStart = Date.now();
+      // PPS clock likewise — every mode
+      if (this.playStart === 0 && this.input.enabled) this.playStart = Date.now();
     }
     this.input.keyDown(desc, performance.now());
     this.refreshPanes();
@@ -458,6 +636,8 @@ export class GameView {
   }
 
   private onLock(ev: LockEvent): void {
+    if (this.playStart === 0) this.playStart = Date.now(); // bot-first edge case
+    this.lastLockAt = Date.now();
     this.comboHistory.push(this.combo);
     const b2bBefore = this.b2b; // chain state going into this placement
     if (this.mode === 'fourwide') {
@@ -479,11 +659,14 @@ export class GameView {
       this.fxOnLock(ev, 0, this.combo);
       this.lastLock = ev;
       this.session.pieces++;
-      this.engine.gradeLock(ev, { fourwide: true });
+      if (this.evalOn()) this.engine.gradeLock(ev, { fourwide: true });
+      this.versusLock(ev, 0, this.combo - 1);
       this.handleTopOut();
       this.refreshAll();
       return;
     }
+    // consecutive-clear combo (feeds the versus attack table)
+    this.combo = ev.linesCleared > 0 ? this.combo + 1 : 0;
     // B2B chain: spins and quads keep it, a plain clear breaks it
     if (ev.linesCleared > 0) {
       if (ev.spin !== 'none' || ev.linesCleared === 4) {
@@ -513,6 +696,12 @@ export class GameView {
         cells: ev.cells.map(([a, b]) => [a, b] as [number, number]),
         wasTsd: openerDone,
       });
+      // evaluation off: still advance the opener → loop phase, no grading
+      if (!this.evalOn()) {
+        if (openerDone) this.openerPhase = false;
+        this.refreshAll();
+        return;
+      }
       const match = matchOpener(this.openerHistory);
       if (openerDone) {
         this.openerPhase = false;
@@ -537,10 +726,11 @@ export class GameView {
 
     if (this.mode === 'allspin') {
       if (this.botMoving) this.botMoveFeedback(ev);
-      else void this.gradeAllspin(ev, b2bBefore);
-    } else {
+      else if (this.evalOn()) void this.gradeAllspin(ev, b2bBefore);
+    } else if (this.evalOn()) {
       this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
     }
+    this.versusLock(ev, b2bBefore, this.combo - 1);
     if (this.mode === 'free' && this.sprintMs === null && this.session.lines >= 40 && !this.game.topOut) {
       this.finishSprint();
     }
@@ -694,7 +884,7 @@ export class GameView {
         `<span>${[alt.isBook ? 'book' : '', tag, alt.isUser ? 'yours' : ''].filter(Boolean).join(' · ')}</span>`;
       card.appendChild(meta);
       card.addEventListener('mouseenter', () => {
-        this.preview = { board: before, cells: alt.cells };
+        this.preview = { board: before, colors: lock.colorsBefore, cells: alt.cells, piece: alt.piece };
         card.classList.add('selected');
       });
       card.addEventListener('mouseleave', () => {
@@ -828,7 +1018,7 @@ export class GameView {
       meta.className = 'meta';
       meta.innerHTML = `<b style="color:${PIECE_COLORS[piece]}">${top}</b><span>${bot}</span>`;
       card.appendChild(meta);
-      card.addEventListener('mouseenter', () => { this.preview = { board: before, cells }; card.classList.add('selected'); });
+      card.addEventListener('mouseenter', () => { this.preview = { board: before, colors: ev.colorsBefore, cells, piece }; card.classList.add('selected'); });
       card.addEventListener('mouseleave', () => { this.preview = null; card.classList.remove('selected'); });
       this.pathsBody.appendChild(card);
     };
@@ -880,68 +1070,64 @@ export class GameView {
     for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell));
   }
 
+  /** Live PPS over the active window (first input → last lock). */
+  private livePps(): string {
+    if (this.playStart === 0 || this.session.pieces < 2) return '—';
+    const ms = (this.lastLockAt || Date.now()) - this.playStart;
+    if (ms < 500) return '—';
+    return (this.session.pieces / (ms / 1000)).toFixed(2);
+  }
+
   private refreshSession(): void {
+    const s = this.session;
+    const evalOn = this.evalOn();
     // this session's accuracy (resets on retry), not the lifetime number
-    const acc = gradeAccuracy(this.session.grades);
-    const ranked = this.session.tainted
-      ? `<b class="unranked">unranked</b>`
-      : `<b>ranked ✓</b>`;
-    if (this.mode === 'fourwide') {
-      this.statStrip.innerHTML =
-        `phase <b>4-wide combo</b><br>` +
-        `pieces <b>${this.session.pieces}</b><br>` +
-        `combo <b>${this.combo}</b><br>` +
-        `best combo <b>${this.maxCombo}</b><br>` +
-        `mistakes <b>${this.session.mistakes}</b><br>` +
-        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
-        `session ${ranked}`;
-      return;
-    }
-    if (this.mode === 'allspin') {
-      this.statStrip.innerHTML =
-        `phase <b>all-spin B2B</b><br>` +
-        `pieces <b>${this.session.pieces}</b><br>` +
-        `B2B <b>${this.b2b}</b><br>` +
-        `best B2B <b>${this.maxB2b}</b><br>` +
-        `mistakes <b>${this.session.mistakes}</b><br>` +
-        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
-        `session ${ranked}`;
-      return;
+    const acc = gradeAccuracy(s.grades);
+    const cells: [string, string][] = [];
+    if (this.mode === 'lst') {
+      cells.push(['phase', this.openerPhase ? 'TKI' : 'LST loop'], ['TSDs', String(s.tsds)]);
     }
     if (this.mode === 'free') {
       const clock = this.sprintMs ?? (this.sprintStart ? Date.now() - this.sprintStart : 0);
-      this.statStrip.innerHTML =
-        `phase <b>40 lines</b><br>` +
-        `lines <b>${Math.min(this.session.lines, 40)}/40</b><br>` +
-        `time <b>${fmtSprint(clock)}</b><br>` +
-        `pieces <b>${this.session.pieces}</b><br>` +
-        `mistakes <b>${this.session.mistakes}</b><br>` +
-        `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
-        `session ${ranked}`;
-      return;
+      cells.push(['time', fmtSprint(clock)], ['lines', `${Math.min(s.lines, 40)}/40`]);
     }
-    const phase = this.openerPhase ? 'TKI opener' : 'LST loop';
-    this.statStrip.innerHTML =
-      `phase <b>${phase}</b><br>` +
-      `pieces <b>${this.session.pieces}</b><br>` +
-      `TSDs <b>${this.session.tsds}</b><br>` +
-      `mistakes <b>${this.session.mistakes}</b><br>` +
-      `accuracy <b>${(acc * 100).toFixed(0)}%</b><br>` +
-      `session ${ranked}`;
+    if (this.mode === 'fourwide') cells.push(['combo', `×${this.combo}`], ['best', `×${this.maxCombo}`]);
+    if (this.mode === 'allspin') cells.push(['B2B', `×${this.b2b}`], ['best', `×${this.maxB2b}`]);
+    cells.push(['pieces', String(s.pieces)], ['PPS', this.livePps()]);
+    // opponent traffic (and KOs when a real bot is on the other side)
+    if (this.opp) {
+      cells.push(['sent', String(this.vsSent)], ['taken', String(this.vsTaken)]);
+      if (this.opp.bot) cells.push(['KOs', String(this.vsKos)]);
+    }
+    if (evalOn) cells.push(['errors', String(s.mistakes)], ['acc', `${(acc * 100).toFixed(0)}%`]);
+    const body = cells
+      .map(([k, v]) => `<div class="sc"><span class="k">${k}</span><span class="v">${v}</span></div>`)
+      .join('');
+    const ranked = s.tainted
+      ? `<div class="sc wide rank-no"><span class="k">session</span><span class="v">unranked</span></div>`
+      : `<div class="sc wide rank-ok"><span class="k">session</span><span class="v">ranked ✓</span></div>`;
+    this.statStrip.innerHTML = body + ranked;
   }
 
   private loop(t: number): void {
     this.rafId = requestAnimationFrame((tt) => this.loop(tt));
+    const dt = this.lastT ? Math.min(t - this.lastT, 100) : 0;
+    this.lastT = t;
     if (!this.paused) this.input.update(t);
-    // live sprint clock while a 40 lines run is underway
-    if (this.mode === 'free' && this.sprintStart !== 0 && this.sprintMs === null && t - this.clockAt > 100) {
+    this.tickOpponent(dt);
+    // live clock/PPS repaint while a run is underway — the sprint clock ticks
+    // fast; the other modes only need the PPS cell to feel alive
+    const sprintLive = this.mode === 'free' && this.sprintStart !== 0 && this.sprintMs === null;
+    const interval = sprintLive ? 100 : 500;
+    if (this.playStart !== 0 && !this.paused && !this.game.topOut && t - this.clockAt > interval) {
       this.clockAt = t;
       this.refreshSession();
     }
     if (this.preview) {
-      // render preview: boardBefore + alternative cells, no active piece
-      this.renderer.highlight = { cells: this.preview.cells, color: '#e8b34c' };
-      this.renderer.renderStatic(this.preview.board);
+      // render preview: boardBefore with its real skins + the alternative
+      // placement as its own piece skin, outlined
+      this.renderer.highlight = { cells: this.preview.cells, color: '#e8b34c', piece: this.preview.piece };
+      this.renderer.renderStatic(this.preview.board, this.preview.colors);
     } else {
       this.renderer.highlight = null;
       this.renderer.render(this.game);

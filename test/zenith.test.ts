@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FLOORS, floorIndexAt, attackFor, ZenithRun } from '../src/core/zenith';
-import { Board } from '../src/core/board';
+import { Board, BOARD_H } from '../src/core/board';
 import { Game } from '../src/core/game';
 import { mulberry32 } from '../src/core/rng';
 
@@ -133,5 +133,41 @@ describe('garbage insertion', () => {
     expect(g.active).not.toBeNull();
     expect(g.active!.y).toBeGreaterThan(yBefore);
     expect(g.topOut).toBe(false);
+  });
+
+  it('a moderate garbage hit near the top does not instant-kill', () => {
+    const g = new Game(1);
+    // build a stack ~14 high, then take 4 garbage: still inside the field
+    const tall = Array.from({ length: 14 }, () => 0b0111111111); // hole at col 9
+    g.reset(new Board(Uint32Array.from(tall.concat(Array(BOARD_H - 14).fill(0)))), 1);
+    g.addGarbage([9, 9, 9, 9]);
+    expect(g.topOut).toBe(false);
+    expect(g.active).not.toBeNull();
+  });
+
+  it('tops out only when garbage buries the stack past the ceiling', () => {
+    const g = new Game(1);
+    // stack already 24 high; a big dump overflows the 26-row field → dead
+    const rows = Array.from({ length: BOARD_H }, (_, y) => (y < 24 ? 0b0111111111 : 0));
+    g.reset(new Board(Uint32Array.from(rows)), 1);
+    g.addGarbage([9, 9, 9, 9, 9, 9]);
+    expect(g.topOut).toBe(true);
+    expect(g.active).toBeNull();
+  });
+
+  it('never leaves the active piece floating alive above the field', () => {
+    const g = new Game(1);
+    // fill every column solid to row 22, single-column hole so garbage packs it
+    const rows = Array.from({ length: BOARD_H }, (_, y) => (y < 22 ? 0b0111111111 : 0));
+    g.reset(new Board(Uint32Array.from(rows)), 1);
+    g.addGarbage([9, 9, 9, 9, 9, 9, 9, 9]); // 8 lines onto a 22-high stack
+    // either it tops out, or the piece is still within the field — never a
+    // live piece whose cells all sit above the board
+    if (!g.topOut) {
+      const cells = g.active!;
+      expect(cells.y).toBeLessThan(BOARD_H);
+    } else {
+      expect(g.active).toBeNull();
+    }
   });
 });

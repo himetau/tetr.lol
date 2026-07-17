@@ -1,11 +1,12 @@
-// Stats page: accuracy trend over recent sessions (per mode, toggleable via
-// checkmark tabs), quick-play altitude per run, 40 lines time per run,
-// lifetime totals, and the recent-session log. Charts are inline SVG — smooth
-// monotone curves with a crosshair + tooltip; the session tables are the
-// accessible fallback for everything the charts show. Only ranked sessions
-// are ever recorded (no undo, no bot assist), so the charts need no filtering.
+// Stats page: one progress chart per mode, each tracking the number that mode
+// is actually about — LST accuracy, 4-wide combo, all-spin B2B chain, 40 lines
+// time, quick play altitude, 1v1 round share — plus lifetime totals and the
+// recent-session log. Charts are inline SVG polylines with a crosshair +
+// tooltip; the tables are the accessible fallback for everything the charts
+// show. Only ranked sessions are ever recorded (no undo, no bot assist), so
+// the charts need no filtering.
 
-import { stats, accuracy, gradeAccuracy, resetStats, fmtSprint, type Mode } from './stats';
+import { stats, accuracy, gradeAccuracy, gradeTotal, sessionPps, resetStats, fmtSprint, type Mode, type SessionRecord } from './stats';
 
 const MODE_LABEL: Record<Mode, string> = {
   lst: 'LST drill (TKI → loop)',
@@ -13,44 +14,43 @@ const MODE_LABEL: Record<Mode, string> = {
   free: '40 Lines',
   quick: 'Quick play',
   allspin: 'All-Spin trainer',
+  versus: '1v1 vs Cold Clear',
 };
 
-const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: '40 Lines', quick: 'Quick play', allspin: 'All-Spin' };
+const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: '40 Lines', quick: 'Quick play', allspin: 'All-Spin', versus: '1v1' };
 
-// one color per mode — validated (CVD + contrast) against --bg-raised in both
-// themes, slot order lst → free → fourwide → allspin (+quick in its own chart)
+// one color per mode — each chart is single-series, so the colors only carry
+// identity next to text (card titles, table dots), never alone
 const SERIES_VAR: Record<Mode, string> = {
   lst: 'var(--series-lst)',
   fourwide: 'var(--series-fourwide)',
   free: 'var(--series-free)',
   quick: 'var(--series-quick)',
   allspin: 'var(--series-allspin)',
+  versus: 'var(--series-versus)',
 };
 
-const TREND_MODES: Mode[] = ['lst', 'fourwide', 'free', 'allspin'];
 const TREND_WINDOW = 40;
-const TABS_KEY = 'lst-trainer-stats-tabs-v1';
 
 interface ChartPoint {
-  x: number;               // slot in the shared x order
+  x: number;               // slot in the x order
   y: number;               // data value
   label: string;           // tooltip text
 }
 
-interface ChartSeries {
-  name: string;
-  color: string;
-  points: ChartPoint[];
+/** Percent ticks for accuracy / win-share charts. */
+const PCT_TICKS = [0, 25, 50, 75, 100];
+
+/** yMax rounded up to a multiple of `step` quarters, so ticks stay integers. */
+function quarterTicks(top: number, minMax: number, step: number): number[] {
+  const yMax = Math.max(minMax, Math.ceil(top / step) * step);
+  return [0, yMax / 4, yMax / 2, (3 * yMax) / 4, yMax];
 }
 
-/** modes the user has unchecked on the trend chart, persisted across visits */
-function loadHiddenModes(): Set<Mode> {
-  try {
-    const raw = JSON.parse(localStorage.getItem(TABS_KEY) ?? '[]') as Mode[];
-    return new Set(raw.filter((m) => TREND_MODES.includes(m)));
-  } catch {
-    return new Set();
-  }
+/** "· 2.31 pps" suffix when the session has one, else "". */
+function ppsTag(s: SessionRecord): string {
+  const pps = sessionPps(s);
+  return pps ? ` · ${pps.toFixed(2)} pps` : '';
 }
 
 export function statsView(): HTMLElement {
@@ -58,131 +58,142 @@ export function statsView(): HTMLElement {
   page.className = 'page';
   page.innerHTML = `<h1>Stats</h1><p class="sub">progress over time and lifetime numbers, stored locally — only ranked sessions count (no undo, no bot)</p>`;
 
-  // ---- accuracy trend (per mode, checkmark tabs) ----
-  const graded = stats.sessions.filter((s) => s.mode !== 'quick');
-  const trend = card('Accuracy trend');
-  if (graded.length < 2) {
-    trend.appendChild(emptyNote('finish a couple of ranked drills (5+ graded placements, no undo/bot — retry, top out, or leave the drill records it) and the trend appears here'));
-  } else {
-    const present = TREND_MODES.filter((m) => graded.some((s) => s.mode === m));
-    const hidden = loadHiddenModes();
-    const area = document.createElement('div');
-
-    const draw = () => {
-      area.replaceChildren();
-      const visible = graded.filter((s) => !hidden.has(s.mode)).slice(-TREND_WINDOW);
-      if (visible.length < 2) {
-        area.appendChild(emptyNote('not enough sessions for the checked modes — toggle a tab back on'));
-        return;
-      }
-      const series: ChartSeries[] = present
-        .filter((m) => !hidden.has(m))
-        .map((m) => ({
-          name: SHORT_LABEL[m],
-          color: SERIES_VAR[m],
-          points: visible
-            .map((s, i) => ({ s, i }))
-            .filter(({ s }) => s.mode === m)
-            .map(({ s, i }) => ({
-              x: i,
-              y: gradeAccuracy(s.grades) * 100,
-              label: `${fmtDate(s.at)} · ${SHORT_LABEL[s.mode]} · ${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · ${s.pieces} pieces · ${s.tsds} TSD`,
-            })),
-        }))
-        .filter((s) => s.points.length > 0);
-      area.appendChild(lineChart(series, {
-        slots: visible.length,
-        yTicks: [0, 25, 50, 75, 100],
-        yFmt: (v) => `${v}%`,
+  const of = (m: Mode) => stats.sessions.filter((s) => s.mode === m);
+  const chartCard = (title: string, color: string, points: ChartPoint[], yTicks: number[], yFmt: (v: number) => string, few: string) => {
+    const c = card(title);
+    if (points.length < 2) {
+      c.appendChild(emptyNote(few));
+    } else {
+      c.appendChild(lineChart({ color, points: points.slice(-TREND_WINDOW).map((p, i) => ({ ...p, x: i })) }, {
+        slots: Math.min(points.length, TREND_WINDOW),
+        yTicks,
+        yFmt,
       }));
-    };
-
-    // checkmark tab per mode — toggles the series, selection persists
-    const tabs = document.createElement('div');
-    tabs.className = 'chart-tabs';
-    for (const m of present) {
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'chart-tab' + (hidden.has(m) ? '' : ' active');
-      tab.style.setProperty('--tab-c', SERIES_VAR[m]);
-      tab.setAttribute('role', 'checkbox');
-      tab.setAttribute('aria-checked', String(!hidden.has(m)));
-      tab.innerHTML = `<i class="dot"></i>${SHORT_LABEL[m]}<span class="ck">✓</span>`;
-      tab.addEventListener('click', () => {
-        if (hidden.has(m)) hidden.delete(m);
-        else hidden.add(m);
-        tab.classList.toggle('active', !hidden.has(m));
-        tab.setAttribute('aria-checked', String(!hidden.has(m)));
-        localStorage.setItem(TABS_KEY, JSON.stringify([...hidden]));
-        draw();
-      });
-      tabs.appendChild(tab);
     }
-    trend.append(tabs, area);
-    draw();
-  }
-  page.appendChild(trend);
+    page.appendChild(c);
+  };
 
-  // ---- quick play altitude ----
-  const runs = stats.sessions.filter((s) => s.mode === 'quick' && s.altitude !== undefined).slice(-TREND_WINDOW);
-  if (runs.length >= 2) {
-    const alt = card('Quick play — altitude per run');
-    const top = Math.max(...runs.map((r) => r.altitude!));
-    const yMax = Math.max(100, Math.ceil(top / 100) * 100);
-    alt.appendChild(lineChart([{
-      name: SHORT_LABEL.quick,
-      color: SERIES_VAR.quick,
-      points: runs.map((s, i) => ({
-        x: i,
-        y: s.altitude!,
-        label: `${fmtDate(s.at)} · ${Math.round(s.altitude!)}m · ${s.pieces} pieces`,
+  // ---- LST: the drill is about clean loop placements → accuracy ----
+  const lst = of('lst').filter((s) => gradeTotal(s.grades) > 0);
+  if (lst.length > 0) {
+    chartCard('LST drill — accuracy per session', SERIES_VAR.lst,
+      lst.map((s) => ({
+        x: 0,
+        y: gradeAccuracy(s.grades) * 100,
+        label: `${fmtDate(s.at)} · ${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · ${s.pieces} pieces · ${s.tsds} TSD${ppsTag(s)}`,
       })),
-    }], {
-      slots: runs.length,
-      yTicks: [0, yMax / 4, yMax / 2, (3 * yMax) / 4, yMax],
-      yFmt: (v) => `${Math.round(v)}m`,
-    }));
-    page.appendChild(alt);
+      PCT_TICKS, (v) => `${v}%`,
+      'finish one more ranked LST drill and the trend appears here');
   }
 
-  // ---- 40 lines sprint times ----
-  const sprints = stats.sessions.filter((s) => s.mode === 'free' && s.sprintMs !== undefined).slice(-TREND_WINDOW);
-  if (sprints.length >= 2) {
-    const spr = card('40 Lines — time per run');
+  // ---- 4-wide: the drill is about the combo → longest combo per session ----
+  const fw = of('fourwide').filter((s) => s.maxCombo !== undefined);
+  if (fw.length > 0) {
+    const top = Math.max(...fw.map((s) => s.maxCombo!));
+    chartCard('4-wide — longest combo per session', SERIES_VAR.fourwide,
+      fw.map((s) => ({
+        x: 0,
+        y: s.maxCombo!,
+        label: `${fmtDate(s.at)} · combo ×${s.maxCombo} · ${s.pieces} pieces${ppsTag(s)}`,
+      })),
+      quarterTicks(top, 8, 4), (v) => `×${Math.round(v)}`,
+      'finish one more ranked 4-wide drill and the trend appears here');
+  }
+
+  // ---- all-spin: the drill is about keeping the chain → best B2B ----
+  // (accuracy fallback for stats recorded before B2B tracking existed)
+  const asB2b = of('allspin').filter((s) => s.maxB2b !== undefined);
+  const asAcc = of('allspin').filter((s) => gradeTotal(s.grades) > 0);
+  if (asB2b.length >= 2 || (asB2b.length > 0 && asAcc.length < 2)) {
+    const top = Math.max(...asB2b.map((s) => s.maxB2b!));
+    chartCard('All-Spin — best B2B chain per session', SERIES_VAR.allspin,
+      asB2b.map((s) => ({
+        x: 0,
+        y: s.maxB2b!,
+        label: `${fmtDate(s.at)} · B2B ×${s.maxB2b} · ${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · ${s.pieces} pieces${ppsTag(s)}`,
+      })),
+      quarterTicks(top, 8, 4), (v) => `×${Math.round(v)}`,
+      'finish one more ranked all-spin drill and the trend appears here');
+  } else if (asAcc.length > 0) {
+    chartCard('All-Spin — accuracy per session', SERIES_VAR.allspin,
+      asAcc.map((s) => ({
+        x: 0,
+        y: gradeAccuracy(s.grades) * 100,
+        label: `${fmtDate(s.at)} · ${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · ${s.pieces} pieces${ppsTag(s)}`,
+      })),
+      PCT_TICKS, (v) => `${v}%`,
+      'finish one more ranked all-spin drill and the trend appears here');
+  }
+
+  // ---- 40 lines: time per finished run ----
+  const sprints = of('free').filter((s) => s.sprintMs !== undefined);
+  if (sprints.length > 0) {
     const slowest = Math.max(...sprints.map((r) => r.sprintMs!)) / 1000;
-    const yMax = Math.max(60, Math.ceil(slowest / 30) * 30);
-    spr.appendChild(lineChart([{
-      name: SHORT_LABEL.free,
-      color: SERIES_VAR.free,
-      points: sprints.map((s, i) => ({
-        x: i,
+    chartCard('40 Lines — time per run', SERIES_VAR.free,
+      sprints.map((s) => ({
+        x: 0,
         y: s.sprintMs! / 1000,
-        label: `${fmtDate(s.at)} · ${fmtSprint(s.sprintMs!)} · ${s.pieces} pieces`,
+        label: `${fmtDate(s.at)} · ${fmtSprint(s.sprintMs!)} · ${s.pieces} pieces${ppsTag(s)}`,
       })),
-    }], {
-      slots: sprints.length,
-      yTicks: [0, yMax / 4, yMax / 2, (3 * yMax) / 4, yMax],
-      yFmt: (v) => fmtSprint(v * 1000, false),
-    }));
-    page.appendChild(spr);
+      quarterTicks(slowest, 60, 20), (v) => fmtSprint(v * 1000, false),
+      'finish one more 40 lines run and the trend appears here');
+  }
+
+  // ---- quick play: altitude per run ----
+  const runs = of('quick').filter((s) => s.altitude !== undefined);
+  if (runs.length > 0) {
+    const top = Math.max(...runs.map((r) => r.altitude!));
+    chartCard('Quick play — altitude per run', SERIES_VAR.quick,
+      runs.map((s) => ({
+        x: 0,
+        y: s.altitude!,
+        label: `${fmtDate(s.at)} · ${Math.round(s.altitude!)}m · ${s.pieces} pieces${ppsTag(s)}`,
+      })),
+      quarterTicks(top, 100, 100), (v) => `${Math.round(v)}m`,
+      'finish one more quick play run and the trend appears here');
+  }
+
+  // ---- 1v1: share of rounds taken per match ----
+  const matches = of('versus').filter((s) => (s.wins ?? 0) + (s.losses ?? 0) > 0);
+  if (matches.length > 0) {
+    chartCard('1v1 — rounds taken per match', SERIES_VAR.versus,
+      matches.map((s) => {
+        const w = s.wins ?? 0;
+        const l = s.losses ?? 0;
+        return {
+          x: 0,
+          y: (w / (w + l)) * 100,
+          label: `${fmtDate(s.at)} · ${w > l ? 'won' : 'lost'} ${w}–${l} · ${s.pieces} pieces${ppsTag(s)}`,
+        };
+      }),
+      PCT_TICKS, (v) => `${v}%`,
+      'finish one more 1v1 match and the trend appears here');
+  }
+
+  if (stats.sessions.length === 0) {
+    const empty = card('Progress');
+    empty.appendChild(emptyNote('finish a couple of ranked sessions (5+ placements, no undo/bot — retry, top out, or leave the drill records it) and per-mode trends appear here'));
+    page.appendChild(empty);
   }
 
   // ---- lifetime table ----
   const life = card('Lifetime');
-  const played = (['lst', 'fourwide', 'free', 'quick', 'allspin'] as Mode[]).filter((m) => stats.modes[m].pieces > 0 || stats.modes[m].drills > 0);
+  const played = (['lst', 'fourwide', 'free', 'quick', 'allspin', 'versus'] as Mode[]).filter((m) => stats.modes[m].pieces > 0 || stats.modes[m].drills > 0);
   if (played.length === 0) {
     life.appendChild(emptyNote('no ranked sessions yet'));
   } else {
     const table = document.createElement('table');
     table.className = 'stats';
-    table.innerHTML = `<tr><th>mode</th><th>drills</th><th>pieces</th><th>TSD</th><th>best</th><th>good</th><th>inacc</th><th>mistake</th><th>killer</th><th>accuracy</th></tr>`;
+    table.innerHTML = `<tr><th>mode</th><th>drills</th><th>pieces</th><th>TSD</th><th>accuracy</th><th>avg PPS</th><th>record</th></tr>`;
     for (const m of played) {
       const s = stats.modes[m];
-      const g = s.grades;
+      const sessions = of(m);
+      const ppsVals = sessions.map(sessionPps).filter((v): v is number => v !== null);
+      const avgPps = ppsVals.length > 0 ? (ppsVals.reduce((a, b) => a + b, 0) / ppsVals.length).toFixed(2) : '—';
+      const acc = gradeTotal(s.grades) > 0 ? `${(accuracy(s) * 100).toFixed(1)}%` : '—';
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${modeDot(m)}${MODE_LABEL[m]}</td><td>${s.drills}</td><td>${s.pieces}</td><td>${s.tsds}</td>` +
-        `<td>${g.best}</td><td>${g.good}</td><td>${g.inaccuracy}</td><td>${g.mistake}</td><td>${g.killer}</td>` +
-        `<td><b>${(accuracy(s) * 100).toFixed(1)}%</b></td>`;
+        `<td>${acc}</td><td>${avgPps}</td><td><b>${modeRecord(m, sessions)}</b></td>`;
       table.appendChild(tr);
     }
     life.appendChild(table);
@@ -197,17 +208,12 @@ export function statsView(): HTMLElement {
   } else {
     const t = document.createElement('table');
     t.className = 'stats';
-    t.innerHTML = `<tr><th>when</th><th>mode</th><th>pieces</th><th>TSD</th><th>result</th></tr>`;
+    t.innerHTML = `<tr><th>when</th><th>mode</th><th>pieces</th><th>PPS</th><th>result</th></tr>`;
     for (const s of recent) {
       const tr = document.createElement('tr');
-      const result = s.mode === 'quick'
-        ? `${Math.round(s.altitude ?? 0)}m`
-        : s.mode === 'fourwide' && s.maxCombo !== undefined
-          ? `${(gradeAccuracy(s.grades) * 100).toFixed(0)}% · combo ×${s.maxCombo}`
-          : s.mode === 'free' && s.sprintMs !== undefined
-            ? `${fmtSprint(s.sprintMs)} · ${(gradeAccuracy(s.grades) * 100).toFixed(0)}%`
-            : `${(gradeAccuracy(s.grades) * 100).toFixed(0)}% accuracy`;
-      tr.innerHTML = `<td>${fmtDate(s.at)}</td><td>${modeDot(s.mode)}${SHORT_LABEL[s.mode]}</td><td>${s.pieces}</td><td>${s.tsds}</td><td><b>${result}</b></td>`;
+      const pps = sessionPps(s);
+      tr.innerHTML = `<td>${fmtDate(s.at)}</td><td>${modeDot(s.mode)}${SHORT_LABEL[s.mode]}</td><td>${s.pieces}</td>` +
+        `<td>${pps ? pps.toFixed(2) : '—'}</td><td><b>${sessionResult(s)}</b></td>`;
       t.appendChild(tr);
     }
     log.appendChild(t);
@@ -230,6 +236,50 @@ export function statsView(): HTMLElement {
   page.appendChild(danger);
 
   return page;
+}
+
+/** The mode-appropriate personal best across recorded sessions. */
+function modeRecord(m: Mode, sessions: SessionRecord[]): string {
+  switch (m) {
+    case 'fourwide': {
+      const best = Math.max(0, ...sessions.map((s) => s.maxCombo ?? 0));
+      return best > 0 ? `combo ×${best}` : '—';
+    }
+    case 'allspin': {
+      const best = Math.max(0, ...sessions.map((s) => s.maxB2b ?? 0));
+      return best > 0 ? `B2B ×${best}` : '—';
+    }
+    case 'free': {
+      const times = sessions.map((s) => s.sprintMs).filter((v): v is number => v !== undefined);
+      return times.length > 0 ? fmtSprint(Math.min(...times)) : '—';
+    }
+    case 'quick': {
+      const best = Math.max(0, ...sessions.map((s) => s.altitude ?? 0));
+      return best > 0 ? `${Math.round(best)}m` : '—';
+    }
+    case 'versus': {
+      const w = sessions.reduce((n, s) => n + (s.wins ?? 0), 0);
+      const l = sessions.reduce((n, s) => n + (s.losses ?? 0), 0);
+      return w + l > 0 ? `${w}–${l} rounds` : '—';
+    }
+    case 'lst': {
+      const accs = sessions.filter((s) => gradeTotal(s.grades) > 0).map((s) => gradeAccuracy(s.grades));
+      return accs.length > 0 ? `${(Math.max(...accs) * 100).toFixed(0)}% acc` : '—';
+    }
+  }
+}
+
+/** One-cell summary of a session for the recent log. */
+function sessionResult(s: SessionRecord): string {
+  const acc = gradeTotal(s.grades) > 0 ? `${(gradeAccuracy(s.grades) * 100).toFixed(0)}%` : '';
+  switch (s.mode) {
+    case 'quick': return `${Math.round(s.altitude ?? 0)}m`;
+    case 'versus': return `${(s.wins ?? 0) > (s.losses ?? 0) ? 'won' : 'lost'} ${s.wins ?? 0}–${s.losses ?? 0}`;
+    case 'fourwide': return s.maxCombo !== undefined ? `combo ×${s.maxCombo}${acc ? ` · ${acc}` : ''}` : acc || '—';
+    case 'free': return s.sprintMs !== undefined ? `${fmtSprint(s.sprintMs)}${acc ? ` · ${acc}` : ''}` : 'unfinished';
+    case 'allspin': return s.maxB2b !== undefined ? `B2B ×${s.maxB2b}${acc ? ` · ${acc}` : ''}` : acc || '—';
+    case 'lst': return acc ? `${acc} accuracy` : '—';
+  }
 }
 
 /** In-app confirm dialog for the restart action; Esc / backdrop / Cancel decline. */
@@ -286,7 +336,12 @@ const VB_W = 720;
 const VB_H = 220;
 const PAD = { l: 44, r: 14, t: 12, b: 20 };
 
-function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[]; yFmt: (v: number) => string }): HTMLElement {
+interface ChartSeries {
+  color: string;
+  points: ChartPoint[];
+}
+
+function lineChart(series: ChartSeries, opts: { slots: number; yTicks: number[]; yFmt: (v: number) => string }): HTMLElement {
   // wrap contains only the svg + tooltip, so tooltip math needs no offsets
   const wrap = document.createElement('div');
   wrap.className = 'chart-wrap';
@@ -308,13 +363,17 @@ function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[
     grid += `<line x1="${PAD.l}" y1="${y}" x2="${VB_W - PAD.r}" y2="${y}" class="gridline"/>`;
     yLabels += `<text x="${PAD.l - 8}" y="${y + 3.5}" text-anchor="end" class="tick">${opts.yFmt(t)}</text>`;
   }
+  const pts = series.points.map((p) => ({ x: px(p.x), y: py(p.y) }));
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   let marks = '';
-  for (const s of series) {
-    const pts = s.points.map((p) => ({ x: px(p.x), y: py(p.y) }));
-    marks += `<path d="${smoothPath(pts)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    for (const p of pts) {
-      marks += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${s.color}" stroke="var(--bg-raised)" stroke-width="2"/>`;
-    }
+  if (pts.length > 1) {
+    // faint fill under the line grounds the trend without adding a second hue
+    const base = PAD.t + plotH;
+    marks += `<path d="${line} L${pts[pts.length - 1].x.toFixed(1)} ${base} L${pts[0].x.toFixed(1)} ${base} Z" fill="${series.color}" fill-opacity="0.08" stroke="none"/>`;
+  }
+  marks += `<path d="${line}" fill="none" stroke="${series.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  for (const p of pts) {
+    marks += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${series.color}" stroke="var(--bg-raised)" stroke-width="2"/>`;
   }
   svg.innerHTML = grid + yLabels + marks;
   wrap.appendChild(svg);
@@ -336,7 +395,7 @@ function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[
   ring.style.display = 'none';
   svg.appendChild(ring);
 
-  const all = series.flatMap((s) => s.points.map((p) => ({ ...p, color: s.color })));
+  const all = series.points;
   const hide = () => {
     ring.style.display = 'none';
     xhair.style.display = 'none';
@@ -345,15 +404,13 @@ function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[
   svg.addEventListener('mousemove', (e) => {
     const r = svg.getBoundingClientRect();
     const mx = ((e.clientX - r.left) / r.width) * VB_W;
-    const my = ((e.clientY - r.top) / r.height) * VB_H;
-    // nearest by x (crosshair-style), y only breaks ties between series
     let nearest = all[0];
     let bd = Infinity;
     for (const p of all) {
-      const d = Math.abs(px(p.x) - mx) * 1000 + Math.abs(py(p.y) - my);
+      const d = Math.abs(px(p.x) - mx);
       if (d < bd) { bd = d; nearest = p; }
     }
-    if (!nearest || bd > 50 * 1000) {
+    if (!nearest || bd > 50) {
       hide();
       return;
     }
@@ -364,7 +421,7 @@ function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[
     ring.style.display = '';
     ring.setAttribute('cx', String(cx));
     ring.setAttribute('cy', String(py(nearest.y)));
-    ring.setAttribute('stroke', nearest.color);
+    ring.setAttribute('stroke', series.color);
     tip.textContent = nearest.label;
     tip.classList.add('show');
     const tx = (cx / VB_W) * r.width;
@@ -374,43 +431,6 @@ function lineChart(series: ChartSeries[], opts: { slots: number; yTicks: number[
   svg.addEventListener('mouseleave', hide);
 
   return wrap;
-}
-
-/**
- * Smooth "round" line through the points: monotone cubic interpolation
- * (Fritsch–Carlson tangents), which never overshoots the data the way a
- * naive Catmull-Rom spline would on an accuracy chart.
- */
-function smoothPath(pts: { x: number; y: number }[]): string {
-  if (pts.length === 0) return '';
-  if (pts.length === 1) return `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-  const n = pts.length;
-  const dx: number[] = [];
-  const slope: number[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    const h = Math.max(pts[i + 1].x - pts[i].x, 1e-6);
-    dx.push(h);
-    slope.push((pts[i + 1].y - pts[i].y) / h);
-  }
-  const tan: number[] = [slope[0]];
-  for (let i = 1; i < n - 1; i++) {
-    if (slope[i - 1] * slope[i] <= 0) {
-      tan.push(0);
-    } else {
-      const w1 = 2 * dx[i] + dx[i - 1];
-      const w2 = dx[i] + 2 * dx[i - 1];
-      tan.push((w1 + w2) / (w1 / slope[i - 1] + w2 / slope[i]));
-    }
-  }
-  tan.push(slope[n - 2]);
-  let d = `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const h = dx[i];
-    d += ` C${(pts[i].x + h / 3).toFixed(1)} ${(pts[i].y + (tan[i] * h) / 3).toFixed(1)}` +
-      ` ${(pts[i + 1].x - h / 3).toFixed(1)} ${(pts[i + 1].y - (tan[i + 1] * h) / 3).toFixed(1)}` +
-      ` ${pts[i + 1].x.toFixed(1)} ${pts[i + 1].y.toFixed(1)}`;
-  }
-  return d;
 }
 
 function modeDot(m: Mode): string {

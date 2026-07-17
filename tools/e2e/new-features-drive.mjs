@@ -32,7 +32,7 @@ await page.screenshot({ path: `${shotDir}/quick-launch.png` });
 
 // start on The Laboratory with brutal pressure so garbage shows up fast
 await page.locator('.floor-btn', { hasText: 'The Laboratory' }).click();
-await page.selectOption('.zenith-opts select', 'brutal');
+await page.locator('.qp-seg-btn', { hasText: 'brutal' }).click();
 await page.click('text=Start climb');
 await page.waitForTimeout(600);
 ok('quick: overlay hidden after start', !(await page.isVisible('.zenith-overlay.show')));

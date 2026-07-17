@@ -28,11 +28,29 @@ export const DEFAULT_GARBAGE: GarbageConfig = {
   holeMax: 9,
 };
 
+/** Every dial of the versus damage table — all user-tunable. */
+export interface AttackRules {
+  spinMult: number;   // full-spin attack = floor(lines × this)
+  quadAttack: number; // lines a quad sends
+  b2bBonus: number;   // extra lines while the B2B chain is alive
+  comboDiv: number;   // attack += floor(combo / this); 0 disables combo damage
+  allClear: number;   // lines a perfect clear adds
+}
+
+/** guideline/tetr.io-flavored defaults */
+export const DEFAULT_RULES: AttackRules = {
+  spinMult: 2,
+  quadAttack: 4,
+  b2bBonus: 1,
+  comboDiv: 2,
+  allClear: 10,
+};
+
 /**
- * Lines sent by a clear (guideline/tetr.io-flavored versus table): spins send
- * double, quads send 4, B2B adds 1 while the chain is alive, combo adds
- * floor(combo/2), a perfect clear sends 10. `combo` counts consecutive
- * clearing locks with 0 = the first clear of a run.
+ * Lines sent by a clear under `rules` (defaults: spins send double, quads
+ * send 4, B2B adds 1 while the chain is alive, combo adds floor(combo/2),
+ * a perfect clear adds 10). `combo` counts consecutive clearing locks with
+ * 0 = the first clear of a run.
  */
 export function versusAttack(
   lines: number,
@@ -40,16 +58,22 @@ export function versusAttack(
   combo: number,
   b2b: number,
   allClear: boolean,
+  rules: AttackRules = DEFAULT_RULES,
 ): number {
   if (lines <= 0) return 0;
   let atk = 0;
-  if (spin === 'full') atk = lines * 2;
+  if (spin === 'full') atk = Math.floor(lines * rules.spinMult);
   else if (spin === 'mini') atk = Math.max(0, lines - 1);
-  else atk = lines === 4 ? 4 : lines - 1;
-  if (b2b > 0 && (spin !== 'none' || lines === 4)) atk += 1;
-  atk += Math.floor(Math.max(0, combo) / 2);
-  if (allClear) atk += 10;
+  else atk = lines === 4 ? rules.quadAttack : lines - 1;
+  if (b2b > 0 && (spin !== 'none' || lines === 4)) atk += rules.b2bBonus;
+  if (rules.comboDiv > 0) atk += Math.floor(Math.max(0, combo) / rules.comboDiv);
+  if (allClear) atk += rules.allClear;
   return atk;
+}
+
+/** Apply a percentage handicap to an attack (rounded, never negative). */
+export function scaleAttack(atk: number, percent: number): number {
+  return Math.max(0, Math.round(atk * percent / 100));
 }
 
 interface QueuedAttack {

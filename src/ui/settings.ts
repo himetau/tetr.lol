@@ -1,5 +1,5 @@
 import { DEFAULT_HANDLING, DEFAULT_KEYBINDS, type HandlingSettings, type Keybinds } from '../core/handling';
-import type { Pressure } from '../core/versus';
+import { DEFAULT_RULES, type AttackRules, type Pressure } from '../core/versus';
 
 export interface VolumeSettings {
   master: number; // percent, 0..100 — scales every category
@@ -17,21 +17,34 @@ export interface BackgroundSettings {
 /** What applies pressure in a drill: nothing, quickplay-style scheduled
  * garbage, or a real Cold Clear bot playing its own hidden board. */
 export type OpponentKind = 'off' | 'garbage' | 'bot';
-export type BotLevel = 'easy' | 'normal' | 'hard' | 'elite';
+export type BotLevel = 'easy' | 'normal' | 'hard' | 'elite' | 'custom';
 
-/** CC2 node budget per move — the bot's strength knob. */
-export const BOT_NODES: Record<BotLevel, number> = { easy: 1200, normal: 6000, hard: 20000, elite: 60000 };
+/** CC2 node budget per move — the bot's strength presets. */
+export const BOT_NODES: Record<Exclude<BotLevel, 'custom'>, number> = { easy: 1200, normal: 6000, hard: 20000, elite: 60000 };
+
+/** Resolve the bot's node budget: preset level, or the custom slider. */
+export function botNodesOf(v: VersusSettings): number {
+  return v.botLevel === 'custom' ? v.botNodes : BOT_NODES[v.botLevel];
+}
 
 export interface VersusSettings {
   botPps: number;         // bot pieces per second (0.5..4)
   botLevel: BotLevel;
+  botNodes: number;       // CC2 nodes per move when botLevel = 'custom'
   garbageDelayMs: number; // telegraph before an attack can rise
   messiness: number;      // percent 0..100 — hole-column chaos
   garbageCap: number;     // max rows rising on one non-clearing lock
   pressure: Pressure;     // scheduled-garbage intensity ('garbage' opponents)
+  attackScale: number;    // percent — scales the player's outgoing attack
+  botAttackScale: number; // percent — scales the bot's outgoing attack (handicap)
+  firstTo: number;        // 1v1: rounds needed to take the match
+  rules: AttackRules;     // the damage table itself
   /** per-drill opponent (the 1v1 mode always uses the bot) */
   drill: { fourwide: OpponentKind; free: OpponentKind; allspin: OpponentKind };
 }
+
+/** The modes whose placements get engine/book evaluation. */
+export type GradedMode = 'lst' | 'fourwide' | 'free' | 'allspin';
 
 export interface AppSettings {
   handling: HandlingSettings;
@@ -49,6 +62,8 @@ export interface AppSettings {
   neuralEval: boolean;
   autoRetryTopOut: boolean;
   feedbackLevel: 'all' | 'mistakes' | 'off';
+  /** per-mode master switch for placement evaluation (grades, paths, chips) */
+  evalDrill: Record<GradedMode, boolean>;
   versus: VersusSettings;
 }
 
@@ -68,13 +83,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
   neuralEval: true,
   autoRetryTopOut: false,
   feedbackLevel: 'all',
+  evalDrill: { lst: true, fourwide: true, free: true, allspin: true },
   versus: {
     botPps: 1.5,
     botLevel: 'normal',
+    botNodes: 10000,
     garbageDelayMs: 2000,
     messiness: 15,
     garbageCap: 8,
     pressure: 'normal',
+    attackScale: 100,
+    botAttackScale: 100,
+    firstTo: 3,
+    rules: { ...DEFAULT_RULES },
     // 4-wide defaults to scheduled garbage — a bot's normal stacking reads
     // oddly against a combo drill; the other drills get the real bot
     drill: { fourwide: 'garbage', free: 'bot', allspin: 'bot' },
@@ -101,7 +122,13 @@ export function loadSettings(): AppSettings {
       binds: { ...def.binds, ...parsed.binds },
       volume: { ...def.volume, ...parsed.volume },
       background: { ...def.background, ...parsed.background },
-      versus: { ...def.versus, ...parsed.versus, drill: { ...def.versus.drill, ...parsed.versus?.drill } },
+      evalDrill: { ...def.evalDrill, ...parsed.evalDrill },
+      versus: {
+        ...def.versus,
+        ...parsed.versus,
+        drill: { ...def.versus.drill, ...parsed.versus?.drill },
+        rules: { ...def.versus.rules, ...parsed.versus?.rules },
+      },
     };
     // migrations: undo moved to Ctrl+Z, ControlLeft freed from rotateCCW
     if (merged.binds.undo.length === 1 && merged.binds.undo[0] === 'Backspace') {

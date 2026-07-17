@@ -183,17 +183,26 @@ export class ZenithView {
     this.overlay.classList.add('show');
 
     const box = document.createElement('div');
-    box.className = 'zenith-box';
-    box.innerHTML = `<h2>Quick play</h2>
-      <p class="sub">Zenith-style climb at your chosen altitude.<br>Garbage pressure is simulated — no live opponents.</p>`;
+    box.className = 'zenith-box qp-menu';
+    const head = document.createElement('div');
+    head.className = 'qp-head';
+    head.innerHTML = `<h2>Quick play</h2>
+      <p class="sub">Zenith-style climb at your chosen altitude — garbage pressure is simulated, no live opponents.</p>`;
+    box.appendChild(head);
 
+    // floor cards — pick your starting altitude, tetr.io-style
     const grid = document.createElement('div');
-    grid.className = 'floor-grid';
+    grid.className = 'qp-floors';
     let selectedBtn: HTMLElement | null = null;
     FLOORS.forEach((f, i) => {
       const b = document.createElement('button');
-      b.className = 'btn floor-btn';
-      b.innerHTML = `<b>F${i + 1} · ${f.from}m</b><span>${f.name}</span>`;
+      b.className = 'floor-btn qp-floor';
+      b.style.setProperty('--fc', floorColor(i));
+      b.style.setProperty('--d', `${i * 34}ms`);
+      b.innerHTML =
+        `<span class="qp-fnum">F${i + 1}</span>` +
+        `<span class="qp-fname">${f.name}</span>` +
+        `<span class="qp-falt">${f.from}m</span>`;
       if (f.from === this.startAltitude) {
         b.classList.add('primary');
         selectedBtn = b;
@@ -203,34 +212,52 @@ export class ZenithView {
         selectedBtn = b;
         b.classList.add('primary');
         this.startAltitude = f.from;
+        if (settings.soundFx) actionSound('rotateCW');
       });
       grid.appendChild(b);
     });
     box.appendChild(grid);
 
+    // options: garbage pressure as a segmented control + a gravity-mod pill
     const opts = document.createElement('div');
-    opts.className = 'zenith-opts';
-    const pressure = document.createElement('select');
-    for (const [v, label] of [['calm', 'calm garbage'], ['normal', 'normal garbage'], ['brutal', 'brutal garbage']] as const) {
-      const o = document.createElement('option');
-      o.value = v;
-      o.textContent = label;
-      if (v === this.pressure) o.selected = true;
-      pressure.appendChild(o);
+    opts.className = 'qp-opts';
+
+    const pressGroup = document.createElement('div');
+    pressGroup.className = 'qp-opt';
+    const pressLabel = document.createElement('span');
+    pressLabel.className = 'qp-opt-label';
+    pressLabel.textContent = 'Garbage';
+    const seg = document.createElement('div');
+    seg.className = 'qp-seg';
+    const segBtns: HTMLElement[] = [];
+    for (const [v, label] of [['calm', 'calm'], ['normal', 'normal'], ['brutal', 'brutal']] as const) {
+      const sb = document.createElement('button');
+      sb.className = 'qp-seg-btn' + (v === this.pressure ? ' on' : '');
+      sb.textContent = label;
+      sb.addEventListener('click', () => {
+        this.pressure = v as Pressure;
+        for (const el of segBtns) el.classList.remove('on');
+        sb.classList.add('on');
+        if (settings.soundFx) actionSound('left');
+      });
+      segBtns.push(sb);
+      seg.appendChild(sb);
     }
-    pressure.addEventListener('change', () => { this.pressure = pressure.value as Pressure; });
-    const gmod = document.createElement('label');
-    gmod.className = 'zenith-gmod';
-    const gbox = document.createElement('input');
-    gbox.type = 'checkbox';
-    gbox.checked = this.gravityMod;
-    gbox.addEventListener('change', () => { this.gravityMod = gbox.checked; });
-    gmod.append(gbox, document.createTextNode(' Gravity mod (0.48G→3.18G)'));
-    opts.append(pressure, gmod);
+    pressGroup.append(pressLabel, seg);
+
+    const gmod = document.createElement('button');
+    gmod.className = 'qp-toggle' + (this.gravityMod ? ' on' : '');
+    gmod.innerHTML = `<span class="qp-toggle-dot"></span><span>Gravity mod<small>0.48G → 3.18G</small></span>`;
+    gmod.addEventListener('click', () => {
+      this.gravityMod = !this.gravityMod;
+      gmod.classList.toggle('on', this.gravityMod);
+      if (settings.soundFx) actionSound('move');
+    });
+    opts.append(pressGroup, gmod);
     box.appendChild(opts);
 
     const start = document.createElement('button');
-    start.className = 'btn primary zenith-start';
+    start.className = 'btn primary qp-start';
     start.textContent = 'Start climb';
     start.addEventListener('click', () => this.startRun());
     box.appendChild(start);
@@ -585,6 +612,11 @@ export class ZenithView {
 function fmtTime(ms: number): string {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Per-floor accent for the launch cards: cool at the bottom, hot at the top. */
+function floorColor(i: number): string {
+  return `hsl(${205 - i * 22}, 72%, 58%)`;
 }
 
 function panel(label: string): HTMLElement {

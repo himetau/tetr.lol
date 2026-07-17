@@ -82,8 +82,9 @@ export class FieldRenderer {
   readonly canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private cell = 26;
-  /** transient highlight cells: [x, y, color] with alpha fade handled by caller */
-  highlight: { cells: [number, number][]; color: string } | null = null;
+  /** transient highlight cells — with a piece type they render from the skin
+   * sheet plus a colored outline; without one they fall back to flat color */
+  highlight: { cells: [number, number][]; color: string; piece?: PieceType } | null = null;
   /** 0..1 lock-delay progress of the grounded piece — dims it, tetr.io style */
   lockProgress = 0;
   /** 0..1 stack-danger level — red vignette pulses in from the top */
@@ -371,9 +372,10 @@ export class FieldRenderer {
     ctx.globalAlpha = 1;
   }
 
-  /** Render a bare board (used for alternative-placement previews). */
-  renderStatic(board: Board): void {
-    const fake = { board, colors: null, active: null, ghostY: () => 0 } as unknown as Game;
+  /** Render a bare board (used for alternative-placement previews). Pass the
+   * stack's piece colors so the preview keeps the real skins. */
+  renderStatic(board: Board, colors: (PieceType | null)[][] | null = null): void {
+    const fake = { board, colors, active: null, ghostY: () => 0 } as unknown as Game;
     this.render(fake);
   }
 
@@ -432,10 +434,34 @@ export class FieldRenderer {
       }
     }
 
-    // highlight (last placement / alternative preview)
+    // highlight (last placement / alternative preview): the real piece skin
+    // with a colored outline so it still reads as "the suggested move"
     if (this.highlight) {
-      for (const [x, y] of this.highlight.cells) {
-        if (y <= VISIBLE_H) this.drawCell(x, y, this.highlight.color, 0.95);
+      const hl = this.highlight;
+      if (hl.piece && skinReady) {
+        const n = pieceNeighbors(hl.cells);
+        for (const [x, y] of hl.cells) {
+          if (y <= VISIBLE_H) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
+        }
+        ctx.strokeStyle = hl.color;
+        ctx.lineWidth = Math.max(1.5, this.cell * 0.08);
+        ctx.beginPath();
+        // stroke only the piece's outer edges, not the seams between its cells
+        const has = (x: number, y: number) => hl.cells.some(([cx, cy]) => cx === x && cy === y);
+        for (const [x, y] of hl.cells) {
+          if (y > VISIBLE_H) continue;
+          const px = x * this.cell;
+          const py = this.py(y);
+          if (!has(x, y + 1)) { ctx.moveTo(px, py); ctx.lineTo(px + this.cell, py); }
+          if (!has(x, y - 1)) { ctx.moveTo(px, py + this.cell); ctx.lineTo(px + this.cell, py + this.cell); }
+          if (!has(x - 1, y)) { ctx.moveTo(px, py); ctx.lineTo(px, py + this.cell); }
+          if (!has(x + 1, y)) { ctx.moveTo(px + this.cell, py); ctx.lineTo(px + this.cell, py + this.cell); }
+        }
+        ctx.stroke();
+      } else {
+        for (const [x, y] of hl.cells) {
+          if (y <= VISIBLE_H) this.drawCell(x, y, hl.color, 0.95);
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import { applyTheme, settings, saveSettings } from './settings';
 import { GameView } from './game-view';
 import { ZenithView } from './zenith-view';
+import { VersusView } from './versus-view';
 import { settingsView } from './settings-view';
 import { patternsView } from './patterns-view';
 import { statsView } from './stats-view';
@@ -8,7 +9,7 @@ import { sfx } from './sound';
 import { initBackground } from './background';
 import type { Mode } from './stats';
 
-type ViewName = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin' | 'patterns' | 'stats' | 'settings';
+type ViewName = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin' | 'versus' | 'patterns' | 'stats' | 'settings';
 
 const NAV: { name: ViewName; label: string; ico: string; tag: string }[] = [
   { name: 'lst', label: 'LST drill', ico: '◆', tag: 'opener → loop' },
@@ -16,6 +17,7 @@ const NAV: { name: ViewName; label: string; ico: string; tag: string }[] = [
   { name: 'free', label: '40 lines', ico: '●', tag: 'sprint' },
   { name: 'quick', label: 'Quick play', ico: '▲', tag: 'zenith climb' },
   { name: 'allspin', label: 'All-Spin', ico: '✦', tag: 'vs cold clear' },
+  { name: 'versus', label: '1v1', ico: '⚔', tag: 'live vs cold clear' },
   { name: 'patterns', label: 'Patterns', ico: '▦', tag: 'four.lol library' },
   { name: 'stats', label: 'Stats', ico: '∿', tag: 'progress' },
   { name: 'settings', label: 'Settings', ico: '⚙', tag: 'handling · keys' },
@@ -35,7 +37,7 @@ export function startApp(root: HTMLElement): void {
   const viewEl = document.createElement('main');
   viewEl.id = 'view';
 
-  let currentGame: GameView | ZenithView | null = null;
+  let currentGame: GameView | ZenithView | VersusView | null = null;
   let activeBtn: HTMLElement | null = null;
   const buttons = new Map<ViewName, HTMLElement>();
 
@@ -53,6 +55,9 @@ export function startApp(root: HTMLElement): void {
       mounted = currentGame.root;
     } else if (name === 'quick') {
       currentGame = new ZenithView();
+      mounted = currentGame.root;
+    } else if (name === 'versus') {
+      currentGame = new VersusView();
       mounted = currentGame.root;
     } else if (name === 'patterns') {
       mounted = patternsView();

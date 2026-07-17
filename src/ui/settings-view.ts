@@ -1,4 +1,4 @@
-import { settings, saveSettings, applyTheme, DEFAULT_SETTINGS, type VolumeSettings, type BotLevel, type OpponentKind } from './settings';
+import { settings, saveSettings, applyTheme, DEFAULT_SETTINGS, type VolumeSettings, type BotLevel, type OpponentKind, type GradedMode } from './settings';
 import type { Pressure } from '../core/versus';
 import { keyDescriptor, type Keybinds } from '../core/handling';
 import { sfx } from './sound';
@@ -65,6 +65,18 @@ export function settingsView(): HTMLElement {
   trainer.appendChild(toggleRow('Auto-retry on top out', 'start a fresh drill automatically', settings.autoRetryTopOut, (v) => {
     settings.autoRetryTopOut = v;
   }));
+  const EVAL_LABEL: Record<GradedMode, [string, string]> = {
+    lst: ['LST evaluation', 'book + engine grading in the LST drill'],
+    fourwide: ['4-wide evaluation', 'combo-book grading in the 4-wide drill'],
+    free: ['40 lines evaluation', 'generic placement grading during sprints'],
+    allspin: ['All-Spin evaluation', 'Cold Clear grading in the all-spin drill'],
+  };
+  for (const m of Object.keys(EVAL_LABEL) as GradedMode[]) {
+    const [name, hint] = EVAL_LABEL[m];
+    trainer.appendChild(toggleRow(name, hint + ' — off hides grades, chips and the paths panel', settings.evalDrill[m], (v) => {
+      settings.evalDrill[m] = v;
+    }));
+  }
   page.appendChild(trainer);
 
   // ---- versus / garbage pressure ----
@@ -75,9 +87,19 @@ export function settingsView(): HTMLElement {
     ['normal', 'normal'],
     ['hard', 'hard'],
     ['elite', 'elite'],
+    ['custom', 'custom (nodes below)'],
   ], (val) => { v.botLevel = val as BotLevel; }));
+  vs.appendChild(sliderRow('Custom nodes', 'search nodes per move when strength is "custom"', 500, 100000, 500, v.botNodes, (val) => {
+    v.botNodes = val;
+  }));
   vs.appendChild(sliderRow('Bot speed', 'pieces per second', 0.5, 4, 0.25, v.botPps, (val) => {
     v.botPps = val;
+  }));
+  vs.appendChild(sliderRow('My attack', 'scales your outgoing garbage (%)', 25, 300, 25, v.attackScale, (val) => {
+    v.attackScale = val;
+  }));
+  vs.appendChild(sliderRow('Bot attack', 'scales the bot’s outgoing garbage (%) — a handicap dial', 25, 300, 25, v.botAttackScale, (val) => {
+    v.botAttackScale = val;
   }));
   vs.appendChild(sliderRow('Garbage delay', 'telegraph time (ms) before an attack can rise', 500, 5000, 250, v.garbageDelayMs, (val) => {
     v.garbageDelayMs = val;
@@ -87,6 +109,24 @@ export function settingsView(): HTMLElement {
   }));
   vs.appendChild(sliderRow('Garbage cap', 'max rows rising on one non-clearing lock', 1, 12, 1, v.garbageCap, (val) => {
     v.garbageCap = val;
+  }));
+  vs.appendChild(selectRow('First to', 'rounds needed to take a 1v1 match', String(v.firstTo), [
+    ['1', '1'], ['2', '2'], ['3', '3'], ['5', '5'], ['7', '7'], ['10', '10'],
+  ], (val) => { v.firstTo = Number(val); }));
+  vs.appendChild(sliderRow('Spin attack', 'full-spin damage: lines × this', 0, 4, 0.5, v.rules.spinMult, (val) => {
+    v.rules.spinMult = val;
+  }));
+  vs.appendChild(sliderRow('Quad attack', 'lines a quad sends', 0, 8, 1, v.rules.quadAttack, (val) => {
+    v.rules.quadAttack = val;
+  }));
+  vs.appendChild(sliderRow('B2B bonus', 'extra lines while the back-to-back chain is alive', 0, 4, 1, v.rules.b2bBonus, (val) => {
+    v.rules.b2bBonus = val;
+  }));
+  vs.appendChild(sliderRow('Combo interval', 'attack += floor(combo ÷ this); 0 turns combo damage off', 0, 4, 1, v.rules.comboDiv, (val) => {
+    v.rules.comboDiv = val;
+  }));
+  vs.appendChild(sliderRow('All clear', 'lines a perfect clear adds', 0, 20, 1, v.rules.allClear, (val) => {
+    v.rules.allClear = val;
   }));
   vs.appendChild(selectRow('Simulated pressure', 'attack pace when a drill uses "garbage" instead of the bot', v.pressure, [
     ['calm', 'calm'],
@@ -163,12 +203,40 @@ export function settingsView(): HTMLElement {
   return page;
 }
 
+// which sections the user collapsed, persisted so it survives navigation
+const COLLAPSE_KEY = 'lst-trainer-settings-collapsed-v1';
+
+function loadCollapsed(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+/** A collapsible settings section. Rows are appended after the header, so the
+ * callers' `card.appendChild(row)` still works — they land inside the
+ * disclosure. Open/closed state persists per title. */
 function card(title: string): HTMLElement {
-  const c = document.createElement('div');
+  const c = document.createElement('details');
   c.className = 'card';
+  c.open = !loadCollapsed().has(title);
+  const head = document.createElement('summary');
+  head.className = 'card-head';
   const h = document.createElement('h2');
   h.textContent = title;
-  c.appendChild(h);
+  const chev = document.createElement('span');
+  chev.className = 'chevron';
+  chev.setAttribute('aria-hidden', 'true');
+  chev.textContent = '›';
+  head.append(h, chev);
+  c.appendChild(head);
+  c.addEventListener('toggle', () => {
+    const set = loadCollapsed();
+    if (c.open) set.delete(title);
+    else set.add(title);
+    localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...set]));
+  });
   return c;
 }
 

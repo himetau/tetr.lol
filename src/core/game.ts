@@ -20,6 +20,7 @@ export interface LockEvent {
   spin: SpinKind;
   linesCleared: number;
   boardBefore: Board;     // board before the piece was stamped
+  colorsBefore: (PieceType | null)[][]; // per-cell piece colors, pre-stamp
   boardAfter: Board;      // board after stamping + clears
   queueBefore: PieceType[]; // preview at decision time (piece spawn)
   holdBefore: PieceType | null;
@@ -236,6 +237,7 @@ export class Game {
     this.history.push(snap);
 
     const boardBefore = this.board.clone();
+    const colorsBefore = this.colors.map((r) => [...r]);
     const cells = cellsAt(a.type, a.rot, a.x, a.y);
     const spin = spinOverride ?? detectSpin(this.board, a.type, a.rot, a.x, a.y, this.lastMoveWasRotation, this.lastKickIndex);
     this.board.place(cells);
@@ -255,6 +257,7 @@ export class Game {
       spin,
       linesCleared: cleared.length,
       boardBefore,
+      colorsBefore,
       boardAfter: this.board.clone(),
       queueBefore: [snap.activeType, ...snap.queueRest].slice(0, PREVIEW_N + 1),
       holdBefore: snap.hold,
@@ -269,22 +272,43 @@ export class Game {
     return ev;
   }
 
-  /** Push garbage rows in from the bottom (quick play). Lifts the active
-   * piece if the stack shoves into it; tops out when there is no room. */
+  /** Push garbage rows in from the bottom (quick play / versus). Lifts the
+   * active piece if the stack shoves into it; tops out only when the stack is
+   * genuinely buried past the ceiling, or the piece cannot be nudged back
+   * inside the field.
+   *
+   * Deliberately does NOT top out on the active piece's *origin* leaving the
+   * field the way the old code did: that both killed unfairly when you took
+   * garbage near the top and, when it didn't fire, left the piece hovering
+   * invisibly in the buffer forever ("floating, not really dead"). Death is
+   * now decided by real cells and real stack height. */
   addGarbage(holes: number[]): void {
     const n = holes.length;
     if (n === 0) return;
+    // Buried: rows that would be shoved above the top of the field are lost —
+    // that is a top out (you got sealed under the garbage). Measured before
+    // insertion, since insertGarbage silently discards the overflow.
+    const buried = this.board.maxHeight() + n > BOARD_H;
     this.board.insertGarbage(holes);
     this.colors.splice(BOARD_H - n, n);
     for (let i = 0; i < n; i++) this.colors.unshift(new Array<PieceType | null>(BOARD_W).fill(null));
+    if (buried) {
+      this.topOut = true;
+      this.active = null;
+      return;
+    }
     const a = this.active;
     if (a) {
+      // rise the garbage under the piece: nudge it up out of collision, but
+      // only declare a lock-out once the whole piece is pushed clear out of
+      // the field (its lowest cell reaches the ceiling)
       while (this.board.collides(cellsAt(a.type, a.rot, a.x, a.y))) {
         a.y++;
-        if (a.y >= BOARD_H) {
+        const lowest = Math.min(...cellsAt(a.type, a.rot, a.x, a.y).map(([, cy]) => cy));
+        if (lowest >= BOARD_H) {
           this.topOut = true;
           this.active = null;
-          break;
+          return;
         }
       }
     }

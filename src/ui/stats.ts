@@ -1,6 +1,6 @@
 import type { Grade } from '../engine/grade';
 
-export type Mode = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin';
+export type Mode = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin' | 'versus';
 
 export interface ModeStats {
   pieces: number;
@@ -22,8 +22,15 @@ export interface SessionRecord {
   altitude?: number;
   /** 4-wide drill: longest combo */
   maxCombo?: number;
+  /** all-spin drill: longest back-to-back chain */
+  maxB2b?: number;
   /** 40 lines sprint: clear time — only present when the run reached 40 lines */
   sprintMs?: number;
+  /** 1v1 vs Cold Clear: rounds taken by each side */
+  wins?: number;
+  losses?: number;
+  /** pieces per second over the active part of the session (first input → last lock) */
+  pps?: number;
 }
 
 export interface AllStats {
@@ -48,7 +55,7 @@ export function loadStats(): AllStats {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as AllStats & { modes: { tki?: ModeStats } };
-      for (const m of ['lst', 'fourwide', 'free', 'quick', 'allspin'] as Mode[]) {
+      for (const m of ['lst', 'fourwide', 'free', 'quick', 'allspin', 'versus'] as Mode[]) {
         parsed.modes[m] = { ...emptyMode(), ...parsed.modes[m], grades: { ...emptyGrades(), ...parsed.modes[m]?.grades } };
       }
       parsed.sessions ??= [];
@@ -68,7 +75,7 @@ export function loadStats(): AllStats {
       return parsed;
     }
   } catch { /* fall through */ }
-  return { modes: { lst: emptyMode(), fourwide: emptyMode(), free: emptyMode(), quick: emptyMode(), allspin: emptyMode() }, sessions: [] };
+  return { modes: { lst: emptyMode(), fourwide: emptyMode(), free: emptyMode(), quick: emptyMode(), allspin: emptyMode(), versus: emptyMode() }, sessions: [] };
 }
 
 export const stats = loadStats();
@@ -98,10 +105,21 @@ export function fmtSprint(ms: number, tenths = true): string {
   return tenths ? `${m}:${s.toFixed(1).padStart(4, '0')}` : `${m}:${String(Math.round(s)).padStart(2, '0')}`;
 }
 
+export function gradeTotal(g: Record<Grade, number>): number {
+  return g.best + g.good + g.inaccuracy + g.mistake + g.killer;
+}
+
 export function gradeAccuracy(g: Record<Grade, number>): number {
-  const total = g.best + g.good + g.inaccuracy + g.mistake + g.killer;
+  const total = gradeTotal(g);
   if (total === 0) return 0;
   return (g.best + 0.7 * g.good + 0.3 * g.inaccuracy) / total;
+}
+
+/** Session PPS: recorded live value, else derived from the run duration. */
+export function sessionPps(s: SessionRecord): number | null {
+  if (s.pps !== undefined && isFinite(s.pps)) return s.pps;
+  if (s.durationMs > 0 && s.pieces >= 2) return s.pieces / (s.durationMs / 1000);
+  return null;
 }
 
 export function accuracy(m: ModeStats): number {

@@ -1,0 +1,678 @@
+// 1v1 vs Cold Clear: two live boards trading garbage, tetr.io style. The
+// launch overlay tunes the bot (speed, strength) and the garbage channel
+// (telegraph delay, messiness) — the same knobs as Settings → Versus.
+// Rounds end on a top out; first to the chosen score takes the match.
+// No grading, no undo — this mode is for playing the matchup.
+
+import { Game, type LockEvent } from '../core/game';
+import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
+import { FieldRenderer, renderPieceTile } from './board-canvas';
+import { settings, saveSettings, onSettingsChange, botNodesOf, DEFAULT_SETTINGS, type BotLevel } from './settings';
+import { GarbageQueue, versusAttack, scaleAttack, type GarbageConfig } from '../core/versus';
+import { BotPlayer } from './bot-player';
+import {
+  clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound,
+  spinSound, comboBreakSound, countdownSound, goSound, damageAlertSound, clutchSound,
+  personalBestSound, gameOverSound, topoutSound,
+} from './sound';
+import { stats, saveStats, recordSession } from './stats';
+import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { PIECE_COLORS } from '../core/pieces';
+
+export class VersusView {
+  readonly root: HTMLElement;
+  private game = new Game();
+  private input: InputHandler;
+  private renderer: FieldRenderer;
+  private botRenderer: FieldRenderer;
+  private bot: BotPlayer | null = null;
+  private incoming: GarbageQueue | null = null; // garbage aimed at the player
+  private rafId = 0;
+  private lastT = 0;
+  private unsubSettings: () => void;
+
+  private roundLive = false;
+  private clock = 0;        // current round ms
+  private matchMs = 0;      // all rounds so far + current
+  private b2b = 0;
+  private combo = -1;
+  private score = { me: 0, cc: 0 };
+  private round = 0;
+  private sent = 0;
+  private taken = 0;
+  private pieces = 0;
+  private tsds = 0;
+  private tsses = 0;
+  private lastPending = 0;
+  private matchRecorded = false;
+
+  private fieldPanel!: HTMLElement;
+  private botPanel!: HTMLElement;
+  private holdBox!: HTMLElement;
+  private queueBox!: HTMLElement;
+  private hud!: HTMLElement;
+  private botHud!: HTMLElement;
+  private toast!: HTMLElement;
+  private overlay!: HTMLElement;
+  private b2bTag!: HTMLElement;
+  private gmActive!: HTMLElement;
+  private gmQueued!: HTMLElement;
+  private botGm!: HTMLElement;
+  private toastTimer = 0;
+  private roundTimer = 0;
+  private countdownTimers: number[] = [];
+  private counting = false;
+
+  private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
+  private keyup = (e: KeyboardEvent) => this.input.keyUp(e.code, performance.now());
+
+  constructor() {
+    this.input = new InputHandler(this.game);
+    this.input.settings = settings.handling;
+    this.input.binds = settings.binds;
+    this.input.onAction = (a) => {
+      if (a === 'hold') this.refreshPanes();
+      if (settings.soundFx && this.roundLive) actionSound(a);
+    };
+    this.renderer = new FieldRenderer(this.cellSize());
+    this.botRenderer = new FieldRenderer(this.botCellSize());
+    this.root = this.build();
+    this.game.onLock = (ev) => this.onLock(ev);
+    this.unsubSettings = onSettingsChange(() => {
+      this.input.settings = settings.handling;
+      this.input.binds = settings.binds;
+      this.renderer.setCellSize(this.cellSize());
+      this.botRenderer.setCellSize(this.botCellSize());
+    });
+    this.showLaunch();
+    document.addEventListener('keydown', this.keydown);
+    document.addEventListener('keyup', this.keyup);
+    this.loop(performance.now());
+  }
+
+  destroy(): void {
+    this.recordMatch(); // leaving mid-match still banks finished rounds
+    cancelAnimationFrame(this.rafId);
+    clearTimeout(this.roundTimer);
+    this.clearCountdown();
+    this.unsubSettings();
+    this.bot?.destroy();
+    document.removeEventListener('keydown', this.keydown);
+    document.removeEventListener('keyup', this.keyup);
+  }
+
+  private cellSize(): number {
+    const fit = Math.max(14, Math.min(30, Math.floor((window.innerHeight - 140) / 21)));
+    const zoomed = Math.round(fit * (settings.boardZoom / 100));
+    return Math.max(10, Math.min(40, zoomed));
+  }
+
+  private botCellSize(): number {
+    return Math.max(8, Math.round(this.cellSize() * 0.62));
+  }
+
+  private build(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'game-wrap';
+    const colW = `${Math.max(120, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
+
+    const left = document.createElement('div');
+    left.className = 'side-col';
+    left.style.width = colW;
+    this.holdBox = panel('Hold');
+    left.appendChild(this.holdBox);
+    const match = panel('Match');
+    this.hud = document.createElement('div');
+    this.hud.className = 'zenith-hud';
+    match.appendChild(this.hud);
+    left.appendChild(match);
+    const controls = document.createElement('div');
+    controls.className = 'drill-controls';
+    controls.style.flexDirection = 'column';
+    controls.append(
+      btn('Rematch (R)', () => this.startMatch()),
+      btn('Setup (Esc)', () => this.showLaunch()),
+    );
+    left.appendChild(controls);
+
+    this.fieldPanel = document.createElement('div');
+    this.fieldPanel.className = 'field-panel';
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    const strip = document.createElement('div');
+    strip.className = 'board-strip';
+    this.b2bTag = document.createElement('div');
+    this.b2bTag.className = 'b2b-tag';
+    const meter = document.createElement('div');
+    meter.className = 'gmeter';
+    this.gmQueued = document.createElement('div');
+    this.gmQueued.className = 'gm-queued';
+    this.gmActive = document.createElement('div');
+    this.gmActive.className = 'gm-active';
+    meter.append(this.gmQueued, this.gmActive);
+    strip.append(this.b2bTag, meter);
+    row.append(strip, this.renderer.canvas);
+    this.fieldPanel.appendChild(row);
+    this.toast = document.createElement('div');
+    this.toast.className = 'reason-toast';
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'zenith-overlay';
+    this.fieldPanel.append(this.toast, this.overlay);
+
+    const right = document.createElement('div');
+    right.className = 'side-col';
+    right.style.width = colW;
+    this.queueBox = panel('Next');
+    right.appendChild(this.queueBox);
+
+    // the opponent's board, live
+    const botCol = document.createElement('div');
+    botCol.className = 'vs-bot-col';
+    const tag = document.createElement('div');
+    tag.className = 'vs-nametag';
+    tag.textContent = '✦ Cold Clear';
+    this.botPanel = document.createElement('div');
+    this.botPanel.className = 'field-panel vs-bot-field';
+    const botRow = document.createElement('div');
+    botRow.className = 'field-row';
+    const botStrip = document.createElement('div');
+    botStrip.className = 'board-strip';
+    const botMeter = document.createElement('div');
+    botMeter.className = 'gmeter';
+    this.botGm = document.createElement('div');
+    this.botGm.className = 'gm-active';
+    botMeter.appendChild(this.botGm);
+    botStrip.appendChild(botMeter);
+    botRow.append(botStrip, this.botRenderer.canvas);
+    this.botPanel.appendChild(botRow);
+    this.botHud = document.createElement('div');
+    this.botHud.className = 'vs-bot-hud';
+    botCol.append(tag, this.botPanel, this.botHud);
+
+    wrap.append(left, this.fieldPanel, right, botCol);
+    return wrap;
+  }
+
+  // ---- launch / results ----
+
+  private garbageCfg(): GarbageConfig {
+    const v = settings.versus;
+    return {
+      delayMs: v.garbageDelayMs,
+      messiness: v.messiness / 100,
+      cap: v.garbageCap,
+      holeMin: 0,
+      holeMax: 9,
+    };
+  }
+
+  private showLaunch(): void {
+    this.stopRound();
+    this.overlay.replaceChildren();
+    this.overlay.classList.add('show');
+    const v = settings.versus;
+
+    const box = document.createElement('div');
+    box.className = 'zenith-box';
+    box.innerHTML = `<h2>1v1 vs Cold Clear</h2>
+      <p class="sub">The real bot on its own board, trading garbage with you.<br>Tune it here — the same knobs live in Settings.</p>`;
+
+    const opts = document.createElement('div');
+    opts.className = 'zenith-opts';
+    const strength = document.createElement('select');
+    for (const lv of ['easy', 'normal', 'hard', 'elite', 'custom'] as BotLevel[]) {
+      const o = document.createElement('option');
+      o.value = lv;
+      o.textContent = `strength: ${lv}`;
+      if (lv === v.botLevel) o.selected = true;
+      strength.appendChild(o);
+    }
+    const firstTo = document.createElement('select');
+    for (const n of [1, 2, 3, 5, 7, 10]) {
+      const o = document.createElement('option');
+      o.value = String(n);
+      o.textContent = `first to ${n}`;
+      if (n === v.firstTo) o.selected = true;
+      firstTo.appendChild(o);
+    }
+    firstTo.addEventListener('change', () => { v.firstTo = Number(firstTo.value); saveSettings(); });
+    opts.append(strength, firstTo);
+    box.appendChild(opts);
+
+    const save = <T,>(set: (val: T) => void) => (val: T) => { set(val); saveSettings(); };
+    box.appendChild(launchSlider('bot speed', 'pps', 0.5, 4, 0.25, v.botPps, save((val) => { v.botPps = val; })));
+    // custom node budget — only meaningful when strength is 'custom'
+    const nodesRow = launchSlider('bot nodes', '', 500, 100000, 500, v.botNodes, save((val) => { v.botNodes = val; }));
+    nodesRow.style.display = v.botLevel === 'custom' ? '' : 'none';
+    strength.addEventListener('change', () => {
+      v.botLevel = strength.value as BotLevel;
+      nodesRow.style.display = v.botLevel === 'custom' ? '' : 'none';
+      saveSettings();
+    });
+    box.appendChild(nodesRow);
+    box.appendChild(launchSlider('garbage delay', 's', 0, 5, 0.25, v.garbageDelayMs / 1000, save((val) => { v.garbageDelayMs = Math.round(val * 1000); })));
+    box.appendChild(launchSlider('messiness', '%', 0, 100, 5, v.messiness, save((val) => { v.messiness = val; })));
+
+    // every remaining dial: handicaps, cap, and the damage table itself
+    const adv = document.createElement('details');
+    adv.className = 'vs-adv';
+    const sum = document.createElement('summary');
+    sum.textContent = 'advanced — damage rules & handicaps';
+    adv.appendChild(sum);
+    const advBody = document.createElement('div');
+    const rebuildAdv = () => {
+      advBody.replaceChildren(
+        launchSlider('my attack', '%', 25, 300, 25, v.attackScale, save((val) => { v.attackScale = val; })),
+        launchSlider('bot attack', '%', 25, 300, 25, v.botAttackScale, save((val) => { v.botAttackScale = val; })),
+        launchSlider('garbage cap', ' rows', 1, 20, 1, v.garbageCap, save((val) => { v.garbageCap = val; })),
+        launchSlider('spin attack', '× lines', 0, 4, 0.5, v.rules.spinMult, save((val) => { v.rules.spinMult = val; })),
+        launchSlider('quad attack', '', 0, 8, 1, v.rules.quadAttack, save((val) => { v.rules.quadAttack = val; })),
+        launchSlider('B2B bonus', '', 0, 4, 1, v.rules.b2bBonus, save((val) => { v.rules.b2bBonus = val; })),
+        launchSlider('combo interval', ' (0 = off)', 0, 4, 1, v.rules.comboDiv, save((val) => { v.rules.comboDiv = val; })),
+        launchSlider('all clear', '', 0, 20, 1, v.rules.allClear, save((val) => { v.rules.allClear = val; })),
+      );
+      const reset = document.createElement('button');
+      reset.className = 'btn vs-rules-reset';
+      reset.textContent = 'Reset damage & handicaps';
+      reset.addEventListener('click', () => {
+        const d = DEFAULT_SETTINGS.versus;
+        v.attackScale = d.attackScale;
+        v.botAttackScale = d.botAttackScale;
+        v.garbageCap = d.garbageCap;
+        v.rules = { ...d.rules };
+        saveSettings();
+        rebuildAdv();
+      });
+      advBody.appendChild(reset);
+    };
+    rebuildAdv();
+    adv.appendChild(advBody);
+    box.appendChild(adv);
+
+    const start = document.createElement('button');
+    start.className = 'btn primary zenith-start';
+    start.textContent = 'Start match';
+    start.addEventListener('click', () => this.startMatch());
+    box.appendChild(start);
+    this.overlay.appendChild(box);
+    this.updateHud();
+  }
+
+  private showResults(): void {
+    const won = this.score.me > this.score.cc;
+    this.overlay.replaceChildren();
+    this.overlay.classList.add('show');
+    const box = document.createElement('div');
+    box.className = 'zenith-box';
+    box.innerHTML = `<h2>${won ? 'Victory' : 'Defeat'} · ${this.score.me}–${this.score.cc}</h2>
+      <p class="sub">${this.pieces} pieces · ${this.sent} sent · ${this.taken} taken · ${fmtTime(this.matchMs)}</p>`;
+    const rowEl = document.createElement('div');
+    rowEl.className = 'zenith-opts';
+    rowEl.append(
+      btn('Rematch (R)', () => this.startMatch()),
+      btn('Setup', () => this.showLaunch()),
+    );
+    box.appendChild(rowEl);
+    this.overlay.appendChild(box);
+  }
+
+  // ---- match / round flow ----
+
+  private startMatch(): void {
+    this.recordMatch();
+    this.matchRecorded = false;
+    this.score = { me: 0, cc: 0 };
+    this.round = 0;
+    this.matchMs = 0;
+    this.sent = 0;
+    this.taken = 0;
+    this.pieces = 0;
+    this.tsds = 0;
+    this.tsses = 0;
+    this.startRound();
+  }
+
+  private startRound(): void {
+    this.stopRound();
+    clearTimeout(this.roundTimer);
+    this.overlay.classList.remove('show');
+    this.overlay.replaceChildren();
+    this.round++;
+    this.clock = 0;
+    this.b2b = 0;
+    this.combo = -1;
+    this.lastPending = 0;
+    this.b2bTag.textContent = '';
+    this.gmActive.style.height = '0px';
+    this.gmQueued.style.height = '0px';
+    this.botGm.style.height = '0px';
+    this.game.reset(undefined, (Math.random() * 2 ** 31) | 0);
+    this.incoming = new GarbageQueue(this.garbageCfg());
+    const v = settings.versus;
+    if (this.bot) {
+      this.bot.configure({ pps: v.botPps, nodes: botNodesOf(v), rules: v.rules, attackScale: v.botAttackScale });
+      this.bot.reset((Math.random() * 2 ** 31) | 0);
+    } else {
+      this.bot = new BotPlayer({
+        pps: v.botPps,
+        nodes: botNodesOf(v),
+        garbage: this.garbageCfg(),
+        rules: v.rules,
+        attackScale: v.botAttackScale,
+      });
+    }
+    this.bot.onAttack = (lines) => {
+      this.incoming?.queue(lines, this.clock);
+    };
+    this.bot.onTopOut = () => this.endRound('me');
+    this.bot.onLockEvent = (ev) => this.onBotLock(ev);
+    this.beginCountdown();
+    this.refreshPanes();
+    this.updateHud();
+  }
+
+  /** Freeze play (round over / back to setup); keeps boards on screen.
+   * Also disarms a pending next-round timer so Esc during the intermission
+   * can't start a round under the setup overlay. */
+  private stopRound(): void {
+    this.roundLive = false;
+    this.input.enabled = false;
+    clearTimeout(this.roundTimer);
+    this.clearCountdown();
+  }
+
+  private beginCountdown(): void {
+    this.clearCountdown();
+    this.counting = true;
+    this.input.enabled = false;
+    const digit = document.createElement('div');
+    digit.className = 'zenith-count';
+    this.overlay.replaceChildren(digit);
+    this.overlay.classList.add('show', 'counting');
+    const step = (n: 1 | 2 | 3) => {
+      digit.textContent = String(n);
+      digit.classList.remove('tick');
+      void digit.offsetWidth; // restart the pop animation
+      digit.classList.add('tick');
+      if (settings.soundFx) countdownSound(n);
+    };
+    step(3);
+    this.countdownTimers = [
+      window.setTimeout(() => step(2), 450),
+      window.setTimeout(() => step(1), 900),
+      window.setTimeout(() => {
+        this.clearCountdown();
+        this.overlay.classList.remove('show');
+        this.overlay.replaceChildren();
+        this.roundLive = true;
+        this.input.enabled = true;
+        if (settings.soundFx) goSound();
+      }, 1350),
+    ];
+  }
+
+  private clearCountdown(): void {
+    for (const t of this.countdownTimers) clearTimeout(t);
+    this.countdownTimers = [];
+    this.counting = false;
+    this.overlay.classList.remove('counting');
+  }
+
+  private endRound(winner: 'me' | 'cc'): void {
+    if (!this.roundLive) return;
+    this.stopRound();
+    this.score[winner]++;
+    if (settings.soundFx) {
+      if (winner === 'me') personalBestSound();
+      else gameOverSound();
+    }
+    if (winner === 'me' && settings.effects) {
+      this.botRenderer.fxTopout(this.bot!.game.board, this.bot!.game.colors);
+      actionText(this.botPanel, 'KO', '', 'surge');
+    }
+    const over = this.score.me >= settings.versus.firstTo || this.score.cc >= settings.versus.firstTo;
+    this.updateHud();
+    if (over) {
+      this.recordMatch();
+      this.roundTimer = window.setTimeout(() => this.showResults(), 900);
+    } else {
+      this.showToast(`${winner === 'me' ? 'You take' : 'Cold Clear takes'} round ${this.round} — ${this.score.me}–${this.score.cc}`);
+      this.roundTimer = window.setTimeout(() => this.startRound(), 1800);
+    }
+  }
+
+  /** Fold the finished rounds into lifetime stats (once per match). */
+  private recordMatch(): void {
+    if (this.matchRecorded || this.score.me + this.score.cc === 0 || this.pieces < 5) return;
+    this.matchRecorded = true;
+    const m = stats.modes.versus;
+    m.pieces += this.pieces;
+    m.tsds += this.tsds;
+    m.tsses += this.tsses;
+    m.drills++;
+    saveStats();
+    recordSession({
+      at: new Date().toISOString(),
+      mode: 'versus',
+      pieces: this.pieces,
+      tsds: this.tsds,
+      grades: { best: 0, good: 0, inaccuracy: 0, mistake: 0, killer: 0 },
+      durationMs: this.matchMs,
+      wins: this.score.me,
+      losses: this.score.cc,
+    });
+  }
+
+  // ---- input ----
+
+  private onKeyDown(e: KeyboardEvent): void {
+    const desc = keyDescriptor(e);
+    const b: Keybinds = this.input.binds;
+    if (b.retry.includes(desc)) {
+      e.preventDefault();
+      this.startMatch();
+      return;
+    }
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      this.showLaunch();
+      return;
+    }
+    if (desc !== e.code) return; // no undo/combo chords in versus
+    if (Object.values(b).some((codes) => codes.includes(desc))) e.preventDefault();
+    this.input.keyDown(desc, performance.now());
+  }
+
+  // ---- game events ----
+
+  private onLock(ev: LockEvent): void {
+    this.pieces++;
+    if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) this.tsds++;
+    else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) this.tsses++;
+    if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
+    if (settings.effects) {
+      this.renderer.fxLock(ev.cells);
+      this.renderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
+    }
+
+    if (this.roundLive && this.incoming) {
+      if (ev.linesCleared > 0) {
+        this.combo++;
+        const b2bBefore = this.b2b;
+        const keepsB2b = ev.spin !== 'none' || ev.linesCleared === 4;
+        const v = settings.versus;
+        const atk = scaleAttack(
+          versusAttack(ev.linesCleared, ev.spin, this.combo, b2bBefore, ev.boardAfter.isEmpty(), v.rules),
+          v.attackScale,
+        );
+        this.b2b = keepsB2b ? this.b2b + 1 : 0;
+        const canceled = this.incoming.cancel(atk);
+        const sentNow = atk - canceled;
+        if (sentNow > 0) {
+          this.sent += sentNow;
+          this.bot?.receiveAttack(sentNow);
+        }
+        if (settings.soundFx) {
+          if (b2bBefore > 0 && this.b2b === 0) b2bBreakSound();
+          clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
+          if (this.combo >= 1) comboSound(this.combo, keepsB2b);
+          if (canceled >= 4) clutchSound();
+        }
+        if (settings.effects) {
+          if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
+          else this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+          const label = lockActionLabel(ev);
+          if (label) {
+            const sub = [this.b2b >= 2 ? `B2B ×${this.b2b}` : '', this.combo >= 1 ? `COMBO ×${this.combo}` : '', sentNow > 0 ? `+${sentNow}` : '']
+              .filter(Boolean).join('   ');
+            actionText(this.fieldPanel, label.main, sub, label.kind);
+          }
+        }
+        if (canceled > 0) this.showToast(`blocked ${canceled}${sentNow > 0 ? ` · +${sentNow} sent` : ''}`);
+      } else {
+        if (settings.soundFx && this.combo >= 1) comboBreakSound();
+        this.combo = -1;
+        const rows = this.incoming.rise(this.clock);
+        if (rows.length > 0) {
+          this.game.addGarbage(rows);
+          this.taken += rows.length;
+          if (settings.soundFx) garbageSound(rows.length);
+          this.renderer.fxGarbage(rows.length);
+        }
+      }
+      this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
+    }
+
+    if (this.game.topOut) {
+      this.renderer.fxTopout(this.game.board, this.game.colors);
+      if (settings.soundFx) topoutSound();
+      this.endRound('cc');
+    }
+    this.refreshPanes();
+  }
+
+  /** fx/sounds for the bot's visible board (its logic lives in BotPlayer) */
+  private onBotLock(ev: LockEvent): void {
+    if (!settings.effects) return;
+    this.botRenderer.fxLock(ev.cells);
+    this.botRenderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
+    if (ev.linesCleared > 0) {
+      if (ev.boardAfter.isEmpty()) this.botRenderer.fxAllClear();
+      else this.botRenderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+      const label = lockActionLabel(ev);
+      if (label) actionText(this.botPanel, label.main, '', label.kind);
+    }
+  }
+
+  // ---- per-frame ----
+
+  private loop(t: number): void {
+    this.rafId = requestAnimationFrame((tt) => this.loop(tt));
+    const dt = this.lastT ? Math.min(t - this.lastT, 100) : 0;
+    this.lastT = t;
+    if (this.roundLive && !this.counting) {
+      this.input.update(t);
+      this.clock += dt;
+      this.matchMs += dt;
+      this.bot?.update(dt);
+      const inc = this.incoming?.pending() ?? 0;
+      if (inc > this.lastPending && settings.soundFx) {
+        garbageQueuedSound(inc - this.lastPending);
+        if (inc >= 8 && this.lastPending < 8) damageAlertSound();
+      }
+      this.lastPending = inc;
+      // meters + danger vignettes
+      const cell = this.cellSize();
+      const active = Math.min(this.incoming?.active(this.clock) ?? 0, 20);
+      const queued = Math.min(inc - active, 20 - active);
+      this.gmActive.style.height = `${active * cell}px`;
+      this.gmQueued.style.height = `${queued * cell}px`;
+      this.botGm.style.height = `${Math.min(this.bot?.pendingLines() ?? 0, 20) * this.botCellSize()}px`;
+      this.renderer.danger = Math.max(0, Math.min(1, (this.game.board.maxHeight() - 12) / 6));
+      this.botRenderer.danger = Math.max(0, Math.min(1, ((this.bot?.game.board.maxHeight() ?? 0) - 12) / 6));
+      this.updateHud();
+    }
+    this.renderer.render(this.game);
+    if (this.bot) this.botRenderer.render(this.bot.game);
+  }
+
+  // ---- panes / hud ----
+
+  private refreshPanes(): void {
+    const cell = this.cellSize();
+    const holdCell = Math.max(10, Math.round(cell * 0.68));
+    const queueCell = Math.max(8, Math.round(cell * 0.55));
+    this.holdBox.querySelector('canvas')?.remove();
+    this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
+    for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
+    for (const p of this.game.preview()) this.queueBox.appendChild(renderPieceTile(p, queueCell));
+  }
+
+  private updateHud(): void {
+    const v = settings.versus;
+    const botTag = v.botLevel === 'custom' ? `${v.botNodes} nodes` : v.botLevel;
+    this.hud.innerHTML =
+      `<div class="alt vs-score">${this.score.me}<small>–</small>${this.score.cc}</div>` +
+      `<div class="floor">first to ${v.firstTo} · round ${Math.max(1, this.round)}</div>` +
+      `<div class="meta">time <b>${fmtTime(this.clock)}</b></div>` +
+      `<div class="meta">sent <b>${this.sent}</b> · taken <b>${this.taken}</b></div>` +
+      `<div class="meta">bot <b>${botTag}</b> · <b>${v.botPps}</b> pps</div>`;
+    const bot = this.bot;
+    this.botHud.innerHTML = bot
+      ? `sent <b>${bot.linesSent}</b> · taken <b>${bot.garbageTaken}</b>` +
+        (bot.b2b >= 1 ? ` · B2B <b>×${bot.b2b}</b>` : '')
+      : '&nbsp;';
+  }
+
+  private showToast(text: string): void {
+    this.toast.textContent = text;
+    this.toast.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 2600);
+  }
+}
+
+/** compact labelled slider for the launch overlay */
+function launchSlider(name: string, unit: string, min: number, max: number, step: number, value: number, onChange: (v: number) => void): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'vs-slider';
+  const label = document.createElement('span');
+  const show = (v: number) => { label.textContent = `${name} · ${v}${unit}`; };
+  show(value);
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(value);
+  input.addEventListener('input', () => {
+    const v = Number(input.value);
+    show(v);
+    onChange(v);
+  });
+  row.append(label, input);
+  return row;
+}
+
+function fmtTime(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function panel(label: string): HTMLElement {
+  const p = document.createElement('div');
+  p.className = 'panel';
+  const l = document.createElement('div');
+  l.className = 'label';
+  l.textContent = label;
+  p.appendChild(l);
+  return p;
+}
+
+function btn(text: string, onClick: () => void): HTMLElement {
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.textContent = text;
+  b.addEventListener('click', onClick);
+  return b;
+}

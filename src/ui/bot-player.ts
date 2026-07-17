@@ -9,13 +9,15 @@
 import { Game, type LockEvent } from '../core/game';
 import type { PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
-import { GarbageQueue, versusAttack, type GarbageConfig } from '../core/versus';
+import { GarbageQueue, versusAttack, scaleAttack, DEFAULT_RULES, type AttackRules, type GarbageConfig } from '../core/versus';
 import { ColdClearClient } from './cc2-client';
 
 export interface BotOptions {
   pps: number;    // pieces per second (mean; each move jitters a little)
   nodes: number;  // CC2 search budget per move — the strength knob
   garbage: GarbageConfig;
+  rules?: AttackRules;   // damage table for the bot's clears
+  attackScale?: number;  // percent handicap on the bot's outgoing attack
   seed?: number;
 }
 
@@ -53,10 +55,9 @@ export class BotPlayer {
     return (1000 / this.opts.pps) * (0.85 + 0.3 * Math.random());
   }
 
-  /** Retune pace/strength without rebuilding the worker (drill retries). */
-  configure(pps: number, nodes: number): void {
-    this.opts.pps = pps;
-    this.opts.nodes = nodes;
+  /** Retune pace/strength/rules without rebuilding the worker. */
+  configure(opts: Partial<Omit<BotOptions, 'garbage' | 'seed'>>): void {
+    Object.assign(this.opts, opts);
   }
 
   /** Opponent (the player) sent lines at the bot. */
@@ -66,6 +67,11 @@ export class BotPlayer {
 
   pendingLines(): number {
     return this.incoming.pending();
+  }
+
+  /** lines whose telegraph elapsed on the bot's own clock */
+  activeLines(): number {
+    return this.incoming.active(this.nowMs);
   }
 
   /** Fresh board for a new round; keeps the worker warm. */
@@ -123,7 +129,10 @@ export class BotPlayer {
     if (ev.linesCleared > 0) {
       this.combo++;
       const keepsB2b = ev.spin !== 'none' || ev.linesCleared === 4;
-      const atk = versusAttack(ev.linesCleared, ev.spin, this.combo, this.b2b, ev.boardAfter.isEmpty());
+      const atk = scaleAttack(
+        versusAttack(ev.linesCleared, ev.spin, this.combo, this.b2b, ev.boardAfter.isEmpty(), this.opts.rules ?? DEFAULT_RULES),
+        this.opts.attackScale ?? 100,
+      );
       this.b2b = keepsB2b ? this.b2b + 1 : 0;
       const sent = atk - this.incoming.cancel(atk);
       if (sent > 0) {
