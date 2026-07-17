@@ -38,7 +38,7 @@ export interface AllStats {
   sessions: SessionRecord[];
 }
 
-// predates the tetr.ai rename — kept so existing stats survive
+// predates the app's renames (→tetr.ai→tetr.lol) — kept so existing stats survive
 const KEY = 'lst-trainer-stats-v1';
 const MAX_SESSIONS = 300;
 

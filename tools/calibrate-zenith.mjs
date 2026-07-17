@@ -18,7 +18,7 @@ const FLOOR_COUNT = 10;
 
 async function fetchPage(after) {
   const url = `https://ch.tetr.io/api/records/zenith_global?limit=100${after ? `&after=${after}` : ''}`;
-  const res = await fetch(url, { headers: { 'user-agent': 'tetr-ai-calibration' } });
+  const res = await fetch(url, { headers: { 'user-agent': 'tetr-lol-calibration' } });
   const j = await res.json();
   if (!j.success) throw new Error(JSON.stringify(j.error));
   return j.data.entries;

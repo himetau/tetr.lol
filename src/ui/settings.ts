@@ -102,7 +102,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
 };
 
-// predates the tetr.ai rename — kept so existing settings survive
+// predates the app's renames (→tetr.ai→tetr.lol) — kept so existing settings survive
 const KEY = 'lst-trainer-settings-v1';
 
 type Listener = (s: AppSettings) => void;

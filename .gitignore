@@ -4,3 +4,6 @@ dist/
 
 # Cold Clear 2 WASM build scratch (see src/engine/cc2/BUILD.md)
 build/
+
+# local Claude Code tooling
+.claude/

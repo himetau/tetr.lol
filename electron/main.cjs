@@ -1,4 +1,4 @@
-// Minimal Electron shell for tetr.ai.
+// Minimal Electron shell for tetr.lol.
 // Loads the built app from dist/ (or ELECTRON_START_URL for the vite dev
 // server: ELECTRON_START_URL=http://localhost:5199 electron .)
 

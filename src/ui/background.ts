@@ -8,7 +8,7 @@ import { settings, onSettingsChange } from './settings';
 
 // ---- custom image store (IndexedDB) ----
 
-// predates the tetr.ai rename — kept so stored backgrounds survive
+// predates the app's renames (→tetr.ai→tetr.lol) — kept so stored backgrounds survive
 const DB_NAME = 'lst-trainer-bg';
 const STORE = 'images';
 

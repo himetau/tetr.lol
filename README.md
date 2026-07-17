@@ -1,4 +1,4 @@
-# tetr.ai
+# tetr.lol
 
 A practice client for **LST stacking** (via the **TKI opener**) with live,
 per-placement feedback: the engine enumerates every reachable placement,
@@ -20,7 +20,7 @@ npm run build      # production build (dist/)
 npm run gen:lst-db # regenerate src/data/*.json from tools/data snapshots
 ```
 
-`tools/install-desktop.sh` installs an app-menu launcher (`tetr.ai`)
+`tools/install-desktop.sh` installs an app-menu launcher (`tetr.lol`)
 that runs the built app via the system electron package.
 
 ## Modes

@@ -31,7 +31,7 @@ export function startApp(root: HTMLElement): void {
   sidebar.className = 'sidebar';
   const brand = document.createElement('div');
   brand.className = 'brand';
-  brand.innerHTML = `<span class="logo">tetr<em>.ai</em></span><span class="tagline">stacking practice</span>`;
+  brand.innerHTML = `<span class="logo">tetr<em>.lol</em></span><span class="tagline">stacking practice</span>`;
   sidebar.appendChild(brand);
 
   const viewEl = document.createElement('main');
