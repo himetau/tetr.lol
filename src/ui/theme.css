@@ -188,7 +188,6 @@ h1, h2, h3 {
 .brand .logo em {
   font-style: normal;
   color: var(--accent);
-  text-shadow: var(--glow) color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .brand .tagline {
   font-size: 10px;
