@@ -13,11 +13,11 @@ import { BotPlayer } from './bot-player';
 import {
   clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound,
   spinSound, comboBreakSound, countdownSound, goSound, damageAlertSound, clutchSound,
-  personalBestSound, gameOverSound, topoutSound,
+  personalBestSound, gameOverSound, topoutSound, lockSound,
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
 import { actionText, lockActionLabel, clearedRowsOf } from './fx';
-import { PIECE_COLORS } from '../core/pieces';
+import { PIECE_COLORS, cellsAt } from '../core/pieces';
 
 export class VersusView {
   readonly root: HTMLElement;
@@ -46,6 +46,12 @@ export class VersusView {
   private lastPending = 0;
   private matchRecorded = false;
 
+  // gravity mode: guideline Extended Placement Lock Down (same as quick play)
+  private gravAcc = 0;
+  private lockTimerMs = 0;
+  private moveResets = 0;
+  private lowestY = Infinity;
+
   private fieldPanel!: HTMLElement;
   private botPanel!: HTMLElement;
   private holdBox!: HTMLElement;
@@ -71,8 +77,19 @@ export class VersusView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.input.onAction = (a) => {
-      if (a === 'hold') this.refreshPanes();
+      if (a === 'hold') {
+        this.resetLockdown();
+        this.refreshPanes();
+      }
       if (settings.soundFx && this.roundLive) actionSound(a);
+    };
+    // lock-delay resets come from *successful* moves only (guideline EPLD)
+    this.game.onMove = (kind) => {
+      if (kind === 'drop') return; // soft drop never resets the timer
+      if (this.moveResets < 15) {
+        this.moveResets++;
+        this.lockTimerMs = 0;
+      }
     };
     this.renderer = new FieldRenderer(this.cellSize());
     this.botRenderer = new FieldRenderer(this.botCellSize());
@@ -236,7 +253,16 @@ export class VersusView {
       firstTo.appendChild(o);
     }
     firstTo.addEventListener('change', () => { v.firstTo = Number(firstTo.value); saveSettings(); });
-    opts.append(strength, firstTo);
+    const grav = document.createElement('select');
+    for (const g of [0, 0.5, 1, 1.5, 2, 3, 5, 20]) {
+      const o = document.createElement('option');
+      o.value = String(g);
+      o.textContent = g === 0 ? 'gravity: off' : `gravity: ${g}G`;
+      if (g === v.gravity) o.selected = true;
+      grav.appendChild(o);
+    }
+    grav.addEventListener('change', () => { v.gravity = Number(grav.value); saveSettings(); });
+    opts.append(strength, firstTo, grav);
     box.appendChild(opts);
 
     const save = <T,>(set: (val: T) => void) => (val: T) => { set(val); saveSettings(); };
@@ -347,6 +373,7 @@ export class VersusView {
     this.gmQueued.style.height = '0px';
     this.botGm.style.height = '0px';
     this.game.reset(undefined, (Math.random() * 2 ** 31) | 0);
+    this.resetLockdown();
     this.incoming = new GarbageQueue(this.garbageCfg());
     const v = settings.versus;
     if (this.bot) {
@@ -485,7 +512,53 @@ export class VersusView {
 
   // ---- game events ----
 
+  /** New piece in play: fresh lock timer, move budget, and lowest-row mark. */
+  private resetLockdown(): void {
+    this.lockTimerMs = 0;
+    this.moveResets = 0;
+    this.lowestY = Infinity;
+    this.gravAcc = 0;
+    this.renderer.lockProgress = 0;
+  }
+
+  private applyGravity(dtMs: number): void {
+    const g = settings.versus.gravity;
+    const a = this.game.active;
+    if (g <= 0 || !a) {
+      this.renderer.lockProgress = 0;
+      return;
+    }
+    // a new lowest row restores the move-reset budget (guideline), measured
+    // on the lowest cell — rotation states have different cell offsets
+    let bottom = Infinity;
+    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
+    if (bottom < this.lowestY) {
+      this.lowestY = bottom;
+      this.moveResets = 0;
+      this.lockTimerMs = 0;
+    }
+    const grounded = this.game.ghostY() === a.y;
+    if (!grounded) {
+      this.renderer.lockProgress = 0;
+      this.gravAcc += g * 60 * (dtMs / 1000); // 1G = 1 cell/frame @ 60fps
+      while (this.gravAcc >= 1) {
+        this.gravAcc--;
+        if (!this.game.softDropStep()) break;
+      }
+    } else {
+      this.gravAcc = 0;
+      this.lockTimerMs += dtMs;
+      // the grounded piece dims as its lock timer runs (tetr.io cue)
+      this.renderer.lockProgress = this.lockTimerMs / 500;
+      if (this.lockTimerMs >= 500) {
+        if (settings.soundFx) lockSound(); // gravity lock, not a hard drop
+        this.game.hardDrop();
+      }
+    }
+  }
+
   private onLock(ev: LockEvent): void {
+    this.resetLockdown();
     this.pieces++;
     if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) this.tsds++;
     else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) this.tsses++;
@@ -572,6 +645,7 @@ export class VersusView {
     this.lastT = t;
     if (this.roundLive && !this.counting) {
       this.input.update(t);
+      this.applyGravity(dt);
       this.clock += dt;
       this.matchMs += dt;
       this.bot?.update(dt);

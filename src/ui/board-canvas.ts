@@ -137,15 +137,15 @@ export class FieldRenderer {
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
     this.canvas.width = BOARD_W * this.cell * dpr;
-    this.canvas.height = (VISIBLE_H + 1) * this.cell * dpr;
+    this.canvas.height = VISIBLE_H * this.cell * dpr;
     this.canvas.style.width = `${BOARD_W * this.cell}px`;
-    this.canvas.style.height = `${(VISIBLE_H + 1) * this.cell}px`;
+    this.canvas.style.height = `${VISIBLE_H * this.cell}px`;
     this.ctx.scale(dpr, dpr);
   }
 
-  // y=0 board row is drawn at the bottom; one hidden row peeks above.
+  // y=0 board row is drawn at the bottom; rows above the field are clipped.
   private py(y: number): number {
-    return (VISIBLE_H - y) * this.cell;
+    return (VISIBLE_H - 1 - y) * this.cell;
   }
 
   // ---- fx API (all no-ops when reduced effects is on) ----
@@ -209,7 +209,7 @@ export class FieldRenderer {
   fxAllClear(): void {
     if (!this.fxOn) return;
     const w = BOARD_W * this.cell;
-    const h = (VISIBLE_H + 1) * this.cell;
+    const h = VISIBLE_H * this.cell;
     const palette = Object.values(PIECE_COLORS);
     for (let i = 0; i < 90; i++) {
       this.spawn({
@@ -229,7 +229,7 @@ export class FieldRenderer {
   fxGarbage(rows: number): void {
     if (!this.fxOn) return;
     const w = BOARD_W * this.cell;
-    const h = (VISIBLE_H + 1) * this.cell;
+    const h = VISIBLE_H * this.cell;
     const bad = css('--bad') || '#ff5c5c';
     for (let i = 0; i < rows * 10; i++) {
       this.spawn({
@@ -335,7 +335,7 @@ export class FieldRenderer {
       ctx.globalAlpha = a;
       ctx.fillStyle = '#ffffff';
       for (const [x, y] of f.cells) {
-        if (y > VISIBLE_H) continue;
+        if (y >= VISIBLE_H) continue;
         ctx.beginPath();
         ctx.roundRect(x * this.cell + 1, this.py(y) + 1, this.cell - 2, this.cell - 2, 4);
         ctx.fill();
@@ -412,7 +412,7 @@ export class FieldRenderer {
 
     const ctx = this.ctx;
     const w = BOARD_W * this.cell;
-    const h = (VISIBLE_H + 1) * this.cell;
+    const h = VISIBLE_H * this.cell;
     ctx.save();
     ctx.fillStyle = css('--field-bg');
     ctx.fillRect(0, 0, w, h);
@@ -430,10 +430,10 @@ export class FieldRenderer {
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = 1; x < BOARD_W; x++) {
-        ctx.moveTo(x * this.cell + 0.5, this.cell);
+        ctx.moveTo(x * this.cell + 0.5, 0);
         ctx.lineTo(x * this.cell + 0.5, h);
       }
-      for (let y = 0; y < VISIBLE_H; y++) {
+      for (let y = 0; y < VISIBLE_H - 1; y++) {
         ctx.moveTo(0, this.py(y) + 0.5);
         ctx.lineTo(w, this.py(y) + 0.5);
       }
@@ -448,7 +448,7 @@ export class FieldRenderer {
       if (!game.board.filled(x, y)) return null;
       return game.colors?.[y]?.[x] ?? 'G';
     };
-    for (let y = 0; y <= VISIBLE_H; y++) {
+    for (let y = 0; y < VISIBLE_H; y++) {
       for (let x = 0; x < BOARD_W; x++) {
         const k = keyAt(x, y);
         if (!k) continue;
@@ -468,7 +468,7 @@ export class FieldRenderer {
       if (hl.piece && skinReady) {
         const n = pieceNeighbors(hl.cells);
         for (const [x, y] of hl.cells) {
-          if (y <= VISIBLE_H) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
+          if (y < VISIBLE_H) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
         }
         ctx.strokeStyle = hl.color;
         ctx.lineWidth = Math.max(1.5, this.cell * 0.08);
@@ -476,7 +476,7 @@ export class FieldRenderer {
         // stroke only the piece's outer edges, not the seams between its cells
         const has = (x: number, y: number) => hl.cells.some(([cx, cy]) => cx === x && cy === y);
         for (const [x, y] of hl.cells) {
-          if (y > VISIBLE_H) continue;
+          if (y >= VISIBLE_H) continue;
           const px = x * this.cell;
           const py = this.py(y);
           if (!has(x, y + 1)) { ctx.moveTo(px, py); ctx.lineTo(px + this.cell, py); }
@@ -487,7 +487,7 @@ export class FieldRenderer {
         ctx.stroke();
       } else {
         for (const [x, y] of hl.cells) {
-          if (y <= VISIBLE_H) this.drawCell(x, y, hl.color, 0.95);
+          if (y < VISIBLE_H) this.drawCell(x, y, hl.color, 0.95);
         }
       }
     }
@@ -501,7 +501,7 @@ export class FieldRenderer {
           const gcells = cellsAt(a.type, a.rot, a.x, gy);
           const gn = pieceNeighbors(gcells);
           for (const [x, y] of gcells) {
-            if (y <= VISIBLE_H) {
+            if (y < VISIBLE_H) {
               if (skinReady) this.drawSkinCell(x, y, a.type, gn(x, y), 0.3);
               else this.drawGhostCell(x, y, PIECE_COLORS[a.type]);
             }
@@ -512,7 +512,7 @@ export class FieldRenderer {
       const cells = cellsAt(a.type, a.rot, a.x, a.y);
       const n = pieceNeighbors(cells);
       for (const [x, y] of cells) {
-        if (y <= VISIBLE_H) this.drawSkinCell(x, y, a.type, n(x, y), alpha);
+        if (y < VISIBLE_H) this.drawSkinCell(x, y, a.type, n(x, y), alpha);
       }
     }
 

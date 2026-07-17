@@ -38,6 +38,7 @@ export interface VersusSettings {
   attackScale: number;    // percent — scales the player's outgoing attack
   botAttackScale: number; // percent — scales the bot's outgoing attack (handicap)
   firstTo: number;        // 1v1: rounds needed to take the match
+  gravity: number;        // 1v1: player gravity in G (0 = off, 1G = 60 cells/s)
   rules: AttackRules;     // the damage table itself
   /** per-drill opponent (the 1v1 mode always uses the bot) */
   drill: { fourwide: OpponentKind; free: OpponentKind; allspin: OpponentKind };
@@ -95,6 +96,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     attackScale: 100,
     botAttackScale: 100,
     firstTo: 3,
+    gravity: 0,
     rules: { ...DEFAULT_RULES },
     // 4-wide defaults to scheduled garbage — a bot's normal stacking reads
     // oddly against a combo drill; the other drills get the real bot

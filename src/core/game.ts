@@ -45,8 +45,8 @@ function emptyColors(): (PieceType | null)[][] {
 
 export const SPAWN_X = 4;
 // low enough that the whole piece (incl. its top row) is inside the
-// rendered area instead of hanging half-clipped above the field
-export const SPAWN_Y = 19;
+// 20-row field instead of hanging half-clipped above its top edge
+export const SPAWN_Y = 18;
 export const PREVIEW_N = 5;
 
 export class Game {
