@@ -6,6 +6,8 @@
 import { Board } from '../core/board';
 import type { PieceType } from '../core/pieces';
 import tkiData from '../data/tki.json';
+import { enumeratePlacements } from './enumerate';
+import { bookAdvice } from './book';
 
 export interface OpenerTarget {
   name: string;
@@ -68,4 +70,26 @@ export function matchOpener(placements: OpenerPlacement[]): OpenerMatch {
 
 export function lstStartBoard(): Board {
   return Board.fromStrings(LST_START_ROWS.map((r) => r.replace(/[A-WYZa-z]/g, 'X')));
+}
+
+const chainMemo = new Map<OpenerTarget, boolean>();
+
+/** Does completing this target (and its TSD) land on the LST loop book?
+ * Targets that don't still count as valid TKI builds, but the loop grader
+ * goes off-book after them — prefer the ones that chain. */
+export function chainsToLoop(t: OpenerTarget): boolean {
+  const memo = chainMemo.get(t);
+  if (memo !== undefined) return memo;
+  let b = Board.fromStrings(t.rows.map((r) => r.replace(/[A-Za-z]/g, 'X')));
+  let ok: boolean;
+  if (t.pieces['T']) {
+    // the diagram includes the TSD T pre-clear: complete build, clear rows
+    b.clearLines();
+    ok = bookAdvice(b, [], null).onBook;
+  } else {
+    const p = enumeratePlacements(b, 'T').find((pl) => pl.spin === 'full' && pl.linesCleared >= 2);
+    ok = p ? bookAdvice(p.after, [], null).onBook : false;
+  }
+  chainMemo.set(t, ok);
+  return ok;
 }

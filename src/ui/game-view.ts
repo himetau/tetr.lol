@@ -18,7 +18,9 @@ import { ColdClearClient, type CC2Move } from './cc2-client';
 import { GarbageQueue, ScheduledAttacker, versusAttack, scaleAttack } from '../core/versus';
 import { BotPlayer } from './bot-player';
 import type { GradeResult, Grade, AltInfo } from '../engine/grade';
-import { matchOpener, type OpenerPlacement } from '../engine/opener';
+import { matchOpener, chainsToLoop, type OpenerPlacement } from '../engine/opener';
+import { bookAdvice } from '../engine/book';
+import { enumeratePlacements } from '../engine/enumerate';
 import { buildFourwideStart, refillWalls, WELL_X, WELL_W } from '../engine/fourwide';
 import { genAllspin } from '../engine/allspin-gen';
 import {
@@ -213,6 +215,8 @@ export class GameView {
     );
     if (this.mode === 'allspin') {
       controls.append(btn('▶ Watch bot (B)', () => void this.botPlay()));
+    } else if (this.mode === 'lst') {
+      controls.append(btn('▶ Watch book (B)', () => this.bookPlay()));
     }
     // drill opponent: nothing, quickplay-style garbage, or a hidden Cold
     // Clear bot trading attacks with you (tunables live in Settings)
@@ -575,9 +579,10 @@ export class GameView {
     const b: Keybinds = this.input.binds;
     const has = (codes: string[]) => codes.includes(desc);
 
-    if (this.mode === 'allspin' && e.code === 'KeyB' && desc === e.code) {
+    if ((this.mode === 'allspin' || this.mode === 'lst') && e.code === 'KeyB' && desc === e.code) {
       e.preventDefault();
-      void this.botPlay();
+      if (this.mode === 'lst') this.bookPlay();
+      else void this.botPlay();
       return;
     }
     if (has(b.undo)) {
@@ -696,6 +701,13 @@ export class GameView {
         cells: ev.cells.map(([a, b]) => [a, b] as [number, number]),
         wasTsd: openerDone,
       });
+      // book playback: keep phase bookkeeping, skip grading the book's own move
+      if (this.botMoving) {
+        if (openerDone) this.openerPhase = false;
+        this.botMoveFeedback(ev);
+        this.refreshAll();
+        return;
+      }
       // evaluation off: still advance the opener → loop phase, no grading
       if (!this.evalOn()) {
         if (openerDone) this.openerPhase = false;
@@ -727,6 +739,8 @@ export class GameView {
     if (this.mode === 'allspin') {
       if (this.botMoving) this.botMoveFeedback(ev);
       else if (this.evalOn()) void this.gradeAllspin(ev, b2bBefore);
+    } else if (this.botMoving) {
+      this.botMoveFeedback(ev);
     } else if (this.evalOn()) {
       this.engine.gradeLock(ev, { lstBias: this.mode === 'lst', neural: settings.neuralEval });
     }
@@ -895,6 +909,88 @@ export class GameView {
     });
   }
 
+  // ---- lst: book playback ("watch book") ----
+
+  /** Play the book's move for the current position: TKI targets during the
+   * opener, the LST cover book in the loop, the ready TSD as the payoff. */
+  private bookPlay(): void {
+    if (this.mode !== 'lst' || this.paused || !this.game.active) return;
+    const found = this.lstBookMove();
+    if (!found) {
+      this.showToast('No book move here — the book has nothing for this position');
+      return;
+    }
+    this.taintSession('Book assist');
+    if (found.park) {
+      if (this.game.holdPiece()) this.showToast(`Book: park ${found.piece} in hold`);
+      this.refreshAll();
+      return;
+    }
+    this.botMoving = true;
+    const ev = this.game.applyMove(found.piece, found.cells, found.spin);
+    this.botMoving = false;
+    if (!ev) this.showToast('Book move is not reachable here');
+    else this.handleTopOut();
+    this.refreshAll();
+  }
+
+  private lstBookMove(): { piece: PieceType; cells: [number, number][]; spin: SpinKind; park?: boolean } | null {
+    const board = this.game.board;
+    const active = this.game.active!.type;
+    const holdP = this.game.hold ?? this.game.preview()[0] ?? null;
+    const canHold = holdP !== null && holdP !== active;
+    // a ready full T-spin double is the goal in both phases; prefer the one
+    // whose result is still a book state so the loop keeps going
+    const tsd = () => {
+      const opts = enumeratePlacements(board, 'T').filter((p) => p.spin === 'full' && p.linesCleared >= 2);
+      return opts.find((p) => bookAdvice(p.after, [], null).onBook) ?? opts[0];
+    };
+
+    if (this.openerPhase) {
+      const match = matchOpener(this.openerHistory);
+      // build toward a target that flows into the LST loop book when possible
+      const targets = [...match.matching].sort((a, b) => Number(chainsToLoop(b)) - Number(chainsToLoop(a)));
+      const placed = new Set(this.openerHistory.map((h) => h.piece));
+      const tryPiece = (piece: PieceType): { piece: PieceType; cells: [number, number][]; spin: SpinKind } | null => {
+        if (piece === 'T') {
+          // the T is always the TSD payoff — a flat drop into the notch
+          // matches a target's T cells but ruins the opener
+          const p = tsd();
+          return p ? { piece: 'T', cells: p.cells.map(([a, b]) => [a, b] as [number, number]), spin: p.spin } : null;
+        }
+        for (const t of targets) {
+          const want = t.pieces[piece];
+          if (!want || placed.has(piece)) continue;
+          const p = enumeratePlacements(board, piece).find((pl) => sameCells(pl.cells, want));
+          if (p) return { piece, cells: p.cells.map(([a, b]) => [a, b] as [number, number]), spin: p.spin };
+        }
+        return null;
+      };
+      const mv = tryPiece(active) ?? (canHold ? tryPiece(holdP) : null);
+      // no spot yet (needs support, or the T came early): stash the active piece
+      if (!mv && this.game.hold === null) return { piece: active, cells: [], spin: 'none', park: true };
+      return mv;
+    }
+
+    const adv = bookAdvice(board, [active, ...this.game.preview()], this.game.hold);
+    if (adv.onBook) {
+      // prefer keeping the hold slot free, like the book planner does
+      const ordered = [...adv.moves].sort((a, b) => Number(a.usesHold) - Number(b.usesHold));
+      for (const mv of ordered) {
+        const p = enumeratePlacements(board, mv.piece).find((pl) => sameCells(pl.cells, mv.cells));
+        if (p) return { piece: mv.piece, cells: p.cells.map(([a, b]) => [a, b] as [number, number]), spin: p.spin };
+      }
+    }
+    if (active === 'T' || (canHold && holdP === 'T')) {
+      const p = tsd();
+      if (p) return { piece: 'T', cells: p.cells.map(([a, b]) => [a, b] as [number, number]), spin: p.spin };
+    }
+    if (adv.onBook && adv.holdIsBook && this.game.hold !== active) {
+      return { piece: active, cells: [], spin: 'none', park: true };
+    }
+    return null;
+  }
+
   // ---- all-spin: Cold Clear 2 (real bot) grading ----
 
   /** Let Cold Clear play its own best move on the current board (watch it). */
@@ -923,11 +1019,12 @@ export class GameView {
   }
 
   private botMoveFeedback(ev: LockEvent): void {
+    const who = this.mode === 'lst' ? 'Book' : 'Cold Clear';
     const tag = ev.spin !== 'none' && ev.linesCleared > 0 ? `${ev.piece}-spin ×${ev.linesCleared}`
       : ev.linesCleared === 4 ? 'quad'
       : ev.linesCleared > 0 ? `${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''}` : 'build';
-    this.showChip('best', `Cold Clear · ${tag}`);
-    this.dockNote(`Cold Clear played ${ev.piece}${ev.usedHold ? ' (hold)' : ''} — ${tag}`);
+    this.showChip('best', `${who} · ${tag}`);
+    this.dockNote(`${who} played ${ev.piece}${ev.usedHold ? ' (hold)' : ''} — ${tag}`);
   }
 
   private async gradeAllspin(ev: LockEvent, b2bBefore: number): Promise<void> {

@@ -14,7 +14,7 @@ function css(name: string): string {
 // pack's ghost sheet. Cells are drawn straight from the sheet so adjacent
 // cells of the same piece merge seamlessly, exactly like in tetr.io.
 
-type SkinKey = PieceType | 'G';
+export type SkinKey = PieceType | 'G';
 const SKIN_TILE = 96;
 const SKIN_ORIGIN: Record<SkinKey, [number, number]> = {
   Z: [0, 0], L: [384, 0], O: [768, 0], S: [1152, 0], G: [1536, 0],
@@ -39,12 +39,16 @@ function skin(): HTMLImageElement {
 skin(); // start loading at module import
 
 /** Run when the skin sheet is available (immediately if already loaded). */
-function whenSkinReady(f: () => void): void {
+export function whenSkinReady(f: () => void): void {
   if (skinReady) f();
   else skinWaiters.push(f);
 }
 
-interface Neighbors { up: boolean; down: boolean; left: boolean; right: boolean }
+export function skinLoaded(): boolean {
+  return skinReady;
+}
+
+export interface Neighbors { up: boolean; down: boolean; left: boolean; right: boolean }
 
 /** Top-left of the connected tile for a cell merging with these neighbors. */
 function skinTile(key: SkinKey, n: Neighbors): [number, number] {
@@ -52,6 +56,27 @@ function skinTile(key: SkinKey, n: Neighbors): [number, number] {
   const row = !n.up ? (!n.down ? 3 : 0) : (!n.down ? 2 : 1);
   const col = !n.left ? (!n.right ? 0 : 1) : (!n.right ? 3 : 2);
   return [ox + col * SKIN_TILE, oy + row * SKIN_TILE];
+}
+
+/** Draw one connected-skin cell into any 2d context (pixel coords). The dest
+ * rect is snapped to whole device pixels: cells are drawn one drawImage each,
+ * and a boundary on a fractional pixel antialiases against the background on
+ * both sides, reading as a seam through the piece. */
+export function blitSkinCell(
+  ctx: CanvasRenderingContext2D,
+  key: SkinKey,
+  n: Neighbors,
+  px: number,
+  py: number,
+  size: number,
+  dpr = window.devicePixelRatio || 1,
+): void {
+  const [sx, sy] = skinTile(key, n);
+  const x0 = Math.round(px * dpr) / dpr;
+  const y0 = Math.round(py * dpr) / dpr;
+  const x1 = Math.round((px + size) * dpr) / dpr;
+  const y1 = Math.round((py + size) * dpr) / dpr;
+  ctx.drawImage(skin(), sx, sy, SKIN_TILE, SKIN_TILE, x0, y0, x1 - x0, y1 - y0);
 }
 
 /** Neighbor lookup for a free-standing set of cells (a piece). */
@@ -82,6 +107,7 @@ export class FieldRenderer {
   readonly canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private cell = 26;
+  private dpr = 1;
   /** transient highlight cells — with a piece type they render from the skin
    * sheet plus a colored outline; without one they fall back to flat color */
   highlight: { cells: [number, number][]; color: string; piece?: PieceType } | null = null;
@@ -109,6 +135,7 @@ export class FieldRenderer {
   setCellSize(cellSize: number): void {
     this.cell = cellSize;
     const dpr = window.devicePixelRatio || 1;
+    this.dpr = dpr;
     this.canvas.width = BOARD_W * this.cell * dpr;
     this.canvas.height = (VISIBLE_H + 1) * this.cell * dpr;
     this.canvas.style.width = `${BOARD_W * this.cell}px`;
@@ -331,10 +358,8 @@ export class FieldRenderer {
       this.drawCell(x, y, key === 'G' ? css('--text-dim') : PIECE_COLORS[key], alpha);
       return;
     }
-    const c = this.cell;
-    const [sx, sy] = skinTile(key, n);
     this.ctx.globalAlpha = alpha;
-    this.ctx.drawImage(skin(), sx, sy, SKIN_TILE, SKIN_TILE, x * c, this.py(y), c, c);
+    blitSkinCell(this.ctx, key, n, x * this.cell, this.py(y), this.cell, this.dpr);
     this.ctx.globalAlpha = 1;
   }
 
@@ -391,7 +416,9 @@ export class FieldRenderer {
     ctx.save();
     ctx.fillStyle = css('--field-bg');
     ctx.fillRect(0, 0, w, h);
-    ctx.translate(this.shakeX, this.shakeY);
+    // whole-device-pixel shake only — fractional offsets antialias every
+    // cell edge and draw seams through the pieces
+    ctx.translate(Math.round(this.shakeX * this.dpr) / this.dpr, Math.round(this.shakeY * this.dpr) / this.dpr);
     // cover the sliver the shake exposes at the edges
     if (this.shakeMag > 0) {
       ctx.fillStyle = css('--field-bg');
@@ -528,8 +555,7 @@ export function renderPieceTile(type: PieceType | null, cell = 18): HTMLCanvasEl
       const px = (x - cx) * cell + w / 2;
       const py = (cy - 1 - y) * cell + h / 2;
       if (skinReady) {
-        const [sx, sy] = skinTile(type, n(x, y));
-        ctx.drawImage(skin(), sx, sy, SKIN_TILE, SKIN_TILE, px, py, cell, cell);
+        blitSkinCell(ctx, type, n(x, y), px, py, cell);
       } else {
         ctx.fillStyle = PIECE_COLORS[type];
         ctx.beginPath();
@@ -573,10 +599,9 @@ export function renderMiniBoard(
         if (!board.filled(x, y)) continue;
         ctx.globalAlpha = 0.8;
         if (skinReady) {
-          const [sx, sy] = skinTile('G', {
+          blitSkinCell(ctx, 'G', {
             up: inBoard(x, y + 1), down: inBoard(x, y - 1), left: inBoard(x - 1, y), right: inBoard(x + 1, y),
-          });
-          ctx.drawImage(skin(), sx, sy, SKIN_TILE, SKIN_TILE, px(x), py(y), cell, cell);
+          }, px(x), py(y), cell);
         } else {
           ctx.fillStyle = stackColor;
           ctx.fillRect(px(x) + 0.5, py(y) + 0.5, cell - 1, cell - 1);
@@ -589,8 +614,7 @@ export function renderMiniBoard(
       for (const [x, y] of pieceCells) {
         if (y >= heightRows) continue;
         if (skinReady) {
-          const [sx, sy] = skinTile(pieceType, n(x, y));
-          ctx.drawImage(skin(), sx, sy, SKIN_TILE, SKIN_TILE, px(x), py(y), cell, cell);
+          blitSkinCell(ctx, pieceType, n(x, y), px(x), py(y), cell);
         } else {
           ctx.fillStyle = PIECE_COLORS[pieceType];
           ctx.fillRect(px(x) + 0.5, py(y) + 0.5, cell - 1, cell - 1);

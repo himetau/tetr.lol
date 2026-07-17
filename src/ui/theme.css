@@ -231,9 +231,17 @@ h1, h2, h3 {
 }
 .nav-btn.active .ico {
   color: var(--accent);
-  text-shadow: var(--glow) color-mix(in srgb, var(--accent) 60%, transparent);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 60%, transparent));
 }
-.nav-btn .ico { width: 18px; text-align: center; font-size: 15px; flex-shrink: 0; }
+.nav-btn .ico {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: filter 0.14s;
+}
+.nav-btn .ico svg { width: 17px; height: 17px; stroke-width: 1.75; }
 .nav-btn .txt { display: flex; flex-direction: column; line-height: 1.25; }
 .nav-btn .txt small {
   font-size: 9.5px;
@@ -247,6 +255,19 @@ h1, h2, h3 {
 .nav-btn:hover .txt small, .nav-btn.active .txt small { opacity: 0.85; max-height: 14px; }
 
 .sidebar .spacer { flex: 1; }
+
+.nav-sec {
+  padding: 14px 12px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.26em;
+  color: var(--text-dim);
+  opacity: 0.65;
+  user-select: none;
+}
+.sidebar .nav-sec:first-of-type { padding-top: 2px; }
 
 .side-foot {
   padding: 8px 12px 2px;
@@ -268,7 +289,11 @@ h1, h2, h3 {
   padding: 4px 6px;
   border-radius: var(--radius-sm);
   transition: color 0.14s, background 0.14s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
+.foot-btn svg { width: 13px; height: 13px; stroke-width: 1.75; }
 .foot-btn:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
 
 /* ---- main view ---- */

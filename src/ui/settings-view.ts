@@ -342,9 +342,16 @@ function bgImagesRow(): HTMLElement {
   const makePicker = (folder: boolean): HTMLInputElement => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    if (folder) input.webkitdirectory = true;
+    if (folder) {
+      // no accept filter here — combined with webkitdirectory the Linux
+      // folder dialog applies image/* to directories and grays them all out;
+      // addCustomImages drops non-image files anyway
+      input.webkitdirectory = true;
+      input.multiple = true;
+    } else {
+      input.accept = 'image/*';
+      input.multiple = true;
+    }
     input.style.display = 'none';
     input.addEventListener('change', () => {
       void (async () => {

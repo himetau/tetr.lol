@@ -2,6 +2,7 @@
 
 import patterns from '../data/lst-patterns.json';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
+import { blitSkinCell, skinLoaded, whenSkinReady, type SkinKey } from './board-canvas';
 
 interface PatternPage { rows: string[] }
 interface Pattern { fumen: string; pages: PatternPage[] }
@@ -22,20 +23,40 @@ function renderPatternCanvas(rows: string[], cell = 14): HTMLCanvasElement {
   canvas.style.height = `${h * cell}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = css('--field-bg');
-  ctx.fillRect(0, 0, w * cell, h * cell);
-  for (let r = 0; r < h; r++) {
-    for (let x = 0; x < Math.min(10, rows[r].length); x++) {
-      const ch = rows[r][x];
-      if (ch === '_' || ch === ' ') continue;
-      ctx.fillStyle = ch === 'X' ? css('--text-dim') : (PIECE_COLORS[ch as PieceType] ?? css('--text-dim'));
-      ctx.globalAlpha = ch === 'X' ? 0.65 : 1;
-      ctx.beginPath();
-      ctx.roundRect(x * cell + 0.5, r * cell + 0.5, cell - 1, cell - 1, 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+  // rows are top-down; same-letter cells merge via the connected skin so
+  // pieces read as one shape instead of a grid of outlined tiles
+  const keyAt = (x: number, r: number): string | null => {
+    const ch = r >= 0 && r < h && x >= 0 && x < 10 ? rows[r][x] : undefined;
+    return !ch || ch === '_' || ch === ' ' ? null : ch;
+  };
+  const paint = () => {
+    ctx.fillStyle = css('--field-bg');
+    ctx.fillRect(0, 0, w * cell, h * cell);
+    for (let r = 0; r < h; r++) {
+      for (let x = 0; x < Math.min(10, rows[r].length); x++) {
+        const ch = keyAt(x, r);
+        if (!ch) continue;
+        ctx.globalAlpha = ch === 'X' ? 0.65 : 1;
+        if (skinLoaded()) {
+          const key: SkinKey = ch !== 'X' && ch in PIECE_COLORS ? (ch as PieceType) : 'G';
+          blitSkinCell(ctx, key, {
+            up: keyAt(x, r - 1) === ch,
+            down: keyAt(x, r + 1) === ch,
+            left: keyAt(x - 1, r) === ch,
+            right: keyAt(x + 1, r) === ch,
+          }, x * cell, r * cell, cell);
+        } else {
+          ctx.fillStyle = ch === 'X' ? css('--text-dim') : (PIECE_COLORS[ch as PieceType] ?? css('--text-dim'));
+          ctx.beginPath();
+          ctx.roundRect(x * cell + 0.5, r * cell + 0.5, cell - 1, cell - 1, 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
     }
-  }
+  };
+  paint();
+  if (!skinLoaded()) whenSkinReady(paint);
   return canvas;
 }
 
