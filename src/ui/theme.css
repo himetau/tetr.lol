@@ -531,7 +531,67 @@ details.card:not([open]) .card-head .chevron {
 }
 .set-row input[type="range"] {
   width: 180px;
-  accent-color: var(--accent);
+  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.set-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--fill, 50%),
+    var(--bg-inset) var(--fill, 50%)
+  );
+  border: 1px solid var(--line);
+}
+.set-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+}
+.set-row input[type="range"]::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.set-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  transition:
+    transform 0.14s,
+    box-shadow 0.14s;
+}
+.set-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  transition:
+    transform 0.14s,
+    box-shadow 0.14s;
+}
+.set-row input[type="range"]:hover::-webkit-slider-thumb,
+.set-row input[type="range"]:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.set-row input[type="range"]:hover::-moz-range-thumb,
+.set-row input[type="range"]:focus-visible::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.set-row input[type="range"]:focus-visible {
+  outline: none;
 }
 .set-row input[type="number"] {
   width: 70px;
@@ -541,6 +601,13 @@ details.card:not([open]) .card-head .chevron {
   background: var(--bg-inset);
   color: var(--text);
   font-family: inherit;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.set-row input[type="number"]::-webkit-outer-spin-button,
+.set-row input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .set-row select {
   padding: 5px 8px;

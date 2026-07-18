@@ -269,10 +269,16 @@ function sliderRow(name: string, hint: string, min: number, max: number, step: n
   num.min = slider.min;
   num.max = slider.max;
   num.value = slider.value;
+  const updateFill = () => {
+    const pct = ((Number(slider.value) - min) / (max - min)) * 100;
+    slider.style.setProperty('--fill', `${pct}%`);
+  };
+  updateFill();
   const apply = (v: number) => {
     const clamped = Math.max(min, Math.min(max, v));
     slider.value = String(clamped);
     num.value = String(clamped);
+    updateFill();
     onChange(clamped);
     saveSettings();
   };
