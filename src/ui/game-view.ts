@@ -17,10 +17,12 @@ import { EngineClient } from './engine-client';
 import { ColdClearClient, type CC2Move } from './cc2-client';
 import { GarbageQueue, ScheduledAttacker, versusAttack, scaleAttack } from '../core/versus';
 import { BotPlayer } from './bot-player';
-import type { GradeResult, Grade, AltInfo } from '../engine/grade';
+import { bestMove, type GradeResult, type Grade, type AltInfo } from '../engine/grade';
 import { matchOpener, chainsToLoop, type OpenerPlacement } from '../engine/opener';
 import { bookAdvice } from '../engine/book';
 import { enumeratePlacements } from '../engine/enumerate';
+import { lstLoopMove } from '../engine/lst-loop';
+import { CC2_LST_LOOP_JSON } from '../engine/cc2-weights';
 import { buildFourwideStart, refillWalls, WELL_X, WELL_W } from '../engine/fourwide';
 import { genAllspin } from '../engine/allspin-gen';
 import {
@@ -31,6 +33,12 @@ import { actionText, lockActionLabel, clearedRowsOf } from './fx';
 import { stats, saveStats, gradeAccuracy, emptyGrades, recordSession, fmtSprint, type Mode } from './stats';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
+
+// LST drill goal: 20 TSDs in one run with back-to-back never broken, the
+// loop never dead, no I piece spent on a clear (quads and I-burns are
+// off-plan; parking the I or laying it as build filler is fine), and not a
+// single T wasted — every locked T must be a full T-spin double.
+const LST_GOAL_TSDS = 20;
 
 const GRADE_LABEL: Record<Grade, string> = {
   best: '★ Best',
@@ -112,6 +120,15 @@ export class GameView {
 
   // opener-phase placement history (popped on undo)
   private openerHistory: (OpenerPlacement & { wasTsd: boolean })[] = [];
+
+  // LST goal run state: first violation ends the goal (short label for the
+  // session panel), goalDone latches the 20-TSD success jingle
+  private goalFail: string | null = null;
+  private goalDone = false;
+
+  // who played the last assisted move in the LST drill: the cover book, the
+  // goal-legal loop player, the plain engine fallback, or Cold Clear 2
+  private assistWho: 'Book' | 'Loop' | 'Engine' | 'Cold Clear' = 'Book';
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -217,6 +234,24 @@ export class GameView {
       controls.append(btn('▶ Watch bot (B)', () => void this.botPlay()));
     } else if (this.mode === 'lst') {
       controls.append(btn('▶ Watch book (B)', () => this.bookPlay()));
+      // which engine drives "watch book" once the position leaves the book:
+      // the built-in heuristic loop player, or loop-tuned Cold Clear 2
+      const assistSel = document.createElement('select');
+      assistSel.className = 'opp-select';
+      for (const [v, label] of [['engine', 'assist: engine'], ['cc2', 'assist: cold clear']] as const) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = label;
+        assistSel.appendChild(o);
+      }
+      assistSel.value = settings.lstAssist;
+      assistSel.addEventListener('change', () => {
+        settings.lstAssist = assistSel.value as 'engine' | 'cc2';
+        saveSettings();
+        assistSel.blur();
+        if (settings.lstAssist === 'cc2' && !this.cc2) this.cc2 = new ColdClearClient();
+      });
+      controls.append(assistSel);
     }
     // drill opponent: nothing, quickplay-style garbage, or a hidden Cold
     // Clear bot trading attacks with you (tunables live in Settings)
@@ -407,6 +442,8 @@ export class GameView {
     }
     this.setupOpponent(end === 'restart');
     this.openerHistory = [];
+    this.goalFail = null;
+    this.goalDone = false;
     this.lastLock = null;
     this.preview = null;
     this.paused = false;
@@ -693,6 +730,7 @@ export class GameView {
     } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
       this.session.tsses++;
     }
+    if (this.mode === 'lst') this.trackLstGoal(ev);
 
     if (this.openerPhase) {
       const openerDone = ev.spin === 'full' && ev.linesCleared >= 2;
@@ -788,6 +826,35 @@ export class GameView {
       }, 900);
     } else {
       this.showToast('Top out — R to retry');
+    }
+  }
+
+  /**
+   * The LST goal run: reach LST_GOAL_TSDS TSDs with back-to-back never broken,
+   * no I piece spent on a clear, and every locked T a full TSD (a TSS, flat T,
+   * or T burn wastes the run). No explicit "loop alive" check — a dead loop
+   * can only show up as a wasted T or a broken chain, both caught here, and a
+   * rigid col-2 template test just misfires on valid right-handed / freestyle
+   * loops. The first violation ends the goal until R resets the run.
+   */
+  private trackLstGoal(ev: LockEvent): void {
+    if (this.goalDone) return;
+    if (this.goalFail === null) {
+      if (ev.piece === 'T' && !(ev.spin === 'full' && ev.linesCleared >= 2)) {
+        this.goalFail = 'T wasted ✗';
+        this.showToast('Goal lost — wasted a T (every T must be a full TSD) · R for a fresh 20-TSD run');
+      } else if (ev.linesCleared > 0 && ev.linesCleared < 4 && ev.spin === 'none') {
+        this.goalFail = 'B2B ✗';
+        this.showToast('Goal lost — broke back-to-back · R for a fresh 20-TSD run');
+      } else if (ev.piece === 'I' && ev.linesCleared > 0) {
+        this.goalFail = 'I spent ✗';
+        this.showToast('Goal lost — spent the I on a clear · R for a fresh 20-TSD run');
+      }
+    }
+    if (this.goalFail === null && this.session.tsds >= LST_GOAL_TSDS) {
+      this.goalDone = true;
+      if (settings.soundFx) personalBestSound();
+      this.showToast(`Goal reached — ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`);
     }
   }
 
@@ -912,24 +979,92 @@ export class GameView {
   // ---- lst: book playback ("watch book") ----
 
   /** Play the book's move for the current position: TKI targets during the
-   * opener, the LST cover book in the loop, the ready TSD as the payoff. */
+   * opener, the LST cover book in the loop, the ready TSD as the payoff.
+   * When the position is off-book the loop player keeps chasing the 20-TSD
+   * goal (goal-legal moves only — never a wasted T); only when even that is
+   * stuck does the plain engine take over, so the button always plays. */
   private bookPlay(): void {
-    if (this.mode !== 'lst' || this.paused || !this.game.active) return;
-    const found = this.lstBookMove();
+    if (this.mode !== 'lst' || !this.game.active) return;
+    if (this.paused) this.resume();
+    const queue = [this.game.active.type, ...this.game.preview()];
+    let found = this.lstBookMove();
+    if (found) {
+      this.assistWho = 'Book';
+    } else if (!this.openerPhase && settings.lstAssist === 'cc2') {
+      // off-book loop, Cold Clear selected: let the loop-tuned bot drive
+      // (async — it thinks on a worker); the rest of this method is skipped
+      void this.cc2LoopPlay(queue);
+      return;
+    } else if (!this.openerPhase) {
+      // off-book loop: hunt for a goal-legal continuation before anything
+      // that would waste the T
+      const loop = lstLoopMove(this.game.board, queue, this.game.hold);
+      if (loop) {
+        this.assistWho = 'Loop';
+        found = { piece: loop.piece, cells: loop.cells, spin: loop.spin };
+      } else if (this.game.hold === null || this.game.hold !== 'T') {
+        // no legal loop move: park the T so it survives for a later TSD
+        // rather than being forced onto the stack
+        if (this.game.active.type === 'T') {
+          found = { piece: 'T', cells: [], spin: 'none', park: true };
+          this.assistWho = 'Loop';
+        }
+      }
+    }
     if (!found) {
-      this.showToast('No book move here — the book has nothing for this position');
+      // genuinely off-plan (opener miss, or the loop is unrecoverable): the
+      // plain engine keeps the demo moving even if it can't stay clean
+      this.assistWho = 'Engine';
+      const mv = bestMove(Array.from(this.game.board.rows), queue, this.game.hold, true);
+      if (mv) found = { piece: mv.piece, cells: mv.cells, spin: mv.spin };
+    }
+    if (!found) {
+      this.showToast('No move available — the board is jammed');
       return;
     }
-    this.taintSession('Book assist');
+    this.taintSession(`${this.assistWho} assist`);
     if (found.park) {
-      if (this.game.holdPiece()) this.showToast(`Book: park ${found.piece} in hold`);
+      if (this.game.holdPiece()) {
+        this.showToast(this.assistWho === 'Loop'
+          ? `Loop: park the ${found.piece} — keep it for the next TSD`
+          : `Book: park ${found.piece} in hold`);
+      }
       this.refreshAll();
       return;
     }
     this.botMoving = true;
     const ev = this.game.applyMove(found.piece, found.cells, found.spin);
     this.botMoving = false;
-    if (!ev) this.showToast('Book move is not reachable here');
+    if (!ev) this.showToast(`${this.assistWho} move is not reachable here`);
+    else this.handleTopOut();
+    this.refreshAll();
+  }
+
+  /** Off-book loop playback driven by Cold Clear 2 with the loop-tuned
+   * weights (settings.lstAssist === 'cc2'). Async: the bot thinks on its
+   * worker, so a later lock/undo/reset supersedes a stale result. */
+  private async cc2LoopPlay(queue: PieceType[]): Promise<void> {
+    if (!this.cc2) this.cc2 = new ColdClearClient();
+    const q = ++this.cc2Query;
+    const moves = await this.cc2.analyze(
+      Array.from(this.game.board.rows),
+      queue,
+      this.game.hold,
+      this.b2b > 0,
+      this.combo,
+      30000,
+      CC2_LST_LOOP_JSON,
+    );
+    if (q !== this.cc2Query || this.mode !== 'lst' || !this.game.active) return;
+    const best = moves[0];
+    if (!best) { this.showToast('Cold Clear found no move here'); return; }
+    const spin: SpinKind = best.spin === 'f' ? 'full' : best.spin === 'm' ? 'mini' : 'none';
+    this.assistWho = 'Cold Clear';
+    this.taintSession('Cold Clear assist');
+    this.botMoving = true;
+    const ev = this.game.applyMove(best.piece as PieceType, pairsOf(best.cells), spin);
+    this.botMoving = false;
+    if (!ev) this.showToast('Cold Clear move is not reachable here');
     else this.handleTopOut();
     this.refreshAll();
   }
@@ -1019,7 +1154,7 @@ export class GameView {
   }
 
   private botMoveFeedback(ev: LockEvent): void {
-    const who = this.mode === 'lst' ? 'Book' : 'Cold Clear';
+    const who = this.mode === 'lst' ? this.assistWho : 'Cold Clear';
     const tag = ev.spin !== 'none' && ev.linesCleared > 0 ? `${ev.piece}-spin ×${ev.linesCleared}`
       : ev.linesCleared === 4 ? 'quad'
       : ev.linesCleared > 0 ? `${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''}` : 'build';
@@ -1182,7 +1317,11 @@ export class GameView {
     const acc = gradeAccuracy(s.grades);
     const cells: [string, string][] = [];
     if (this.mode === 'lst') {
-      cells.push(['phase', this.openerPhase ? 'TKI' : 'LST loop'], ['TSDs', String(s.tsds)]);
+      cells.push(
+        ['phase', this.openerPhase ? 'TKI' : 'LST loop'],
+        ['TSDs', `${s.tsds}/${LST_GOAL_TSDS}`],
+        ['goal', this.goalDone ? 'done ✓' : this.goalFail ?? 'on track'],
+      );
     }
     if (this.mode === 'free') {
       const clock = this.sprintMs ?? (this.sprintStart ? Date.now() - this.sprintStart : 0);

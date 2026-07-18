@@ -22,6 +22,12 @@ export const WASTED_T_TOLL = -180;
 // a permanent toll on the line — burns must never look like a clean fix.
 export const B2B_BREAK_TOLL = -300;
 
+// The drill goal is 20 straight TSDs without spending I pieces: any I
+// placement pays a toll so lines prefer parking it in hold. When placing it
+// is unavoidable (hold full, next I incoming) every candidate pays equally,
+// so structure still decides where the filler goes.
+export const I_USE_TOLL = -140;
+
 /** A clear that would break back-to-back: lines without a spin, not a quad. */
 export function breaksB2b(linesCleared: number, spin: string): boolean {
   return linesCleared > 0 && linesCleared < 4 && spin === 'none';
@@ -81,9 +87,10 @@ export function searchBestLine(
       }
       for (const opt of options) {
         for (const p of enumerateFast(node.board, opt.piece)) {
-          let reward = node.reward + clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type);
+          let reward = node.reward + clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type, bias);
           if (bias && !findLstSite(p.after)) reward += LOOP_DEATH_TOLL;
           if (bias && p.type === 'T' && p.spin !== 'full') reward += WASTED_T_TOLL;
+          if (bias && p.type === 'I') reward += I_USE_TOLL;
           if (bias && breaksB2b(p.linesCleared, p.spin)) reward += B2B_BREAK_TOLL;
           next.push({
             board: p.after,

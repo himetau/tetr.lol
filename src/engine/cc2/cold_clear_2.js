@@ -15,20 +15,25 @@ export class ColdClear {
      * `cols`: 10 column bitboards (bit y set => filled at row y, y up).
      * `queue`: upcoming pieces as letters, front = current piece.
      * `hold`: single hold-piece letter, or "" for empty.
+     * `weights`: a `BotConfig` JSON string to override the default evaluation
+     * (e.g. an LST-loop profile), or "" to use the built-in defaults.
      * @param {Uint32Array} cols
      * @param {string} queue
      * @param {string} hold
      * @param {boolean} back_to_back
      * @param {number} combo
+     * @param {string} weights
      */
-    constructor(cols, queue, hold, back_to_back, combo) {
+    constructor(cols, queue, hold, back_to_back, combo, weights) {
         const ptr0 = passArray32ToWasm0(cols, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(queue, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
         const ptr2 = passStringToWasm0(hold, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len2 = WASM_VECTOR_LEN;
-        const ret = wasm.coldclear_new(ptr0, len0, ptr1, len1, ptr2, len2, back_to_back, combo);
+        const ptr3 = passStringToWasm0(weights, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ret = wasm.coldclear_new(ptr0, len0, ptr1, len1, ptr2, len2, back_to_back, combo, ptr3, len3);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }

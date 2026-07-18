@@ -65,6 +65,9 @@ export interface AppSettings {
   feedbackLevel: 'all' | 'mistakes' | 'off';
   /** per-mode master switch for placement evaluation (grades, paths, chips) */
   evalDrill: Record<GradedMode, boolean>;
+  /** which engine drives the LST drill's "watch book" once off the book:
+   * the built-in heuristic loop player, or Cold Clear 2 (loop-tuned) */
+  lstAssist: 'engine' | 'cc2';
   versus: VersusSettings;
 }
 
@@ -85,6 +88,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoRetryTopOut: false,
   feedbackLevel: 'all',
   evalDrill: { lst: true, fourwide: true, free: true, allspin: true },
+  lstAssist: 'engine',
   versus: {
     botPps: 1.5,
     botLevel: 'normal',

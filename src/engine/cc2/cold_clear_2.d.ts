@@ -8,8 +8,10 @@ export class ColdClear {
      * `cols`: 10 column bitboards (bit y set => filled at row y, y up).
      * `queue`: upcoming pieces as letters, front = current piece.
      * `hold`: single hold-piece letter, or "" for empty.
+     * `weights`: a `BotConfig` JSON string to override the default evaluation
+     * (e.g. an LST-loop profile), or "" to use the built-in defaults.
      */
-    constructor(cols: Uint32Array, queue: string, hold: string, back_to_back: boolean, combo: number);
+    constructor(cols: Uint32Array, queue: string, hold: string, back_to_back: boolean, combo: number, weights: string);
     /**
      * Ranked moves (best first) as a JSON array, or null if none. Each item:
      * piece, spin ('n'|'m'|'f'), lines, usesHold, soft (needs a soft-drop /
@@ -27,7 +29,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_coldclear_free: (a: number, b: number) => void;
-    readonly coldclear_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
+    readonly coldclear_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
     readonly coldclear_suggest: (a: number) => [number, number];
     readonly coldclear_work: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

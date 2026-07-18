@@ -7,7 +7,7 @@ import type { PieceType, Rot } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
 import { enumeratePlacements, type Placement } from './enumerate';
 import { evaluateBoard, clearReward, findTSlots, findLstSite, LST_SPIN_COL, type EvalBreakdown } from './eval';
-import { searchBestLine, LOOP_DEATH_TOLL, WASTED_T_TOLL, B2B_BREAK_TOLL, breaksB2b, type SearchOptions, DEFAULT_SEARCH } from './search';
+import { searchBestLine, LOOP_DEATH_TOLL, WASTED_T_TOLL, B2B_BREAK_TOLL, I_USE_TOLL, breaksB2b, type SearchOptions, DEFAULT_SEARCH } from './search';
 import { bookAdvice, matchesBookMove, OFF_BOOK } from './book';
 
 export type Grade = 'best' | 'good' | 'inaccuracy' | 'mistake' | 'killer';
@@ -99,6 +99,75 @@ function cellKey(cells: readonly (readonly [number, number])[]): string {
     .join(',');
 }
 
+/**
+ * The engine's preferred placement for a position — the drill's "watch"
+ * playback falls back to this when the book has nothing. Shallow search so
+ * it is safe to run synchronously on the UI thread.
+ */
+export function bestMove(
+  rows: number[],
+  queue: PieceType[],
+  hold: PieceType | null,
+  lstBias: boolean,
+  search: SearchOptions = { depth: 2, beamWidth: 8 },
+): { piece: PieceType; cells: [number, number][]; spin: SpinKind; linesCleared: number; usesHold: boolean } | null {
+  const opts: SearchOptions = { ...search, lstBias };
+  const board = new Board(Uint32Array.from(rows));
+  const active = queue[0];
+  if (!active) return null;
+  const preview = queue.slice(1);
+  const hadReadySlot = findTSlots(board).some((s) => s.clears2);
+
+  const candidates: Candidate[] = [];
+  const addCandidates = (piece: PieceType, usesHold: boolean, queueAfter: PieceType[], holdAfter: PieceType | null) => {
+    for (const p of enumeratePlacements(board, piece)) {
+      let immediateReward = clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type, lstBias);
+      if (piece === 'T' && p.spin !== 'full') {
+        if (hadReadySlot) immediateReward -= 320;
+        else if (lstBias) immediateReward += WASTED_T_TOLL;
+      }
+      if (lstBias && piece === 'I') immediateReward += I_USE_TOLL;
+      if (lstBias && !findLstSite(p.after)) immediateReward += LOOP_DEATH_TOLL;
+      if (lstBias && breaksB2b(p.linesCleared, p.spin)) immediateReward += B2B_BREAK_TOLL;
+      const ev = evaluateBoard(p.after, lstBias);
+      candidates.push({
+        placement: p,
+        usesHold,
+        queueAfter,
+        holdAfter,
+        immediateReward,
+        immediateScore: immediateReward + ev.score,
+        breakdown: ev.b,
+      });
+    }
+  };
+  addCandidates(active, false, preview, hold);
+  const holdPiece = hold ?? preview[0];
+  if (holdPiece && holdPiece !== active) {
+    addCandidates(holdPiece, true, hold ? preview : preview.slice(1), active);
+  }
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.immediateScore - a.immediateScore);
+  let best: Candidate | null = null;
+  let bestTotal = -Infinity;
+  for (const c of candidates.slice(0, 10)) {
+    const total = c.immediateReward + searchBestLine(c.placement.after, c.queueAfter, 0, c.holdAfter, true, opts).score;
+    if (total > bestTotal) {
+      bestTotal = total;
+      best = c;
+    }
+  }
+  if (!best) return null;
+  return {
+    piece: best.placement.type,
+    cells: best.placement.cells.map(([a, b]) => [a, b] as [number, number]),
+    spin: best.placement.spin,
+    linesCleared: best.placement.linesCleared,
+    usesHold: best.usesHold,
+  };
+}
+
 export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAULT_SEARCH): GradeResult {
   const t0 = performance.now();
   const bias = req.lstBias ?? false;
@@ -115,13 +184,15 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
 
   const addCandidates = (piece: PieceType, usesHold: boolean, queueAfter: PieceType[], holdAfter: PieceType | null) => {
     for (const p of enumeratePlacements(board, piece)) {
-      let immediateReward = clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type);
+      let immediateReward = clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type, bias);
       // in LST every T is TSD fuel: spending it without a full spin is a
       // waste (worse still when the TSD was sitting there ready)
       if (piece === 'T' && p.spin !== 'full') {
         if (hadReadySlot) immediateReward -= 320;
         else if (bias) immediateReward += WASTED_T_TOLL;
       }
+      // the goal never spends I pieces: prefer lines that park the I
+      if (bias && piece === 'I') immediateReward += I_USE_TOLL;
       // entering a loop-dead state is a permanent toll on the line
       if (bias && !findLstSite(p.after)) immediateReward += LOOP_DEATH_TOLL;
       // breaking back-to-back is a permanent toll too — a burn that tidies
@@ -313,6 +384,20 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
         atLeast('mistake');
       }
     }
+  }
+
+  // A quad keeps B2B but is off the 20-TSD plan: the I belongs in hold or
+  // placed as neutral filler, never spent on a clear.
+  if (bias && userCand && req.userPiece === 'I' && req.userLines === 4) {
+    reasons.push('Quad — off the LST plan: every clear should be a T-spin, keep the I as filler');
+    atLeast('inaccuracy');
+  }
+
+  // A TSS keeps B2B too, but it spends the T for half the payoff — the
+  // 20-TSD goal counts it as a wasted T.
+  if (bias && userCand && req.userPiece === 'T' && req.userSpin === 'full' && req.userLines === 1) {
+    reasons.push('TSS — spent the T for one line; the goal takes full TSDs only');
+    atLeast('inaccuracy');
   }
 
   // a full TSD that leaves the loop alive is the loop doing exactly what it

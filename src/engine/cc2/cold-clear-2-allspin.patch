@@ -16,10 +16,10 @@ index c8f8a39..2b7eab0 100644
  [dev-dependencies]
 diff --git a/src/api.rs b/src/api.rs
 new file mode 100644
-index 0000000..fcc87b6
+index 0000000..4c5c342
 --- /dev/null
 +++ b/src/api.rs
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,105 @@
 +// wasm-bindgen wrapper: drive the Cold Clear 2 bot single-threaded from JS.
 +// Bypasses the threaded BotSyncronizer/TBP harness — we build one bot per
 +// query, think for a fixed number of work units, and read back the best move.
@@ -58,8 +58,10 @@ index 0000000..fcc87b6
 +    /// `cols`: 10 column bitboards (bit y set => filled at row y, y up).
 +    /// `queue`: upcoming pieces as letters, front = current piece.
 +    /// `hold`: single hold-piece letter, or "" for empty.
++    /// `weights`: a `BotConfig` JSON string to override the default evaluation
++    /// (e.g. an LST-loop profile), or "" to use the built-in defaults.
 +    #[wasm_bindgen(constructor)]
-+    pub fn new(cols: &[u32], queue: &str, hold: &str, back_to_back: bool, combo: u8) -> Result<ColdClear, JsValue> {
++    pub fn new(cols: &[u32], queue: &str, hold: &str, back_to_back: bool, combo: u8, weights: &str) -> Result<ColdClear, JsValue> {
 +        let mut board = Board::default();
 +        for x in 0..10usize.min(cols.len()) { board.cols[x] = cols[x] as u64; }
 +        let mut q: Vec<Piece> = queue.chars().filter_map(to_piece).collect();
@@ -71,8 +73,13 @@ index 0000000..fcc87b6
 +            None => q.remove(0),
 +        };
 +        let state = GameState { board, bag: EnumSet::all(), reserve, back_to_back, combo };
-+        let config = Arc::new(BotConfig::default());
-+        let bot = Bot::new(BotOptions { speculate: false, config }, state, &q);
++        let config = if weights.is_empty() {
++            BotConfig::default()
++        } else {
++            serde_json::from_str(weights)
++                .map_err(|e| JsValue::from_str(&format!("bad weights JSON: {e}")))?
++        };
++        let bot = Bot::new(BotOptions { speculate: false, config: Arc::new(config) }, state, &q);
 +        Ok(ColdClear { bot, board, active })
 +    }
 +

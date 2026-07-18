@@ -44,10 +44,14 @@ export const WEIGHTS = {
   deepWell: -35,
   // action rewards (applied to the placement, not the board)
   tsd: 480,
-  tss: 60,
+  tss: 60,           // fine in free play…
+  tssOffPlan: -120,  // …but under LST bias a TSS spends the T without the
+                     // TSD: half the payoff, the whole T — a wasted piece
   tspinMiniClear: -30,
   burn: -80,          // per line cleared without a T-spin
-  tetris: 120,        // I-piece 4-line: acceptable but off-plan in LST
+  tetris: 120,        // I-piece 4-line: fine in free play…
+  quadOffPlan: -120,  // …but off-plan under LST bias: the goal is TSDs only,
+                      // and a quad spends the I plus four rows of structure
   // LST-structure bias (four.lol: the spin column is column index 2,
   // left wall on columns 0-1, fill on 3-9)
   lstSlotOnColumn: 90,     // extra for a T-slot sitting on the LST column
@@ -122,6 +126,11 @@ export interface LstSite {
   roofReady: boolean;
 }
 
+// Search and grading ask for the same board's site several times (clear-
+// reward toll, then evaluateBoard, then reasons). Placement result boards
+// are never mutated after creation, so the answer can be cached per board.
+const siteCache = new WeakMap<Board, LstSite | null>();
+
 /**
  * The LST loop is alive iff a col-2 TSD is still buildable somewhere:
  * a row pair (y, y+1) where every row below fits the base shape (anything
@@ -130,6 +139,14 @@ export interface LstSite {
  * four.lol loop structure (base rows / slot row alternation).
  */
 export function findLstSite(board: Board): LstSite | null {
+  const hit = siteCache.get(board);
+  if (hit !== undefined) return hit;
+  const site = computeLstSite(board);
+  siteCache.set(board, site);
+  return site;
+}
+
+function computeLstSite(board: Board): LstSite | null {
   const maxY = board.maxHeight();
   for (let y = 0; y <= maxY; y++) {
     // all rows strictly below must fit the base shape
@@ -308,15 +325,16 @@ export function lstFeatureVector(board: Board): number[] {
   ];
 }
 
-/** Reward/penalty for the line-clear action itself. */
-export function clearReward(info: ClearInfo, piece?: string): number {
+/** Reward/penalty for the line-clear action itself. Under LST bias the goal
+ * is TSDs only — a quad keeps B2B but spends the I and is off-plan. */
+export function clearReward(info: ClearInfo, piece?: string, lstBias = false): number {
   const { linesCleared, spin } = info;
   if (linesCleared === 0) return 0;
   if (spin === 'full') {
     if (linesCleared >= 2) return WEIGHTS.tsd;
-    return WEIGHTS.tss;
+    return lstBias ? WEIGHTS.tssOffPlan : WEIGHTS.tss;
   }
   if (spin === 'mini') return WEIGHTS.tspinMiniClear;
-  if (linesCleared === 4 && piece === 'I') return WEIGHTS.tetris;
+  if (linesCleared === 4 && piece === 'I') return lstBias ? WEIGHTS.quadOffPlan : WEIGHTS.tetris;
   return WEIGHTS.burn * linesCleared;
 }

@@ -18,7 +18,7 @@ import { SevenBag, mulberry32 } from '../src/core/rng';
 import type { PieceType } from '../src/core/pieces';
 import { enumeratePlacements } from '../src/engine/enumerate';
 import { evaluateBoard, clearReward, findLstSite, findTSlots, lstFeatureVector } from '../src/engine/eval';
-import { searchBestLine, LOOP_DEATH_TOLL, WASTED_T_TOLL, B2B_BREAK_TOLL, breaksB2b } from '../src/engine/search';
+import { searchBestLine, LOOP_DEATH_TOLL, WASTED_T_TOLL, B2B_BREAK_TOLL, I_USE_TOLL, breaksB2b } from '../src/engine/search';
 import { setNeuralBlend } from '../src/engine/neural';
 
 setNeuralBlend(0); // data must come from the pure heuristic
@@ -40,9 +40,10 @@ const rng = mulberry32(SEED);
 const samples: Sample[] = [];
 
 function shapedReward(p: { linesCleared: number; spin: string; type: PieceType; after: Board }, hadReadySlot: boolean): number {
-  let r = clearReward({ linesCleared: p.linesCleared, spin: p.spin as 'none' | 'mini' | 'full' }, p.type);
+  let r = clearReward({ linesCleared: p.linesCleared, spin: p.spin as 'none' | 'mini' | 'full' }, p.type, true);
   if (!findLstSite(p.after)) r += LOOP_DEATH_TOLL;
   if (p.type === 'T' && p.spin !== 'full') r += hadReadySlot ? -320 : WASTED_T_TOLL;
+  if (p.type === 'I') r += I_USE_TOLL;
   if (breaksB2b(p.linesCleared, p.spin)) r += B2B_BREAK_TOLL;
   return r;
 }

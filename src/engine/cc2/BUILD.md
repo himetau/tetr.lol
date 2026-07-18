@@ -36,8 +36,13 @@ cp pkg/cold_clear_2.js pkg/cold_clear_2_bg.wasm pkg/cold_clear_2*.d.ts \
 
 ## API (see `src/api.rs` in the patch)
 
-`new ColdClear(cols: Uint32Array[10], queue: string, hold: string, b2b, combo)`
+`new ColdClear(cols: Uint32Array[10], queue: string, hold: string, b2b, combo, weights)`
 → `.work(iters)` to think → `.suggest()` returns the best move as JSON
 (`{piece, spin:'n'|'m'|'f', lines, usesHold, x, y, cells}`), or null.
+
+`weights` is a `BotConfig` JSON string overriding the built-in evaluation
+(`""` = defaults). The LST-loop profile lives in `src/engine/cc2-weights.ts`
+(`CC2_LST_LOOP`) — tune it there, no wasm rebuild needed; only adding a brand
+new weight field requires reapplying the patch and rebuilding.
 
 Consumed by `src/engine/cc2-worker.ts` + `src/ui/cc2-client.ts`.

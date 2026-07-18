@@ -13,6 +13,7 @@ export interface CC2Request {
   b2b: boolean;
   combo: number;
   nodes: number;       // search work units
+  weights?: string;    // BotConfig JSON override (e.g. LST-loop profile), or ''
 }
 
 export interface CC2Move {
@@ -33,7 +34,7 @@ self.onmessage = async (e: MessageEvent<CC2Request>) => {
   await readyP;
   let moves: CC2Move[] = [];
   try {
-    const cc = new ColdClear(new Uint32Array(req.cols), req.queue, req.hold, req.b2b, req.combo);
+    const cc = new ColdClear(new Uint32Array(req.cols), req.queue, req.hold, req.b2b, req.combo, req.weights ?? '');
     cc.work(req.nodes);
     const s = cc.suggest();
     cc.free();

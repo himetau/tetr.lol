@@ -49,6 +49,7 @@ export class ColdClearClient {
     b2b: boolean,
     combo: number,
     nodes = 30000,
+    weights = '',
   ): Promise<CC2Move[]> {
     const id = this.nextId++;
     return new Promise((resolve) => {
@@ -61,6 +62,7 @@ export class ColdClearClient {
         b2b,
         combo,
         nodes,
+        weights,
       });
     });
   }

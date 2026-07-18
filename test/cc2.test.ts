@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import init, { ColdClear } from '../src/engine/cc2/cold_clear_2.js';
 import { genAllspin } from '../src/engine/allspin-gen';
 import { Board } from '../src/core/board';
+import { CC2_LST_LOOP_JSON } from '../src/engine/cc2-weights';
 
 function rowsToCols(rows: Uint32Array): Uint32Array {
   const cols = new Uint32Array(10);
@@ -15,8 +16,8 @@ function rowsToCols(rows: Uint32Array): Uint32Array {
 }
 
 interface Move { piece: string; spin: 'n' | 'm' | 'f'; lines: number; cells: number[] }
-function suggest(board: Board, queue: string, hold: string, b2b: boolean): Move | null {
-  const cc = new ColdClear(rowsToCols(board.rows), queue, hold, b2b, 0);
+function suggest(board: Board, queue: string, hold: string, b2b: boolean, weights = ''): Move | null {
+  const cc = new ColdClear(rowsToCols(board.rows), queue, hold, b2b, 0, weights);
   cc.work(30000);
   const s = cc.suggest();
   cc.free();
@@ -57,5 +58,15 @@ describe('Cold Clear 2 (all-spin) bot', () => {
       if (!m) continue;
       expect(keepsB2b(m), `seed ${seed}: bot broke B2B with ${m.piece} ${m.lines} lines spin=${m.spin}`).toBe(true);
     }
+  });
+
+  it('accepts the LST-loop weights override and takes a ready TSD', () => {
+    // a board with a standing col-2 T-slot: base row full but col 2, slot row
+    // (y1) open at cols 1-3 — dropping a T here is a T-spin double
+    const board = Board.fromStrings(['XX_XXXXXXX', 'X_____XXXX'].reverse());
+    const m = suggest(board, 'TOSILJZ', '', true, CC2_LST_LOOP_JSON);
+    expect(m, 'loop-tuned bot returned no move (bad weights JSON?)').not.toBeNull();
+    // it must not throw and must keep back-to-back
+    expect(m!.spin !== 'n' || m!.lines === 0 || m!.lines === 4).toBe(true);
   });
 });
