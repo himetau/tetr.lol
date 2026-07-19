@@ -134,12 +134,11 @@ export class ZenithView {
     // I-piece nearly fills that width, and the panel grows taller to fit.
     // The Next queue's tiles are 1.5× the hold size, so its column is wider.
     const qc = Math.round(this.cellSize() * 0.62);
-    const colW = `${Math.max(104, Math.round(4.2 * qc) + 24)}px`;
     const colWq = `${Math.max(104, Math.round(4.2 * Math.round(qc * 1.5)) + 24)}px`;
 
     const left = document.createElement('div');
     left.className = 'side-col';
-    left.style.width = colW;
+    left.style.width = colWq; /* match the queue column so text has room */
     this.holdBox = panel('Hold');
     left.appendChild(this.holdBox);
     const runPanel = panel('Run');

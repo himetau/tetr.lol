@@ -40,7 +40,7 @@ export const THEMES: Record<string, Palette> = {
   dracula: { bg: '#282a36', text: '#f8f8f2', accent: '#bd93f9', accent2: '#8be9fd', good: '#50fa7b', warn: '#f1fa8c', bad: '#ff5555', line: '#44475a' },
   nord: { bg: '#2e3440', text: '#eceff4', accent: '#88c0d0', accent2: '#b48ead', good: '#a3be8c', warn: '#ebcb8b', bad: '#bf616a', line: '#434c5e' },
   gruvbox: { bg: '#282828', text: '#ebdbb2', accent: '#fabd2f', accent2: '#8ec07c', good: '#b8bb26', warn: '#fe8019', bad: '#fb4934', line: '#504945' },
-  'rose-pine': { bg: '#191724', text: '#e0def4', accent: '#c4a7e7', accent2: '#9ccfd8', good: '#9ccfd8', warn: '#f6c177', bad: '#eb6f92', line: '#2a273f' },
+  'rose-pine': { bg: '#191724', text: '#e0def4', accent: '#c4a7e7', accent2: '#9ccfd8', good: '#9ccfd8', warn: '#f6c177', bad: '#eb6f92', line: '#403d52' },
 };
 
 /** preset key → dropdown label, in display order. */

@@ -2,6 +2,16 @@
    palette (Mocha dark / Latte light) with a mauve accent — deliberately not
    a strict port; piece colors come from the user's tetr.io skin. */
 
+/* bundled so the pixel font renders everywhere, not just where it's installed;
+   block = wait for it rather than flashing a fallback (it's ~22 KB same-origin) */
+@font-face {
+  font-family: "Departure Mono";
+  src: url("./fonts/DepartureMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 :root {
   /* --- FONT TEST: Departure Mono (blocky pixel, square proportions) --- */
   --font-body: "Departure Mono", ui-monospace, monospace;
@@ -74,16 +84,18 @@
   outline: none;
 }
 
-/* blocky diagonal corners (tetr.io-style chamfer) on every rounded block */
+/* blocky diagonal corners (tetr.io-style chamfer) on every rounded block.
+   --corner-shape mirrors the native property for the hyperellipse polyfill
+   (Firefox/Safari have no corner-shape; the polyfill scans for the custom prop) */
 * {
   corner-shape: bevel;
+  --corner-shape: bevel;
 }
 /* …but true circles and pill controls stay round, not diamonds/hexagons */
 .b2b-bubble,
 .qp-toggle-dot,
 .death-warn,
 .mode-dot,
-.toggle::after,
 .set-row input[type="range"]::-webkit-slider-thumb,
 .set-row input[type="range"]::-moz-range-thumb,
 .garbage-bolt,
@@ -92,6 +104,7 @@
 .qp-seg-btn,
 .qp-toggle {
   corner-shape: round;
+  --corner-shape: round;
 }
 
 html,
@@ -352,7 +365,7 @@ h3 {
 }
 
 .side-foot {
-  padding: 10px 14px 2px;
+  padding: 10px 0px 1px;
   border-top: 1px solid var(--line);
   margin-top: 8px;
   display: flex;
@@ -712,7 +725,7 @@ details.card:not([open]) .card-head .chevron {
   appearance: none;
   width: 40px;
   height: 22px;
-  border-radius: 11px;
+  border-radius: var(--radius);
   background: var(--bg-inset);
   border: 1px solid var(--line);
   position: relative;
@@ -729,7 +742,17 @@ details.card:not([open]) .card-head .chevron {
   left: 2px;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  /* chamfered knob; static clip-path because the polyfill can't reach pseudo-elements */
+  clip-path: polygon(
+    4px 0,
+    12px 0,
+    16px 4px,
+    16px 12px,
+    12px 16px,
+    4px 16px,
+    0 12px,
+    0 4px
+  );
   background: var(--text-dim);
   transition:
     transform 0.18s cubic-bezier(0.3, 1.4, 0.6, 1),
@@ -752,7 +775,8 @@ details.card:not([open]) .card-head .chevron {
   align-items: safe center;
   justify-content: safe center;
   gap: 22px;
-  padding: 24px;
+  /* extra top padding sinks the centered play area a little below true center */
+  padding: 56px 24px 24px;
   min-height: 0;
 }
 
@@ -787,12 +811,24 @@ details.card:not([open]) .card-head .chevron {
   background: var(--bg-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  box-shadow: var(--shadow);
   backdrop-filter: none;
   padding: 12px;
   position: relative;
+}
+/* top shine as a real overlay, not an inset shadow — the corner-shape polyfill
+   drops inset shadows and its SVG layer covers element backgrounds, so this is
+   the only form that renders in Firefox/Safari too (::after is free; the
+   polyfill only claims ::before on shadow hosts) */
+.field-panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--radius); /* stop short of the chamfers */
+  right: var(--radius);
+  height: 1px;
+  background: color-mix(in srgb, #fff 12%, transparent);
+  pointer-events: none;
 }
 .field-panel canvas {
   display: block;
@@ -967,7 +1003,8 @@ details.card:not([open]) .card-head .chevron {
   text-shadow:
     0 0 12px color-mix(in srgb, var(--warn) 70%, transparent),
     0 3px 6px rgba(0, 0, 0, 0.6);
-  animation: sent-pop var(--sp-dur, 0.6s) cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  animation: sent-pop var(--sp-dur, 0.6s) cubic-bezier(0.2, 0.8, 0.3, 1)
+    forwards;
 }
 @keyframes sent-pop {
   0% {
@@ -976,16 +1013,19 @@ details.card:not([open]) .card-head .chevron {
   }
   16% {
     opacity: 1;
-    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -1));
+    transform: scale(var(--sp-scale, 1))
+      translateX(calc(var(--sp-shake, 4px) * -1));
   }
   26% {
     transform: scale(var(--sp-scale, 1)) translateX(var(--sp-shake, 4px));
   }
   36% {
-    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -0.6));
+    transform: scale(var(--sp-scale, 1))
+      translateX(calc(var(--sp-shake, 4px) * -0.6));
   }
   46% {
-    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * 0.4));
+    transform: scale(var(--sp-scale, 1))
+      translateX(calc(var(--sp-shake, 4px) * 0.4));
   }
   60% {
     transform: scale(var(--sp-scale, 1)) translateX(0);
@@ -1508,7 +1548,11 @@ details.card:not([open]) .card-head .chevron {
   font-size: 14px;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
-  background: color-mix(in srgb, var(--b2b-col, var(--warn)) 30%, rgba(12, 12, 20, 0.62));
+  background: color-mix(
+    in srgb,
+    var(--b2b-col, var(--warn)) 30%,
+    rgba(12, 12, 20, 0.62)
+  );
   border: 2px solid var(--b2b-col, var(--warn));
   transform: scale(0.4);
   transition:
@@ -1520,7 +1564,8 @@ details.card:not([open]) .card-head .chevron {
   transform: scale(1);
 }
 .b2b-bubble.charged {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--b2b-col, var(--warn)) 75%, transparent);
+  box-shadow: 0 0 16px
+    color-mix(in srgb, var(--b2b-col, var(--warn)) 75%, transparent);
 }
 .chain-slot.show .b2b-bubble.pop {
   animation: b2b-pop 0.32s ease;

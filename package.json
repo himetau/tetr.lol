@@ -17,6 +17,7 @@
     "gen:fourwide-db": "tsx tools/gen-fourwide-db.ts"
   },
   "dependencies": {
+    "hyperellipse": "^1.0.5",
     "tetris-fumen": "^1.1.3"
   },
   "devDependencies": {

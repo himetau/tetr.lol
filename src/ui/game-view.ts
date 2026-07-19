@@ -213,9 +213,9 @@ export class GameView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.renderer.setCellSize(this.cellSize());
-    const colW = `${Math.max(110, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
-    this.leftCol.style.width = colW;
+    this.leftCol.style.width = this.queueColW();
     this.rightCol.style.width = this.queueColW();
+    this.rightCol.style.transform = `translateY(-${this.cellSize()}px)`; // queue rides one row high
     this.applyEvalVisibility();
     if (this.evalSel) this.evalSel.value = this.evalOn() ? 'on' : 'off';
     this.refreshPanes();
@@ -225,12 +225,11 @@ export class GameView {
   private build(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'game-wrap';
-    // side columns grow with zoom so the scaled piece tiles fit
-    const colW = `${Math.max(110, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
-
+    // side columns grow with zoom so the scaled piece tiles fit; the left one
+    // matches the (wider) queue column so stat labels and selects have room
     const left = document.createElement('div');
     left.className = 'side-col';
-    left.style.width = colW;
+    left.style.width = this.queueColW();
     this.leftCol = left;
     this.holdBox = panel('Hold');
     left.appendChild(this.holdBox);
@@ -344,6 +343,7 @@ export class GameView {
     const right = document.createElement('div');
     right.className = 'side-col';
     right.style.width = this.queueColW();
+    right.style.transform = `translateY(-${this.cellSize()}px)`; // queue rides one row high
     this.rightCol = right;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
