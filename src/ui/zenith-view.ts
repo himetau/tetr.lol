@@ -667,12 +667,12 @@ function fmtTime(ms: number): string {
 
 // rotating one-liner under the Quick play heading (in the app's voice)
 const QP_HINTS = [
-  'Pick a floor. Climb. Simple as that.',
-  'The garbage is fake but the pressure is real.',
-  'No opponents. Just you and gravity.',
-  'Start high if you like living dangerously.',
-  'Floor 10 is not a suggestion.',
-  'Surge responsibly.',
+  "Don't tell osk about this",
+  "Have you ever multitasked wordle x tetris",
+  "I'm good at speedrunning minecraft",
+  "Smashing your desk only hurts it",
+  "Hi stephen",
+  "Message eye.balm on discord if you hate this",
 ];
 
 function panel(label: string): HTMLElement {

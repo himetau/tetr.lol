@@ -258,7 +258,7 @@ export class VersusView {
     const box = document.createElement('div');
     box.className = 'zenith-box';
     box.innerHTML = `<h2>1v1 vs Cold Clear</h2>
-      <p class="sub">The real bot on its own board, trading garbage with you.<br>Tune it here - the same knobs live in Settings.</p>`;
+      <p class="sub">1v1 against Cold Clear <br>You can also change the bot in settings</p>`;
 
     const opts = document.createElement('div');
     opts.className = 'zenith-opts';
