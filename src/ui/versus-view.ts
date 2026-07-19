@@ -112,6 +112,7 @@ export class VersusView {
       this.botRenderer.setCellSize(this.botCellSize());
       this.leftCol.style.width = sideColWidth(this.cellSize());
       this.rightCol.style.width = sideColWidth(this.cellSize());
+      this.rightCol.style.transform = `translateY(-${this.cellSize()}px)`;
       this.refreshPanes();
     });
     this.showLaunch();
@@ -200,6 +201,7 @@ export class VersusView {
     const right = document.createElement('div');
     right.className = 'side-col';
     right.style.width = colW;
+    right.style.transform = `translateY(-${this.cellSize()}px)`; // queue rides one row high, like the drills
     this.rightCol = right;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
@@ -227,7 +229,8 @@ export class VersusView {
     this.botPanel.appendChild(botRow);
     this.botHud = document.createElement('div');
     this.botHud.className = 'vs-bot-hud';
-    botCol.append(tag, this.botPanel, this.botHud);
+    // nametag under the board - above it the bot's vanish-zone pieces cover it
+    botCol.append(this.botPanel, tag, this.botHud);
 
     wrap.append(left, this.fieldPanel, right, botCol);
     return wrap;
