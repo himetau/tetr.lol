@@ -1146,26 +1146,24 @@ details.card:not([open]) .card-head .chevron {
   -webkit-text-stroke-width: 0;
 }
 
-/* session panel: compact label/value tiles instead of a stacked text list */
+/* session panel: bare colour-coded label/value pairs (quick-play HUD language),
+   no boxed tiles - just dim uppercase keys over bright, semantically tinted
+   values, kept tight so the strip stays compact */
 .sess-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 5px 12px;
+  margin-top: 4px;
 }
 .sess-grid .sc {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 5px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--bg-inset);
+  gap: 0;
 }
 .sess-grid .sc .k {
   font-family: var(--font-display);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1175,19 +1173,38 @@ details.card:not([open]) .card-head .chevron {
   text-overflow: ellipsis;
 }
 .sess-grid .sc .v {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* colour-coded values, matching the quick-play HUD (green good, amber warn,
+   red bad, purple accent for the live figures) */
+.sess-grid .sc .v.good {
+  color: var(--good);
+}
+.sess-grid .sc .v.warn {
+  color: var(--warn);
+}
+.sess-grid .sc .v.bad {
+  color: var(--bad);
+}
+.sess-grid .sc .v.accent {
+  color: var(--accent);
+}
+/* the ranked/unranked line spans the row, split label|value with a hairline
+   divider instead of a box */
 .sess-grid .sc.wide {
   grid-column: 1 / -1;
   flex-direction: row;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
+  margin-top: 3px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
 }
 .sess-grid .sc.wide .v {
   font-size: 12.5px;

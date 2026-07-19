@@ -1431,29 +1431,31 @@ export class GameView {
     const evalOn = this.evalOn();
     // this session's accuracy (resets on retry), not the lifetime number
     const acc = gradeAccuracy(s.grades);
-    const cells: [string, string][] = [];
+    // third slot tints the value like the quick-play HUD: 'good' green,
+    // 'warn' amber, 'bad' red, 'accent' purple for the live figures
+    const cells: [string, string, ('good' | 'warn' | 'bad' | 'accent')?][] = [];
     if (this.mode === 'lst') {
       cells.push(
-        ['phase', this.openerPhase ? 'TKI' : 'LST loop'],
+        ['phase', this.openerPhase ? 'TKI' : 'LST loop', 'accent'],
         ['TSDs', `${s.tsds}/${LST_GOAL_TSDS}`],
-        ['goal', this.goalDone ? 'done ✓' : this.goalFail ?? 'on track'],
+        ['goal', this.goalDone ? 'done ✓' : this.goalFail ?? 'on track', this.goalDone ? 'good' : this.goalFail ? 'warn' : undefined],
       );
     }
     if (this.mode === 'free') {
       const clock = this.sprintMs ?? (this.sprintStart ? Date.now() - this.sprintStart : 0);
       cells.push(['time', fmtSprint(clock)], ['lines', `${Math.min(s.lines, 40)}/40`]);
     }
-    if (this.mode === 'fourwide') cells.push(['combo', `×${this.combo}`], ['best', `×${this.maxCombo}`]);
-    if (this.mode === 'allspin') cells.push(['B2B', `×${this.b2b}`], ['best', `×${this.maxB2b}`]);
+    if (this.mode === 'fourwide') cells.push(['combo', `×${this.combo}`, 'accent'], ['best', `×${this.maxCombo}`, 'good']);
+    if (this.mode === 'allspin') cells.push(['B2B', `×${this.b2b}`, 'accent'], ['best', `×${this.maxB2b}`, 'good']);
     cells.push(['pieces', String(s.pieces)], ['PPS', this.livePps()]);
     // opponent traffic (and KOs when a real bot is on the other side)
     if (this.opp) {
-      cells.push(['sent', String(this.vsSent)], ['taken', String(this.vsTaken)]);
-      if (this.opp.bot) cells.push(['KOs', String(this.vsKos)]);
+      cells.push(['sent', String(this.vsSent), 'good'], ['taken', String(this.vsTaken), 'warn']);
+      if (this.opp.bot) cells.push(['KOs', String(this.vsKos), 'accent']);
     }
-    if (evalOn) cells.push(['errors', String(s.mistakes)], ['acc', `${(acc * 100).toFixed(0)}%`]);
+    if (evalOn) cells.push(['errors', String(s.mistakes), s.mistakes > 0 ? 'bad' : undefined], ['acc', `${(acc * 100).toFixed(0)}%`, 'accent']);
     const body = cells
-      .map(([k, v]) => `<div class="sc"><span class="k">${k}</span><span class="v">${v}</span></div>`)
+      .map(([k, v, tint]) => `<div class="sc"><span class="k">${k}</span><span class="v${tint ? ` ${tint}` : ''}">${v}</span></div>`)
       .join('');
     const ranked = s.tainted
       ? `<div class="sc wide rank-no"><span class="k">session</span><span class="v">unranked</span></div>`
