@@ -3,9 +3,6 @@ import { applyTheme, THEME_PRESETS } from './themes';
 import { GameView } from './game-view';
 import { ZenithView } from './zenith-view';
 import { VersusView } from './versus-view';
-import { settingsView } from './settings-view';
-import { patternsView } from './patterns-view';
-import { statsView } from './stats-view';
 import { sfx } from './sound';
 import { initBackground } from './background';
 import type { Mode } from './stats';
@@ -99,25 +96,34 @@ export function startApp(root: HTMLElement): void {
     activeBtn = buttons.get(name) ?? null;
     activeBtn?.classList.add('active');
 
-    let mounted: HTMLElement;
     if (name === 'lst' || name === 'fourwide' || name === 'free' || name === 'allspin') {
       currentGame = new GameView(name as Mode);
-      mounted = currentGame.root;
     } else if (name === 'quick') {
       currentGame = new ZenithView();
-      mounted = currentGame.root;
     } else if (name === 'versus') {
       currentGame = new VersusView();
-      mounted = currentGame.root;
-    } else if (name === 'patterns') {
-      mounted = patternsView();
-    } else if (name === 'stats') {
-      mounted = statsView();
     } else {
-      mounted = settingsView();
+      // Utility views are code-split so their modules and data (notably the
+      // ~82KB pattern-library JSON) stay out of the initial bundle and don't
+      // slow the first paint; they load on demand the first time they're opened.
+      if (name === 'patterns') mountLazy(name, () => import('./patterns-view').then((m) => m.patternsView()));
+      else if (name === 'stats') mountLazy(name, () => import('./stats-view').then((m) => m.statsView()));
+      else mountLazy(name, () => import('./settings-view').then((m) => m.settingsView()));
+      return;
     }
+    const mounted = currentGame.root;
     mounted.classList.add('view-in');
     viewEl.appendChild(mounted);
+  };
+
+  // Mount a code-split view once its chunk resolves, unless the user has
+  // navigated elsewhere in the meantime.
+  const mountLazy = (name: ViewName, load: () => Promise<HTMLElement>) => {
+    void load().then((el) => {
+      if (currentName !== name) return;
+      el.classList.add('view-in');
+      viewEl.replaceChildren(el);
+    });
   };
 
   for (const item of NAV) {

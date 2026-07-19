@@ -409,49 +409,15 @@ export class FieldRenderer {
 
   // ---- cells ----
 
-  /** Draw a cell from the skin sheet (flat-color fallback while it loads). */
+  /** Draw a cell from the connected skin sheet. Nothing is drawn until the sheet
+   * has loaded: every static renderer repaints via whenSkinReady and the live
+   * board repaints each frame, so the merged texture simply appears once ready
+   * (rather than briefly flashing a separate-tile fallback). */
   private drawSkinCell(x: number, y: number, key: SkinKey, n: Neighbors, alpha = 1): void {
-    if (!skinReady) {
-      this.drawCell(x, y, key === 'G' ? css('--text-dim') : PIECE_COLORS[key], alpha);
-      return;
-    }
+    if (!skinReady) return;
     this.ctx.globalAlpha = alpha;
     blitSkinCell(this.ctx, key, n, x * this.cell, this.py(y), this.cell, this.dpr);
     this.ctx.globalAlpha = 1;
-  }
-
-  private drawCell(x: number, y: number, color: string, alpha = 1): void {
-    const c = this.cell;
-    const px = x * c;
-    const py = this.py(y);
-    const ctx = this.ctx;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(px + 1, py + 1, c - 2, c - 2, 4);
-    ctx.fill();
-    // subtle bevel: lit top edge, shaded bottom - makes the stack read as tiles
-    ctx.fillStyle = 'rgba(255,255,255,0.19)';
-    ctx.beginPath();
-    ctx.roundRect(px + 1, py + 1, c - 2, Math.max(2, c * 0.24), [4, 4, 0, 0]);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath();
-    ctx.roundRect(px + 1, py + c - 1 - Math.max(2, c * 0.16), c - 2, Math.max(2, c * 0.16), [0, 0, 4, 4]);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  private drawGhostCell(x: number, y: number, color: string): void {
-    const c = this.cell;
-    const ctx = this.ctx;
-    ctx.globalAlpha = 0.45;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1.5, c * 0.07);
-    ctx.beginPath();
-    ctx.roundRect(x * c + 2.5, this.py(y) + 2.5, c - 5, c - 5, 3);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
   }
 
   /** Render a bare board (used for alternative-placement previews). Pass the
@@ -537,10 +503,11 @@ export class FieldRenderer {
     // with a colored outline so it still reads as "the suggested move"
     if (this.highlight) {
       const hl = this.highlight;
-      if (hl.piece && skinReady) {
+      if (skinReady) {
+        const key: SkinKey = hl.piece ?? 'G';
         const n = pieceNeighbors(hl.cells);
         for (const [x, y] of hl.cells) {
-          if (y < this.rows) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
+          if (y < this.rows) this.drawSkinCell(x, y, key, n(x, y), 0.95);
         }
         ctx.strokeStyle = hl.color;
         ctx.lineWidth = Math.max(1.5, this.cell * 0.08);
@@ -557,10 +524,6 @@ export class FieldRenderer {
           if (!has(x + 1, y)) { ctx.moveTo(px + this.cell, py); ctx.lineTo(px + this.cell, py + this.cell); }
         }
         ctx.stroke();
-      } else {
-        for (const [x, y] of hl.cells) {
-          if (y < this.rows) this.drawCell(x, y, hl.color, 0.95);
-        }
       }
     }
 
@@ -573,10 +536,7 @@ export class FieldRenderer {
           const gcells = cellsAt(a.type, a.rot, a.x, gy);
           const gn = pieceNeighbors(gcells);
           for (const [x, y] of gcells) {
-            if (y < this.rows) {
-              if (skinReady) this.drawSkinCell(x, y, a.type, gn(x, y), 0.3);
-              else this.drawGhostCell(x, y, PIECE_COLORS[a.type]);
-            }
+            if (y < this.rows) this.drawSkinCell(x, y, a.type, gn(x, y), 0.3);
           }
         }
       }
@@ -640,14 +600,7 @@ export function renderPieceTile(type: PieceType | null, cell = 18, widthCells = 
     for (const [x, y] of cells) {
       const px = (x - cx) * cell + w / 2;
       const py = (cy - 1 - y) * cell + h / 2;
-      if (skinReady) {
-        blitSkinCell(ctx, type, n(x, y), px, py, cell);
-      } else {
-        ctx.fillStyle = PIECE_COLORS[type];
-        ctx.beginPath();
-        ctx.roundRect(px + 1, py + 1, cell - 2, cell - 2, 3);
-        ctx.fill();
-      }
+      if (skinReady) blitSkinCell(ctx, type, n(x, y), px, py, cell);
     }
   };
   paint();
@@ -676,7 +629,6 @@ export function renderMiniBoard(
   const paint = () => {
     ctx.fillStyle = css('--field-bg');
     ctx.fillRect(0, 0, w, h);
-    const stackColor = css('--text-dim');
     const px = (x: number) => x * cell;
     const py = (y: number) => (heightRows - 1 - y) * cell;
     const inBoard = (x: number, y: number) => x >= 0 && x < BOARD_W && y >= 0 && board.filled(x, y);
@@ -688,9 +640,6 @@ export function renderMiniBoard(
           blitSkinCell(ctx, 'G', {
             up: inBoard(x, y + 1), down: inBoard(x, y - 1), left: inBoard(x - 1, y), right: inBoard(x + 1, y),
           }, px(x), py(y), cell);
-        } else {
-          ctx.fillStyle = stackColor;
-          ctx.fillRect(px(x) + 0.5, py(y) + 0.5, cell - 1, cell - 1);
         }
         ctx.globalAlpha = 1;
       }
@@ -699,12 +648,7 @@ export function renderMiniBoard(
       const n = pieceNeighbors(pieceCells);
       for (const [x, y] of pieceCells) {
         if (y >= heightRows) continue;
-        if (skinReady) {
-          blitSkinCell(ctx, pieceType, n(x, y), px(x), py(y), cell);
-        } else {
-          ctx.fillStyle = PIECE_COLORS[pieceType];
-          ctx.fillRect(px(x) + 0.5, py(y) + 0.5, cell - 1, cell - 1);
-        }
+        if (skinReady) blitSkinCell(ctx, pieceType, n(x, y), px(x), py(y), cell);
       }
     }
   };

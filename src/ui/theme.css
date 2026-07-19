@@ -59,13 +59,35 @@
   outline: none;
 }
 
-/* blocky diagonal corners (tetr.io-style chamfer) on the raised panel surfaces
-   ONLY — everything else keeps its normal rounded corners. --corner-shape drives
-   both the native property (Chrome, via the polyfill's bridge) and the
-   Firefox/Safari JS fallback, and the polyfill registers it as non-inheriting, so
-   declaring it here does not leak the bevel onto the controls inside a panel.
-   Keeping it off buttons/selects/inputs also avoids the polyfill's border-SVG
-   flicker on hover/focus. */
+/* blocky diagonal corners (tetr.io-style chamfer) on every rounded block. This
+   is the NATIVE corner-shape path (Chrome): it renders with no flicker, so we
+   keep the full bevel here. `html *` (specificity 0,0,1) beats the polyfill's
+   `:where(*)` native bridge so it wins without needing --corner-shape. Firefox/
+   Safari have no native corner-shape and ignore this rule entirely. */
+html * {
+  corner-shape: bevel;
+}
+/* …but true circles and pill controls stay round, not diamonds/hexagons */
+.b2b-bubble,
+.qp-toggle-dot,
+.death-warn,
+.mode-dot,
+.set-row input[type="range"]::-webkit-slider-thumb,
+.set-row input[type="range"]::-moz-range-thumb,
+.garbage-bolt,
+.grade-chip,
+.qp-seg,
+.qp-seg-btn,
+.qp-toggle {
+  corner-shape: round;
+}
+/* Firefox/Safari fall back to the hyperellipse polyfill, which flickers on
+   interactive controls (it fakes the border as an async-decoded SVG background
+   and blinks it on every hover/focus). So in the fallback we bevel ONLY the
+   static panel surfaces — buttons, inputs and everything else keep normal
+   rounded corners. --corner-shape is read only by the polyfill; Chrome's cascade
+   uses the native corner-shape above and ignores it. The polyfill therefore
+   tracks just these few elements, so there is nothing to flicker. */
 .card,
 .side-col .panel,
 .field-panel,
@@ -74,7 +96,6 @@
 .paths-modal,
 .chart-tooltip,
 .zenith-overlay {
-  corner-shape: bevel;
   --corner-shape: bevel;
 }
 

@@ -45,11 +45,6 @@ function renderPatternCanvas(rows: string[], cell = 14): HTMLCanvasElement {
             left: keyAt(x - 1, r) === ch,
             right: keyAt(x + 1, r) === ch,
           }, x * cell, r * cell, cell);
-        } else {
-          ctx.fillStyle = ch === 'X' ? css('--text-dim') : (PIECE_COLORS[ch as PieceType] ?? css('--text-dim'));
-          ctx.beginPath();
-          ctx.roundRect(x * cell + 0.5, r * cell + 0.5, cell - 1, cell - 1, 2);
-          ctx.fill();
         }
         ctx.globalAlpha = 1;
       }
