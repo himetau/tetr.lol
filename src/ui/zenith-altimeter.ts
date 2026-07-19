@@ -22,6 +22,12 @@ function floorColor(i: number): string {
   return `hsl(${205 - i * 22}, 72%, 58%)`;
 }
 
+/** Hue for the meter count: shifts smoothly with altitude, cool blue at the
+ * bottom (~205°) burning to red (~0°) by the top floor (~1700m). */
+function altHue(altitude: number): number {
+  return Math.max(0, Math.min(205, 205 - altitude * 0.12));
+}
+
 export class ZenithAltimeter {
   readonly el: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -127,7 +133,7 @@ export class ZenithAltimeter {
     const fi = floorIndexAt(run.altitude);
     this.drawFloorProgress(run.altitude, fi);
     const altRight = this.drawAltitude(heat);
-    this.drawSubline(fi);
+    this.drawSubline(fi, run.altitude);
     this.drawClimbMeter(run);
     this.emitAndDrawSparks(dt, heat, altRight);
   }
@@ -146,39 +152,45 @@ export class ZenithAltimeter {
     ctx.fillRect(0, 0, this.w * frac, 3);
   }
 
-  /** The big meter count. Returns the right edge of the text (spark zone). */
+  /** The big meter count. Its hue tracks the altitude (cool→hot as you
+   * climb) and whitens toward fire while climbing fast. Returns the right
+   * edge of the text (spark zone). */
   private drawAltitude(heat: number): number {
     const ctx = this.ctx;
+    const hue = altHue(this.shown);
     ctx.save();
-    ctx.font = `700 34px ${this.font}`;
+    ctx.font = `italic 800 34px ${this.font}`;
     ctx.textBaseline = 'alphabetic';
     if (heat > 0.02) {
       ctx.shadowColor = `hsla(${30 - heat * 14}, 100%, 55%, ${0.35 + heat * 0.6})`;
       ctx.shadowBlur = 4 + heat * 18;
     }
-    // the number whitens toward fire as heat rises
-    ctx.fillStyle = heat > 0.4 ? `hsl(38, ${Math.round(90 * heat)}%, ${Math.round(62 + heat * 20)}%)` : this.cText;
+    // altitude-tinted, brightening to white-hot as heat rises
+    const sat = Math.round(70 + heat * 25);
+    const light = Math.round(62 + heat * 22);
+    ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
     const num = this.shown.toFixed(1);
     ctx.fillText(num, 6, 44);
     const numW = ctx.measureText(num).width;
     ctx.shadowBlur = 0;
-    ctx.font = `600 16px ${this.font}`;
+    ctx.font = `italic 700 16px ${this.font}`;
     ctx.fillStyle = this.cDim;
-    ctx.fillText('m', 6 + numW + 3, 44);
+    ctx.fillText('m', 6 + numW + 4, 44);
     ctx.restore();
-    return 6 + numW + 16;
+    return 6 + numW + 18;
   }
 
-  private drawSubline(fi: number): void {
+  private drawSubline(fi: number, altitude: number): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.font = `700 11px ${this.font}`;
-    ctx.fillStyle = this.cAccent;
+    ctx.font = `italic 800 11px ${this.font}`;
+    // floor label carries the same altitude tint as the count
+    ctx.fillStyle = `hsl(${altHue(altitude)}, 68%, 60%)`;
     const floorTxt = `F${fi + 1} · ${FLOORS[fi].name.toUpperCase()}`;
     ctx.fillText(floorTxt, 6, 66);
     if (this.speed > 0.05) {
       ctx.fillStyle = this.cDim;
-      ctx.font = `600 11px ${this.font}`;
+      ctx.font = `italic 700 11px ${this.font}`;
       ctx.fillText(`+${this.speed.toFixed(1)} m/s`, 6 + ctx.measureText(floorTxt).width + 30, 66);
     }
     ctx.restore();
@@ -193,10 +205,10 @@ export class ZenithAltimeter {
     // cool blue at low ranks burning toward red near hyperspeed
     const col = `hsl(${Math.max(8, 205 - rank * 22)}, 80%, 58%)`;
     ctx.save();
-    ctx.font = `700 10px ${this.font}`;
+    ctx.font = `italic 800 10px ${this.font}`;
     ctx.fillStyle = this.cDim;
     ctx.fillText('CLIMB SPEED', x, 26);
-    ctx.font = `700 20px ${this.font}`;
+    ctx.font = `italic 800 20px ${this.font}`;
     ctx.fillStyle = col;
     if (rank >= 8) {
       ctx.shadowColor = col;

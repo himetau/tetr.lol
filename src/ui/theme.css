@@ -233,9 +233,12 @@ h3 {
   color: var(--accent);
 }
 .brand .tagline {
+  font-family: var(--font-display);
   font-size: 11px;
+  font-weight: 800;
+  font-style: italic;
   text-transform: uppercase;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.14em;
   color: var(--text-dim);
 }
 
@@ -1511,15 +1514,30 @@ details.card:not([open]) .card-head .chevron {
 }
 .zenith-hud .meta {
   font-size: 12.5px;
-  line-height: 1.8;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.7;
   color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .zenith-hud .meta b {
+  font-weight: 800;
   color: var(--text);
+}
+/* colour-coded run meters: neutral time, green sent, amber taken */
+.zenith-hud .m-sent b {
+  color: var(--good);
+}
+.zenith-hud .m-taken b {
+  color: var(--warn);
 }
 .zenith-hud .incoming {
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--bad);
   margin-top: 4px;
   animation: incoming-blink 0.9s ease-in-out infinite;

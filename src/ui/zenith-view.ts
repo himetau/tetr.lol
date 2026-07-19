@@ -639,8 +639,9 @@ export class ZenithView {
     // altitude/floor/climb speed live on the altimeter canvas under the
     // board — the side panel keeps the secondary numbers
     this.hud.innerHTML =
-      `<div class="meta">time <b>${fmtTime(r.timeMs)}</b></div>` +
-      `<div class="meta">sent <b>${r.linesSent}</b> · taken <b>${r.garbageTaken}</b></div>` +
+      `<div class="meta m-time">time <b>${fmtTime(r.timeMs)}</b></div>` +
+      `<div class="meta m-sent">sent <b>${r.linesSent}</b></div>` +
+      `<div class="meta m-taken">taken <b>${r.garbageTaken}</b></div>` +
       (incoming > 0 ? `<div class="incoming">▼ ${incoming} incoming</div>` : `<div class="meta">&nbsp;</div>`);
   }
 
