@@ -31,7 +31,7 @@ describe('TKI opener book', () => {
   });
 
   it('rejects a piece inside the footprint but off the decomposition', () => {
-    // S flat at spawn covers I/Z cells of the target — footprint-subset but wrong
+    // S flat at spawn covers I/Z cells of the target - footprint-subset but wrong
     const badS: OpenerPlacement = { piece: 'S', cells: [[3, 0], [4, 0], [4, 1], [5, 1]] };
     expect(matchOpener([badS]).ok).toBe(false);
   });

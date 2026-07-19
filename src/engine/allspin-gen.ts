@@ -52,7 +52,7 @@ function settle(board: Board): Board {
 }
 
 // Brute-force a spin entry (orient, shift, soft-drop, rotate-tuck, lock) and
-// report whether some entry lands a clean spin *double* — the satisfying
+// report whether some entry lands a clean spin *double* - the satisfying
 // B2B-keeping clear the board is built around. Doubles clear both slot rows
 // with no leftover holes, so the taught move is unambiguous and clean.
 function hasSpinDouble(board: Board, piece: PieceType): boolean {

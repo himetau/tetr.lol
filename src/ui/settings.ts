@@ -2,7 +2,7 @@ import { DEFAULT_HANDLING, DEFAULT_KEYBINDS, type HandlingSettings, type Keybind
 import { DEFAULT_RULES, type AttackRules, type Pressure } from '../core/versus';
 
 export interface VolumeSettings {
-  master: number; // percent, 0..100 — scales every category
+  master: number; // percent, 0..100 - scales every category
   move: number;   // movement: move/rotate/drop/hold/gravity lock
   clear: number;  // line clears, spins, B2B and combo jingles
   alert: number;  // garbage, danger, countdowns, mistakes, milestones
@@ -11,7 +11,7 @@ export interface VolumeSettings {
 export interface BackgroundSettings {
   mode: 'aurora' | 'scenes' | 'custom'; // aurora = glow only, no image
   cycleSec: number; // seconds between background changes
-  dim: number;      // percent, 0..100 — overlay strength over the image
+  dim: number;      // percent, 0..100 - overlay strength over the image
 }
 
 export interface PaletteSettings {
@@ -26,7 +26,7 @@ export interface PaletteSettings {
 export type OpponentKind = 'off' | 'garbage' | 'bot';
 export type BotLevel = 'easy' | 'normal' | 'hard' | 'elite' | 'custom';
 
-/** CC2 node budget per move — the bot's strength presets. */
+/** CC2 node budget per move - the bot's strength presets. */
 export const BOT_NODES: Record<Exclude<BotLevel, 'custom'>, number> = { easy: 1200, normal: 6000, hard: 20000, elite: 60000 };
 
 /** Resolve the bot's node budget: preset level, or the custom slider. */
@@ -39,11 +39,11 @@ export interface VersusSettings {
   botLevel: BotLevel;
   botNodes: number;       // CC2 nodes per move when botLevel = 'custom'
   garbageDelayMs: number; // telegraph before an attack can rise
-  messiness: number;      // percent 0..100 — within-attack hole re-rolls (tetr.io: 0)
+  messiness: number;      // percent 0..100 - within-attack hole re-rolls (tetr.io: 0)
   garbageCap: number;     // max rows rising on one non-clearing lock
   pressure: Pressure;     // scheduled-garbage intensity ('garbage' opponents)
-  attackScale: number;    // percent — scales the player's outgoing attack
-  botAttackScale: number; // percent — scales the bot's outgoing attack (handicap)
+  attackScale: number;    // percent - scales the player's outgoing attack
+  botAttackScale: number; // percent - scales the bot's outgoing attack (handicap)
   firstTo: number;        // 1v1: rounds needed to take the match
   gravity: number;        // 1v1: player gravity in G (0 = off, 1G = 60 cells/s)
   rules: AttackRules;     // the damage table itself
@@ -111,13 +111,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
     firstTo: 3,
     gravity: 0,
     rules: { ...DEFAULT_RULES },
-    // 4-wide defaults to scheduled garbage — a bot's normal stacking reads
+    // 4-wide defaults to scheduled garbage - a bot's normal stacking reads
     // oddly against a combo drill; the other drills get the real bot
     drill: { fourwide: 'garbage', free: 'bot', allspin: 'bot' },
   },
 };
 
-// predates the app's renames (→tetr.ai→tetr.lol) — kept so existing settings survive
+// predates the app's renames (→tetr.ai→tetr.lol) - kept so existing settings survive
 const KEY = 'lst-trainer-settings-v1';
 
 type Listener = (s: AppSettings) => void;
@@ -156,7 +156,7 @@ export function loadSettings(): AppSettings {
     delete (merged as unknown as Record<string, unknown>).autoRestartTki;
     // migration: cancelDasOnDirChange inverted into dasCarry (default off, no bounce)
     delete (merged.handling as unknown as Record<string, unknown>).cancelDasOnDirChange;
-    // migration: the 'auto' theme was removed — keep the user's light/dark look
+    // migration: the 'auto' theme was removed - keep the user's light/dark look
     if (merged.palette.preset === 'auto') {
       merged.palette.preset = merged.theme === 'light' ? 'latte' : 'mocha';
     }

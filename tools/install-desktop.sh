@@ -7,7 +7,7 @@ DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$DESKTOP_DIR"
 
 if [ ! -d "$APP_DIR/dist" ]; then
-  echo "dist/ missing — run 'npm run build' first" >&2
+  echo "dist/ missing - run 'npm run build' first" >&2
   exit 1
 fi
 

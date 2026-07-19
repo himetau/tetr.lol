@@ -244,7 +244,7 @@ describe('garbage favor (column placement)', () => {
   it('after a break the old pile pulls re-picks back (messy transition)', () => {
     // the well just relocated: new rows opened col 4 at the bottom (low
     // height) while the OLD pile on top still anchors at 4; the current
-    // hole col 7 is buried under that pile. Re-picks must not settle on 7 —
+    // hole col 7 is buried under that pile. Re-picks must not settle on 7 -
     // they scatter toward the old well and its neighbors (cheese).
     const rng = mulberry32(17);
     const view = { heights: [9, 9, 10, 9, 2, 9, 10, 9, 9, 10], garbageAnchor: 4 };
@@ -375,7 +375,7 @@ describe('garbage insertion', () => {
     const rows = Array.from({ length: BOARD_H }, (_, y) => (y < 22 ? 0b0111111111 : 0));
     g.reset(new Board(Uint32Array.from(rows)), 1);
     g.addGarbage([9, 9, 9, 9, 9, 9, 9, 9]); // 8 lines onto a 22-high stack
-    // either it tops out, or the piece is still within the field — never a
+    // either it tops out, or the piece is still within the field - never a
     // live piece whose cells all sit above the board
     if (!g.topOut) {
       const cells = g.active!;

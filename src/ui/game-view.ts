@@ -38,7 +38,7 @@ import type { SpinKind } from '../core/spin';
 // LST drill goal: 20 TSDs in one run with back-to-back never broken, the
 // loop never dead, no I piece spent on a clear (quads and I-burns are
 // off-plan; parking the I or laying it as build filler is fine), and not a
-// single T wasted — every locked T must be a full T-spin double.
+// single T wasted - every locked T must be a full T-spin double.
 const LST_GOAL_TSDS = 20;
 
 const GRADE_LABEL: Record<Grade, string> = {
@@ -63,7 +63,7 @@ export class GameView {
   private input: InputHandler;
   private renderer: FieldRenderer;
   private engine = new EngineClient();
-  /** Cold Clear 2 (all-spin patched) — real bot analysis for the all-spin mode */
+  /** Cold Clear 2 (all-spin patched) - real bot analysis for the all-spin mode */
   private cc2: ColdClearClient | null = null;
   private cc2Query = 0;
   private botMoving = false; // suppress grading while the bot plays its own move
@@ -137,7 +137,7 @@ export class GameView {
   private lastLock: LockEvent | null = null;
   private preview: { board: Board; colors: (PieceType | null)[][]; cells: [number, number][]; piece: PieceType } | null = null;
 
-  // session counters — lifetime stats only absorb these when the session
+  // session counters - lifetime stats only absorb these when the session
   // ends ranked (no undo, no bot assist, run finished naturally)
   private session = freshSession();
 
@@ -177,7 +177,7 @@ export class GameView {
     return Math.max(10, Math.min(44, zoomed));
   }
 
-  /** Next-queue piece cell size — 1.5× the hold/preview base so the pieces
+  /** Next-queue piece cell size - 1.5× the hold/preview base so the pieces
    * read large; its column widens to match. */
   private queueCell(): number {
     return Math.round(Math.max(8, Math.round(this.cellSize() * 0.55)) * 1.5);
@@ -292,7 +292,7 @@ export class GameView {
       });
       controls.append(sel);
     }
-    // per-mode evaluation switch — same setting as in Settings → Trainer
+    // per-mode evaluation switch - same setting as in Settings → Trainer
     if (this.mode === 'lst' || this.mode === 'fourwide' || this.mode === 'free' || this.mode === 'allspin') {
       const gm = this.mode;
       const evalSel = document.createElement('select');
@@ -359,7 +359,7 @@ export class GameView {
     dockHead.innerHTML = `<span class="label">Paths</span><span class="kbd">Tab</span>`;
     this.pathsBody = document.createElement('div');
     this.pathsBody.className = 'dock-body';
-    this.pathsBody.innerHTML = `<div class="dock-empty">place a piece —<br>alternatives appear here</div>`;
+    this.pathsBody.innerHTML = `<div class="dock-empty">place a piece -<br>alternatives appear here</div>`;
     this.pathsDock.append(dockHead, this.pathsBody);
 
     wrap.append(left, this.fieldPanel, right, this.pathsDock);
@@ -367,14 +367,14 @@ export class GameView {
   }
 
   /**
-   * Fold the session into lifetime stats and the progress charts — runs on
+   * Fold the session into lifetime stats and the progress charts - runs on
    * retry, top out, and leaving the drill. Strict: a session touched by undo
    * or the bot is unranked and records nothing; short stubs (<5 graded
    * placements) are noise. Returns whether anything was recorded.
    */
   private flushSession(): boolean {
     const s = this.session;
-    // with evaluation off there are no grades — piece count is the size gate
+    // with evaluation off there are no grades - piece count is the size gate
     if (s.tainted || (this.evalOn() ? s.graded < 5 : s.pieces < 5)) return false;
     const m = stats.modes[this.mode];
     m.pieces += s.pieces;
@@ -383,7 +383,7 @@ export class GameView {
     m.drills++;
     for (const g of Object.keys(s.grades) as Grade[]) m.grades[g] += s.grades[g];
     saveStats();
-    // active play window only — idle time before the first input doesn't count
+    // active play window only - idle time before the first input doesn't count
     const activeMs = this.playStart ? Math.max(0, (this.lastLockAt || Date.now()) - this.playStart) : Date.now() - s.startedAt;
     const pps = s.pieces >= 2 && activeMs > 0 ? Math.round((s.pieces / (activeMs / 1000)) * 100) / 100 : undefined;
     recordSession({
@@ -401,17 +401,17 @@ export class GameView {
     return true;
   }
 
-  /** Undo or bot assistance makes the session unranked — it won't be recorded. */
+  /** Undo or bot assistance makes the session unranked - it won't be recorded. */
   private taintSession(what: string): void {
     if (!this.session.tainted) {
       this.session.tainted = true;
-      this.showToast(`${what} — session unranked, R for a fresh ranked run`);
+      this.showToast(`${what} - session unranked, R for a fresh ranked run`);
     }
     this.refreshSession();
   }
 
   /**
-   * 'restart' (retry / top out): the run is recorded — retry saves the
+   * 'restart' (retry / top out): the run is recorded - retry saves the
    * session to stats the same as topping out, unless it's unranked or a
    * <5-placement stub. 'continue' (all-spin cleared its setup): new board,
    * same session.
@@ -420,8 +420,8 @@ export class GameView {
     this.engine.cancel();
     let note = '';
     if (end === 'restart') {
-      if (this.flushSession()) note = 'Retry — session saved to stats';
-      else if (this.session.graded >= 5) note = 'Retry — unranked session discarded';
+      if (this.flushSession()) note = 'Retry - session saved to stats';
+      else if (this.session.graded >= 5) note = 'Retry - unranked session discarded';
     }
     // ?seed=N pins the bag order (practice/testing); all-spin picks a fresh
     // random board each drill unless a seed is pinned
@@ -478,7 +478,7 @@ export class GameView {
   }
 
   private undo(): void {
-    if (this.sprintMs !== null) return; // a finished sprint is final — R restarts
+    if (this.sprintMs !== null) return; // a finished sprint is final - R restarts
     if (this.game.undo()) {
       this.engine.cancel();
       // opener history entries correspond 1:1 to opener-phase piece indices;
@@ -511,7 +511,7 @@ export class GameView {
   /**
    * (Re)build the pressure system from settings. `fresh` on retry/top-out;
    * all-spin's board-cleared 'continue' keeps the live queue and bot. The
-   * bot worker survives retries — it just gets a fresh board and retuned
+   * bot worker survives retries - it just gets a fresh board and retuned
    * pace/strength.
    */
   private setupOpponent(fresh: boolean): void {
@@ -562,7 +562,7 @@ export class GameView {
       bot.onTopOut = () => {
         this.vsKos++;
         if (settings.soundFx) personalBestSound();
-        this.showToast(`KO! Cold Clear topped out ×${this.vsKos} — fresh bot board`);
+        this.showToast(`KO! Cold Clear topped out ×${this.vsKos} - fresh bot board`);
         this.opp?.bot?.reset((Math.random() * 2 ** 31) | 0);
         this.refreshSession();
       };
@@ -573,7 +573,7 @@ export class GameView {
     }
   }
 
-  /** Stack height for pressure warnings — in 4-wide the infinite wall
+  /** Stack height for pressure warnings - in 4-wide the infinite wall
    * columns don't count, only the well. */
   private stackHeight(): number {
     const b = this.game.board;
@@ -680,7 +680,7 @@ export class GameView {
       this.pathsDock.classList.toggle('collapsed');
       return;
     }
-    // a finished sprint stays frozen — only R starts the next run
+    // a finished sprint stays frozen - only R starts the next run
     if (e.code === 'Escape' && this.paused && this.sprintMs === null) {
       e.preventDefault();
       this.resume();
@@ -692,7 +692,7 @@ export class GameView {
       e.preventDefault();
       // sprint clock starts on the first game input, not on drill reset
       if (this.mode === 'free' && this.sprintStart === 0 && this.input.enabled) this.sprintStart = Date.now();
-      // PPS clock likewise — every mode
+      // PPS clock likewise - every mode
       if (this.playStart === 0 && this.input.enabled) this.playStart = Date.now();
     }
     this.input.keyDown(desc, performance.now());
@@ -723,7 +723,7 @@ export class GameView {
   private onLock(ev: LockEvent): void {
     if (this.playStart === 0) this.playStart = Date.now(); // bot-first edge case
     this.lastLockAt = Date.now();
-    // clutch: the just-spawned next piece had to climb into the buffer to fit —
+    // clutch: the just-spawned next piece had to climb into the buffer to fit -
     // a saved block-out, announced tetr.io style
     if (this.game.clutched && !this.game.topOut) {
       if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
@@ -744,7 +744,7 @@ export class GameView {
         if (!this.pbPlayed && this.comboRecord >= 3 && this.combo > this.comboRecord) {
           this.pbPlayed = true;
           personalBestSound();
-          this.showToast(`New combo record — ×${this.combo}`);
+          this.showToast(`New combo record - ×${this.combo}`);
         }
       }
       this.fxOnLock(ev, 0, this.combo);
@@ -810,9 +810,9 @@ export class GameView {
       const match = matchOpener(this.openerHistory);
       if (openerDone) {
         this.openerPhase = false;
-        this.showChip('best', 'TSD! — into LST now');
+        this.showChip('best', 'TSD! - into LST now');
         this.recordGrade('best');
-        this.dockNote('TSD ✓ — LST loop grading from here');
+        this.dockNote('TSD ✓ - LST loop grading from here');
         this.refreshAll();
         return;
       }
@@ -845,14 +845,14 @@ export class GameView {
     this.refreshAll();
     // all-spin: a cleared board earns a fresh random setup (same session)
     if (this.mode === 'allspin' && ev.boardAfter.isEmpty() && !this.game.topOut) {
-      this.showToast('Board cleared — new setup');
+      this.showToast('Board cleared - new setup');
       clearTimeout(this.retryTimer);
       this.retryTimer = window.setTimeout(() => this.resetDrill('continue'), 700);
     }
   }
 
   /**
-   * 40 lines reached — freeze the clock and the field. The run is recorded
+   * 40 lines reached - freeze the clock and the field. The run is recorded
    * (with its time) when the session flushes on retry or leaving the drill,
    * so the last placement's async grade still lands first.
    */
@@ -865,8 +865,8 @@ export class GameView {
       .reduce((best, s) => Math.min(best, s.sprintMs!), Infinity);
     const pb = !this.session.tainted && this.sprintMs < prev;
     if (pb && prev !== Infinity && settings.soundFx) personalBestSound();
-    const tag = this.session.tainted ? ' (unranked)' : pb && prev !== Infinity ? ' — new record!' : '';
-    this.showToast(`40 lines — ${fmtSprint(this.sprintMs)}${tag} · R to retry`);
+    const tag = this.session.tainted ? ' (unranked)' : pb && prev !== Infinity ? ' - new record!' : '';
+    this.showToast(`40 lines - ${fmtSprint(this.sprintMs)}${tag} · R to retry`);
   }
 
   private handleTopOut(): void {
@@ -874,20 +874,20 @@ export class GameView {
     this.renderer.fxTopout(this.game.board, this.game.colors);
     if (settings.soundFx) topoutSound();
     if (settings.autoRetryTopOut) {
-      this.showToast('Top out — retrying…');
+      this.showToast('Top out - retrying…');
       clearTimeout(this.retryTimer);
       this.retryTimer = window.setTimeout(() => {
         if (this.game.topOut) this.resetDrill();
       }, 900);
     } else {
-      this.showToast('Top out — R to retry');
+      this.showToast('Top out - R to retry');
     }
   }
 
   /**
    * The LST goal run: reach LST_GOAL_TSDS TSDs with back-to-back never broken,
    * no I piece spent on a clear, and every locked T a full TSD (a TSS, flat T,
-   * or T burn wastes the run). No explicit "loop alive" check — a dead loop
+   * or T burn wastes the run). No explicit "loop alive" check - a dead loop
    * can only show up as a wasted T or a broken chain, both caught here, and a
    * rigid col-2 template test just misfires on valid right-handed / freestyle
    * loops. The first violation ends the goal until R resets the run.
@@ -897,19 +897,19 @@ export class GameView {
     if (this.goalFail === null) {
       if (ev.piece === 'T' && !(ev.spin === 'full' && ev.linesCleared >= 2)) {
         this.goalFail = 'T wasted ✗';
-        this.showToast('Goal lost — wasted a T (every T must be a full TSD) · R for a fresh 20-TSD run');
+        this.showToast('Goal lost - wasted a T (every T must be a full TSD) · R for a fresh 20-TSD run');
       } else if (ev.linesCleared > 0 && ev.linesCleared < 4 && ev.spin === 'none') {
         this.goalFail = 'B2B ✗';
-        this.showToast('Goal lost — broke back-to-back · R for a fresh 20-TSD run');
+        this.showToast('Goal lost - broke back-to-back · R for a fresh 20-TSD run');
       } else if (ev.piece === 'I' && ev.linesCleared > 0) {
         this.goalFail = 'I spent ✗';
-        this.showToast('Goal lost — spent the I on a clear · R for a fresh 20-TSD run');
+        this.showToast('Goal lost - spent the I on a clear · R for a fresh 20-TSD run');
       }
     }
     if (this.goalFail === null && this.session.tsds >= LST_GOAL_TSDS) {
       this.goalDone = true;
       if (settings.soundFx) personalBestSound();
-      this.showToast(`Goal reached — ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`);
+      this.showToast(`Goal reached - ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`);
     }
   }
 
@@ -956,14 +956,14 @@ export class GameView {
         if (settings.stopOnMistake) {
           this.paused = true;
           this.input.enabled = false;
-          this.showToast(`${r.reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo (unranks)`);
+          this.showToast(`${r.reasons[0] ?? 'Mistake'} - Esc to continue, Ctrl+Z to undo (unranks)`);
         }
       }
     } else if (r.book && !r.book.sustainable) {
       // not the player's fault, but they should know why the chain is ending
       this.showToast(this.mode === 'fourwide'
-        ? 'Book: this queue cannot keep the combo to the horizon — plan the break'
-        : 'Book: this queue cannot sustain the loop — burn and rebuild');
+        ? 'Book: this queue cannot keep the combo to the horizon - plan the break'
+        : 'Book: this queue cannot sustain the loop - burn and rebuild');
     }
   }
 
@@ -977,7 +977,7 @@ export class GameView {
   // ---- docked alternatives panel ----
 
   private clearDock(): void {
-    this.pathsBody.innerHTML = `<div class="dock-empty">place a piece —<br>alternatives appear here</div>`;
+    this.pathsBody.innerHTML = `<div class="dock-empty">place a piece -<br>alternatives appear here</div>`;
   }
 
   private dockNote(text: string): void {
@@ -1036,7 +1036,7 @@ export class GameView {
   /** Play the book's move for the current position: TKI targets during the
    * opener, the LST cover book in the loop, the ready TSD as the payoff.
    * When the position is off-book the loop player keeps chasing the 20-TSD
-   * goal (goal-legal moves only — never a wasted T); only when even that is
+   * goal (goal-legal moves only - never a wasted T); only when even that is
    * stuck does the plain engine take over, so the button always plays. */
   private bookPlay(): void {
     if (this.mode !== 'lst' || !this.game.active) return;
@@ -1047,7 +1047,7 @@ export class GameView {
       this.assistWho = 'Book';
     } else if (!this.openerPhase && settings.lstAssist === 'cc2') {
       // off-book loop, Cold Clear selected: let the loop-tuned bot drive
-      // (async — it thinks on a worker); the rest of this method is skipped
+      // (async - it thinks on a worker); the rest of this method is skipped
       void this.cc2LoopPlay(queue);
       return;
     } else if (!this.openerPhase) {
@@ -1074,14 +1074,14 @@ export class GameView {
       if (mv) found = { piece: mv.piece, cells: mv.cells, spin: mv.spin };
     }
     if (!found) {
-      this.showToast('No move available — the board is jammed');
+      this.showToast('No move available - the board is jammed');
       return;
     }
     this.taintSession(`${this.assistWho} assist`);
     if (found.park) {
       if (this.game.holdPiece()) {
         this.showToast(this.assistWho === 'Loop'
-          ? `Loop: park the ${found.piece} — keep it for the next TSD`
+          ? `Loop: park the ${found.piece} - keep it for the next TSD`
           : `Book: park ${found.piece} in hold`);
       }
       this.refreshAll();
@@ -1143,7 +1143,7 @@ export class GameView {
       const placed = new Set(this.openerHistory.map((h) => h.piece));
       const tryPiece = (piece: PieceType): { piece: PieceType; cells: [number, number][]; spin: SpinKind } | null => {
         if (piece === 'T') {
-          // the T is always the TSD payoff — a flat drop into the notch
+          // the T is always the TSD payoff - a flat drop into the notch
           // matches a target's T cells but ruins the opener
           const p = tsd();
           return p ? { piece: 'T', cells: p.cells.map(([a, b]) => [a, b] as [number, number]), spin: p.spin } : null;
@@ -1214,7 +1214,7 @@ export class GameView {
       : ev.linesCleared === 4 ? 'quad'
       : ev.linesCleared > 0 ? `${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''}` : 'build';
     this.showChip('best', `${who} · ${tag}`);
-    this.dockNote(`${who} played ${ev.piece}${ev.usedHold ? ' (hold)' : ''} — ${tag}`);
+    this.dockNote(`${who} played ${ev.piece}${ev.usedHold ? ' (hold)' : ''} - ${tag}`);
   }
 
   private async gradeAllspin(ev: LockEvent, b2bBefore: number): Promise<void> {
@@ -1240,9 +1240,9 @@ export class GameView {
     const reasons: string[] = [];
     if (!playerKeptB2b && botKeptB2b) {
       grade = 'mistake';
-      reasons.push(`Broke back-to-back — cleared ${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''} without a spin`);
+      reasons.push(`Broke back-to-back - cleared ${ev.linesCleared} line${ev.linesCleared > 1 ? 's' : ''} without a spin`);
     } else if (!playerKeptB2b) {
-      grade = 'good'; // the chain was unavoidably lost — even the bot breaks it
+      grade = 'good'; // the chain was unavoidably lost - even the bot breaks it
     } else if (rank === 0) {
       grade = 'best';
     } else if (rank >= 1 && rank <= 3) {
@@ -1267,7 +1267,7 @@ export class GameView {
     if (ev.spin !== 'none' && ev.linesCleared > 0) label = `${ev.piece}-spin · ${label}`;
     this.showChip(grade, label);
     if (isBad && reasons.length) this.showToast(reasons[0]);
-    // a broken chain is the sharp cue — flash / stop only for real mistakes
+    // a broken chain is the sharp cue - flash / stop only for real mistakes
     if (grade === 'mistake') {
       this.fieldPanel.classList.remove('flash-bad');
       void this.fieldPanel.offsetWidth; // restart animation
@@ -1276,7 +1276,7 @@ export class GameView {
       if (settings.stopOnMistake) {
         this.paused = true;
         this.input.enabled = false;
-        this.showToast(`${reasons[0] ?? 'Mistake'} — Esc to continue, Ctrl+Z to undo (unranks)`);
+        this.showToast(`${reasons[0] ?? 'Mistake'} - Esc to continue, Ctrl+Z to undo (unranks)`);
       }
     } else if (!isBad && best && reasons.length) {
       this.showToast(reasons[0]); // show Cold Clear's line even on a fine move
@@ -1309,7 +1309,7 @@ export class GameView {
       card.addEventListener('mouseleave', () => { this.preview = null; card.classList.remove('selected'); });
       this.pathsBody.appendChild(card);
     };
-    // Cold Clear's ranked options — an "easy" (hard-drop) tag on each move that
+    // Cold Clear's ranked options - an "easy" (hard-drop) tag on each move that
     // needs no tuck, so you can pick a low-effort line that still keeps B2B
     moves.slice(0, 6).forEach((m, i) => {
       const ease = m.soft ? 'tuck' : 'easy';
@@ -1359,9 +1359,9 @@ export class GameView {
 
   /** Live PPS over the active window (first input → last lock). */
   private livePps(): string {
-    if (this.playStart === 0 || this.session.pieces < 2) return '—';
+    if (this.playStart === 0 || this.session.pieces < 2) return '-';
     const ms = (this.lastLockAt || Date.now()) - this.playStart;
-    if (ms < 500) return '—';
+    if (ms < 500) return '-';
     return (this.session.pieces / (ms / 1000)).toFixed(2);
   }
 
@@ -1406,7 +1406,7 @@ export class GameView {
     this.lastT = t;
     if (!this.paused) this.input.update(t);
     this.tickOpponent(dt);
-    // live clock/PPS repaint while a run is underway — the sprint clock ticks
+    // live clock/PPS repaint while a run is underway - the sprint clock ticks
     // fast; the other modes only need the PPS cell to feel alive
     const sprintLive = this.mode === 'free' && this.sprintStart !== 0 && this.sprintMs === null;
     const interval = sprintLive ? 100 : 500;
@@ -1445,14 +1445,14 @@ function sameCells(a: readonly (readonly [number, number])[], b: readonly (reado
   return sa.every((v, i) => v === sb[i]);
 }
 
-/** "T (hold) on cols 4–6 spin — clears 2" */
+/** "T (hold) on cols 4–6 spin - clears 2" */
 function describeMove(m: CC2Move): string {
   const xs = m.cells.filter((_, i) => i % 2 === 0);
   const lo = Math.min(...xs) + 1;
   const hi = Math.max(...xs) + 1;
   const cols = lo === hi ? `col ${lo}` : `cols ${lo}–${hi}`;
   const spin = m.spin === 'f' ? ` ${m.lines >= 2 ? `${m.lines}-line ` : ''}spin` : m.spin === 'm' ? ' mini-spin' : m.lines === 4 ? ' quad' : '';
-  const act = m.lines > 0 ? ` — clears ${m.lines}` : ' — build';
+  const act = m.lines > 0 ? ` - clears ${m.lines}` : ' - build';
   return `${m.piece}${m.usesHold ? ' (hold)' : ''} on ${cols}${spin}${act}`;
 }
 

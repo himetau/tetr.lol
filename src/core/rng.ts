@@ -1,6 +1,6 @@
 import { PIECE_TYPES, type PieceType } from './pieces';
 
-/** mulberry32 — small seedable PRNG, good enough for bag shuffling. */
+/** mulberry32 - small seedable PRNG, good enough for bag shuffling. */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -11,7 +11,7 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-/** Full bag state — PRNG word + undrawn pieces. Restorable so undo can rewind draws. */
+/** Full bag state - PRNG word + undrawn pieces. Restorable so undo can rewind draws. */
 export interface BagState {
   a: number;
   queue: PieceType[];

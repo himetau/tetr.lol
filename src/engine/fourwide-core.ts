@@ -21,7 +21,7 @@ export function wallMask(): number {
   return WALL_MASK;
 }
 
-/** Top the wall columns back up after clears — the "infinite" sides. */
+/** Top the wall columns back up after clears - the "infinite" sides. */
 export function refillWalls(board: Board): void {
   for (let y = 0; y < WALL_H; y++) board.rows[y] |= WALL_MASK;
 }
@@ -43,7 +43,7 @@ export function stateToBoard(stateKey: number): Board {
 /**
  * The well contents as a 12-bit residual key, or null when the well is not a
  * clean 3-cell residual in the bottom 3 rows (mid-piece mess, burned stack).
- * Wall height doesn't matter here — only well columns are read.
+ * Wall height doesn't matter here - only well columns are read.
  */
 export function residualKey(board: Board): number | null {
   let key = 0;
@@ -58,7 +58,7 @@ export function residualKey(board: Board): number | null {
   return count === 3 ? key : null;
 }
 
-/** Number of filled well cells (any height) — 3 means a clean residual. */
+/** Number of filled well cells (any height) - 3 means a clean residual. */
 export function wellCellCount(board: Board): number {
   let count = 0;
   for (let y = 0; y < BOARD_H; y++) {

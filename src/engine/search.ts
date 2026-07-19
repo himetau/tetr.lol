@@ -9,7 +9,7 @@ import { enumerateFast, type Placement } from './enumerate';
 import { evaluateBoard, clearReward, findLstSite } from './eval';
 
 // Passing through a loop-dead state costs the line permanently, even if a
-// later burn "revives" the loop — otherwise death gets laundered through
+// later burn "revives" the loop - otherwise death gets laundered through
 // recovery lines and plugging moves rank as if they were fine.
 export const LOOP_DEATH_TOLL = -260;
 
@@ -19,7 +19,7 @@ export const WASTED_T_TOLL = -180;
 
 // Back-to-back is part of the LST canon: every clear must be a spin (or a
 // quad). A plain 1-3 line clear breaks the chain, and like loop death it is
-// a permanent toll on the line — burns must never look like a clean fix.
+// a permanent toll on the line - burns must never look like a clean fix.
 export const B2B_BREAK_TOLL = -300;
 
 // The drill goal is 20 straight TSDs without spending I pieces: any I

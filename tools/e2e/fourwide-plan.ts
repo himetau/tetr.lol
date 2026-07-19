@@ -84,7 +84,7 @@ while (placed < 7 && guard++ < 24) {
   if (!adv.onBook) throw new Error(`sim off book at piece ${placed}`);
   if (adv.moves.length === 0) {
     if (sim.hold !== null) {
-      steps.push({ keys: [], desc: `no continuation with hold occupied at piece ${placed} — plan ends` });
+      steps.push({ keys: [], desc: `no continuation with hold occupied at piece ${placed} - plan ends` });
       break;
     }
     steps.push({ keys: ['KeyC'], desc: `park ${sim.active!.type} in hold (no continuation)` });

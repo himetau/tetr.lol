@@ -135,7 +135,7 @@ while (placed < 6 && guard++ < 20) {
   const adv = bookAdvice(sim.board, queue, sim.hold);
   if (!adv.onBook) throw new Error(`sim off book at bag2 piece ${placed}`);
   if (!adv.sustainable) {
-    steps.push({ keys: [], desc: `bag2 queue unsustainable at piece ${placed} — plan ends here`, expect: 'sustained' });
+    steps.push({ keys: [], desc: `bag2 queue unsustainable at piece ${placed} - plan ends here`, expect: 'sustained' });
     break;
   }
   if (adv.moves.length === 0) {

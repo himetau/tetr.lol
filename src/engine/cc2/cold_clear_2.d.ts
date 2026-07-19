@@ -15,7 +15,7 @@ export class ColdClear {
     /**
      * Ranked moves (best first) as a JSON array, or null if none. Each item:
      * piece, spin ('n'|'m'|'f'), lines, usesHold, soft (needs a soft-drop /
-     * tuck — a more cognitively demanding placement), cells (8 ints), x, y.
+     * tuck - a more cognitively demanding placement), cells (8 ints), x, y.
      */
     suggest(): string | undefined;
     /**

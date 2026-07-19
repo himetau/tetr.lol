@@ -4,7 +4,7 @@
 //
 // The bot's board only ever mutates inside its own lock handler, so a
 // position sent to the analysis worker is still valid when the answer
-// comes back — applyMove cannot race with incoming garbage.
+// comes back - applyMove cannot race with incoming garbage.
 
 import { Game, type LockEvent } from '../core/game';
 import type { PieceType } from '../core/pieces';
@@ -14,7 +14,7 @@ import { ColdClearClient } from './cc2-client';
 
 export interface BotOptions {
   pps: number;    // pieces per second (mean; each move jitters a little)
-  nodes: number;  // CC2 search budget per move — the strength knob
+  nodes: number;  // CC2 search budget per move - the strength knob
   garbage: GarbageConfig;
   rules?: AttackRules;   // damage table for the bot's clears
   attackScale?: number;  // percent handicap on the bot's outgoing attack

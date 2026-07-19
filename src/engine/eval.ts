@@ -46,7 +46,7 @@ export const WEIGHTS = {
   tsd: 480,
   tss: 60,           // fine in free play…
   tssOffPlan: -120,  // …but under LST bias a TSS spends the T without the
-                     // TSD: half the payoff, the whole T — a wasted piece
+                     // TSD: half the payoff, the whole T - a wasted piece
   tspinMiniClear: -30,
   burn: -80,          // per line cleared without a T-spin
   tetris: 120,        // I-piece 4-line: fine in free play…
@@ -262,7 +262,7 @@ export function evaluateBoard(board: Board, lstBias = false): EvalResult {
   }
 
   // in LST mode a shallow overhang cell in the spin region is often the
-  // book move building the next spin space — soften only those; shallow
+  // book move building the next spin space - soften only those; shallow
   // covers elsewhere are ordinary holes
   const holeScore = lstBias
     ? WEIGHTS.hole * (holeSplit.deep + holeSplit.shallowOther) + WEIGHTS.hole * 0.4 * holeSplit.shallowSpin
@@ -282,7 +282,7 @@ export function evaluateBoard(board: Board, lstBias = false): EvalResult {
   return { score, b };
 }
 
-/** Feature vector for the learned evaluator — must stay in sync with the
+/** Feature vector for the learned evaluator - must stay in sync with the
  * inline extraction in evaluateBoard and tools/train-lst-eval.ts. */
 export function lstFeatureVector(board: Board): number[] {
   const slots = findTSlots(board).filter((s) => s.x === LST_SPIN_COL);
@@ -326,7 +326,7 @@ export function lstFeatureVector(board: Board): number[] {
 }
 
 /** Reward/penalty for the line-clear action itself. Under LST bias the goal
- * is TSDs only — a quad keeps B2B but spends the I and is off-plan. */
+ * is TSDs only - a quad keeps B2B but spends the I and is off-plan. */
 export function clearReward(info: ClearInfo, piece?: string, lstBias = false): number {
   const { linesCleared, spin } = info;
   if (linesCleared === 0) return 0;

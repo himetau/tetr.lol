@@ -2,7 +2,7 @@
 //
 // Each book solution is a start field plus an exact tetromino decomposition of
 // the finished build. A solution is "consistent" with the current board when
-// the board is exactly the start field plus a subset of whole placements —
+// the board is exactly the start field plus a subset of whole placements -
 // matching is by cells, so it works mid-build and in any placement order.
 // Queue viability is decided at runtime with the engine's own reachability
 // (enumeratePlacements) and real hold rules, instead of shipping sfinder's

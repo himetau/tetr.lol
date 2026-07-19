@@ -1,13 +1,13 @@
 // A hard-constrained LST loop continuation player for the "watch book"
 // demo. Where the soft-penalty engine (search.ts tolls) will pick a
 // "least-bad" move that quietly wastes a T once the stack drifts, this only
-// ever considers *goal-legal* placements — no wasted T, no I spent on a
-// clear, no back-to-back break, and the loop kept alive — and searches a
+// ever considers *goal-legal* placements - no wasted T, no I spent on a
+// clear, no back-to-back break, and the loop kept alive - and searches a
 // short horizon for the line that fires the most TSDs while staying lowest.
 //
 // It cannot make the loop perpetual (that needs perfect-fill / PC solving,
 // which the cover book was meant to encode but does not close), so it will
-// eventually return null when no legal continuation exists — that is the
+// eventually return null when no legal continuation exists - that is the
 // honest "the loop can't continue from here" signal, not a wasted T.
 
 import { Board } from '../core/board';
@@ -24,14 +24,14 @@ export interface LoopMove {
   usesHold: boolean;
 }
 
-/** A full T-spin double — the loop's payoff and the only legal use of a T. */
+/** A full T-spin double - the loop's payoff and the only legal use of a T. */
 function isTsd(p: Placement): boolean {
   return p.type === 'T' && p.spin === 'full' && p.linesCleared >= 2;
 }
 
 /** Goal-legal in the loop phase: keep every T for a TSD, never spend the I on
  * a clear, never break back-to-back, and never kill the loop (the TSD itself
- * is always allowed — it clears back into a fresh site). */
+ * is always allowed - it clears back into a fresh site). */
 function legal(p: Placement): boolean {
   if (p.type === 'T' && !isTsd(p)) return false;
   if (p.type === 'I' && p.linesCleared > 0) return false;
@@ -54,7 +54,7 @@ const DEFAULT_BEAM = 24;
 
 /**
  * Best goal-legal loop continuation from this position, or null when none
- * exists (the loop is genuinely stuck — the caller should park the T or fall
+ * exists (the loop is genuinely stuck - the caller should park the T or fall
  * back). Objective: fire the most TSDs over the horizon, then stay low and
  * tight (height, buried cells) and keep the next site ready.
  */

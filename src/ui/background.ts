@@ -8,7 +8,7 @@ import { settings, onSettingsChange } from './settings';
 
 // ---- custom image store (IndexedDB) ----
 
-// predates the app's renames (→tetr.ai→tetr.lol) — kept so stored backgrounds survive
+// predates the app's renames (→tetr.ai→tetr.lol) - kept so stored backgrounds survive
 const DB_NAME = 'lst-trainer-bg';
 const STORE = 'images';
 
@@ -91,7 +91,7 @@ function rain(n: number, seed: number): string {
 }
 
 const SCENES: string[] = [
-  // nebula — mauve/blue/teal clouds over deep space
+  // nebula - mauve/blue/teal clouds over deep space
   svgUrl(`<rect width='1600' height='900' fill='#0f0f1c'/>${BLUR}
     <g filter='url(#b)'>
       <circle cx='420' cy='280' r='300' fill='#cba6f7' opacity='0.34'/>
@@ -99,7 +99,7 @@ const SCENES: string[] = [
       <circle cx='950' cy='180' r='200' fill='#94e2d5' opacity='0.22'/>
       <circle cx='260' cy='740' r='240' fill='#f5c2e7' opacity='0.2'/>
     </g>${stars(150, 7)}`),
-  // dusk peaks — layered ridges under a moonlit gradient
+  // dusk peaks - layered ridges under a moonlit gradient
   svgUrl(`<defs><linearGradient id='s' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#181825'/><stop offset='0.6' stop-color='#313253'/><stop offset='1' stop-color='#585b70'/>
     </linearGradient></defs>
@@ -110,7 +110,7 @@ const SCENES: string[] = [
     <polygon points='0,900 0,560 220,420 430,590 640,400 830,620 1050,470 1290,650 1470,520 1600,600 1600,900' fill='#1e1e2e'/>
     <polygon points='0,900 0,700 260,560 520,730 780,570 1040,760 1330,620 1600,740 1600,900' fill='#181825'/>
     <polygon points='0,900 0,810 340,690 700,840 1060,710 1400,850 1600,780 1600,900' fill='#11111b'/>`),
-  // aurora — green/teal curtains over a dark sky
+  // aurora - green/teal curtains over a dark sky
   svgUrl(`<rect width='1600' height='900' fill='#0d1117'/>${BLUR}
     <g filter='url(#b)'>
       <ellipse cx='500' cy='260' rx='520' ry='110' fill='#a6e3a1' opacity='0.3' transform='rotate(-14 500 260)'/>
@@ -118,14 +118,14 @@ const SCENES: string[] = [
       <ellipse cx='1300' cy='210' rx='420' ry='90' fill='#89dceb' opacity='0.2' transform='rotate(-16 1300 210)'/>
     </g>${stars(130, 23)}
     <polygon points='0,900 0,830 400,760 900,860 1300,790 1600,840 1600,900' fill='#0a0d12'/>`),
-  // deep waves — layered blue swells
+  // deep waves - layered blue swells
   svgUrl(`<rect width='1600' height='900' fill='#11111b'/>${BLUR}
     <g filter='url(#b)'><circle cx='800' cy='120' r='260' fill='#b4befe' opacity='0.16'/></g>
     ${stars(70, 41, 420)}
     <path d='M0,520 C300,460 500,600 800,540 C1100,480 1300,620 1600,560 L1600,900 L0,900 Z' fill='#1e2030' opacity='0.9'/>
     <path d='M0,640 C300,580 550,720 850,660 C1150,600 1350,730 1600,670 L1600,900 L0,900 Z' fill='#24273a' opacity='0.9'/>
     <path d='M0,760 C350,700 600,830 900,780 C1200,730 1400,840 1600,790 L1600,900 L0,900 Z' fill='#181825'/>`),
-  // ember dunes — warm peach glow on dark sand
+  // ember dunes - warm peach glow on dark sand
   svgUrl(`<defs><linearGradient id='d' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#181420'/><stop offset='1' stop-color='#2c1f2b'/>
     </linearGradient></defs>
@@ -135,7 +135,7 @@ const SCENES: string[] = [
     <path d='M0,560 C400,480 700,640 1100,560 C1350,510 1500,570 1600,540 L1600,900 L0,900 Z' fill='#332433' opacity='0.9'/>
     <path d='M0,700 C350,630 750,760 1150,690 C1400,650 1550,710 1600,690 L1600,900 L0,900 Z' fill='#251a26'/>
     <path d='M0,820 C450,760 900,860 1300,800 L1600,830 L1600,900 L0,900 Z' fill='#191019'/>`),
-  // synthwave — a retro sun and neon perspective grid
+  // synthwave - a retro sun and neon perspective grid
   svgUrl(`<defs>
       <linearGradient id='sw' x1='0' y1='0' x2='0' y2='1'>
         <stop offset='0' stop-color='#160f22'/><stop offset='0.62' stop-color='#3a1f3a'/>
@@ -148,14 +148,14 @@ const SCENES: string[] = [
     <circle cx='800' cy='430' r='168' fill='url(#sun)'/>
     <g fill='#160f22'><rect x='632' y='452' width='336' height='8'/><rect x='632' y='474' width='336' height='12'/><rect x='632' y='502' width='336' height='16'/><rect x='632' y='536' width='336' height='22'/></g>
     ${synthGrid()}`),
-  // sakura — soft pink blooms and drifting petals
+  // sakura - soft pink blooms and drifting petals
   svgUrl(`<defs><linearGradient id='sk' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#2a1a2a'/><stop offset='1' stop-color='#3a2030'/>
     </linearGradient></defs>
     <rect width='1600' height='900' fill='url(#sk)'/>${BLUR}
     <g filter='url(#b)'><circle cx='1150' cy='240' r='260' fill='#f5c2e7' opacity='0.3'/><circle cx='380' cy='520' r='230' fill='#f38ba8' opacity='0.18'/></g>
     ${stars(95, 91, 900, '#f5c2e7')}`),
-  // sunset — warm sky over a dark sea with a low sun and reflection
+  // sunset - warm sky over a dark sea with a low sun and reflection
   svgUrl(`<defs><linearGradient id='ss' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#f9c08a'/><stop offset='0.34' stop-color='#f38ba8'/><stop offset='0.55' stop-color='#7a5a9a'/>
       <stop offset='0.55' stop-color='#1e2036'/><stop offset='1' stop-color='#11111b'/>
@@ -163,7 +163,7 @@ const SCENES: string[] = [
     <rect width='1600' height='900' fill='url(#ss)'/>
     <circle cx='800' cy='430' r='118' fill='#ffe9c0' opacity='0.95'/>
     <g fill='#ffe9c0' opacity='0.4'><rect x='700' y='512' width='200' height='6'/><rect x='678' y='544' width='244' height='8'/><rect x='648' y='584' width='304' height='10'/><rect x='612' y='636' width='376' height='12'/></g>`),
-  // rolling hills — layered green ridges under a moon
+  // rolling hills - layered green ridges under a moon
   svgUrl(`<defs><linearGradient id='hl' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#12202a'/><stop offset='1' stop-color='#16281f'/>
     </linearGradient></defs>
@@ -174,7 +174,7 @@ const SCENES: string[] = [
     <path d='M0,900 0,610 C300,540 520,650 860,600 C1160,556 1360,640 1600,590 L1600,900 Z' fill='#1c3327'/>
     <path d='M0,900 0,720 C340,660 620,760 960,710 C1240,668 1420,740 1600,700 L1600,900 Z' fill='#16281f'/>
     <path d='M0,900 0,820 C380,770 760,860 1160,810 C1400,782 1520,830 1600,812 L1600,900 Z' fill='#0f1c16'/>`),
-  // rainy night — cool dark blue with streaks and blurred city lights
+  // rainy night - cool dark blue with streaks and blurred city lights
   svgUrl(`<rect width='1600' height='900' fill='#0c0f1a'/>${BLUR}
     <g filter='url(#b)'>
       <circle cx='420' cy='620' r='60' fill='#f9e2af' opacity='0.3'/>

@@ -1,4 +1,4 @@
-// Bottom-of-board altimeter for QUICK PLAY — tetr.io Zenith style: the big
+// Bottom-of-board altimeter for QUICK PLAY - tetr.io Zenith style: the big
 // meter count with the floor readout, a thin progress bar to the next floor,
 // and the climb-speed meter, drawn on one canvas so the number can heat up
 // and throw sparks while the run climbs fast (and erupt on a surge payout).

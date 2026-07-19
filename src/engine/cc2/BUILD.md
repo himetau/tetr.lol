@@ -1,11 +1,11 @@
-# Cold Clear 2 (all-spin) — WASM build
+# Cold Clear 2 (all-spin) - WASM build
 
 The all-spin trainer's analysis is powered by **Cold Clear 2**
 (<https://github.com/MinusKelvin/cold-clear-2>, MIT/Apache-2.0), the modern
 Tetris bot. The vendored `cold_clear_2*.{js,wasm,d.ts}` here are build artifacts;
 this file documents how to reproduce them.
 
-Public CC2 is **T-spin only** — its move generator hard-codes
+Public CC2 is **T-spin only** - its move generator hard-codes
 `if target.piece != Piece::T { spin = Spin::None }`. We patch that one site to
 the tetr.io **all-spin** rule (a non-T piece rotated into an immobile spot
 scores a spin) and add a small `wasm-bindgen` wrapper (`src/api.rs`) that drives
@@ -42,7 +42,7 @@ cp pkg/cold_clear_2.js pkg/cold_clear_2_bg.wasm pkg/cold_clear_2*.d.ts \
 
 `weights` is a `BotConfig` JSON string overriding the built-in evaluation
 (`""` = defaults). The LST-loop profile lives in `src/engine/cc2-weights.ts`
-(`CC2_LST_LOOP`) — tune it there, no wasm rebuild needed; only adding a brand
+(`CC2_LST_LOOP`) - tune it there, no wasm rebuild needed; only adding a brand
 new weight field requires reapplying the patch and rebuilding.
 
 Consumed by `src/engine/cc2-worker.ts` + `src/ui/cc2-client.ts`.

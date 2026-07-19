@@ -41,7 +41,7 @@ function cellKey(piece: string, cells: readonly (readonly [number, number])[]): 
   return piece + ':' + cells.map(([x, y]) => x * 32 + y).sort((a, b) => a - b).join(',');
 }
 
-/** States that continue with the most piece types — fair drill starts. */
+/** States that continue with the most piece types - fair drill starts. */
 const START_STATES: number[] = (() => {
   const counts = STATES.map((s) => Object.keys(s.placements).length);
   const top = Math.max(...counts);
@@ -84,14 +84,14 @@ export function bagRemainder(queue: PieceType[], pieceIndex: number): number {
 //
 // guaranteedDepth(state, hold, bagRemainder) = how many more pieces the combo
 // survives in the WORST bag order (player options per deal: place the dealt
-// piece, swap-place the held piece, or park into an empty hold — no preview
-// knowledge). A boolean "safe forever" version of this DP comes out empty —
+// piece, swap-place the held piece, or park into an empty hold - no preview
+// knowledge). A boolean "safe forever" version of this DP comes out empty -
 // zero-lookahead 4-wide always dies to an adversarial dealer (two dead pieces
-// back to back beat the single hold) — so the useful signal is the depth
+// back to back beat the single hold) - so the useful signal is the depth
 // itself: it ranks horizon-reaching lines by how bag-proof their endpoint is,
 // the exact role DDRKirby's genericScore plays, but bag-exact. Computed by
 // value iteration over all 28 x 8 x 128 x 2 (state, hold, remainder, canHold)
-// nodes — the canHold flag models the real rule that parking (a hold press
+// nodes - the canHold flag models the real rule that parking (a hold press
 // without a lock) blocks hold until the next piece locks.
 
 let DEPTH: Uint8Array | null = null;
@@ -152,8 +152,8 @@ export function guaranteedDepth(state: number, hold: PieceType | null, remainder
  * Max queue slots consumable from `state` before a forced non-clearing lock:
  * place the active piece, place the held piece (swap), or park the active
  * piece when hold is empty (consumes a slot without locking). Past the end
- * of the visible queue the score keeps counting with guaranteedDepth — the
- * worst-case bag continuation from the horizon position — so lines that
+ * of the visible queue the score keeps counting with guaranteedDepth - the
+ * worst-case bag continuation from the horizon position - so lines that
  * survive the preview are ranked by how bag-proof their endpoint is.
  */
 function chain(state: number, queue: PieceType[], qi: number, hold: PieceType | null, canHold: boolean, horizonBag: number, memo: Map<string, number>): number {
@@ -352,20 +352,20 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     // "combo will be lost": the user's line runs out within the pieces they can
     // see, while a placement (or a hold-park) existed that carries it all the
     // way through the preview. If everything dies in-preview it's a doomed
-    // queue, not the player's fault — that stays out of this branch.
+    // queue, not the player's fault - that stays out of this branch.
     const parkSaves = advice.parkScore >= previewLen && advice.parkScore > bestScore;
     if (!userSurvivesPreview && bestAny >= previewLen) {
       grade = 'mistake';
       const diesIn = userMove.score;
-      reasons.push(`Combo will be lost — this line runs out in ${diesIn} piece${diesIn === 1 ? '' : 's'}; a continuation existed that survives your whole preview`);
-      if (parkSaves) reasons.push(`Hold ${req.queue[0]} first — parking keeps the combo going`);
+      reasons.push(`Combo will be lost - this line runs out in ${diesIn} piece${diesIn === 1 ? '' : 's'}; a continuation existed that survives your whole preview`);
+      if (parkSaves) reasons.push(`Hold ${req.queue[0]} first - parking keeps the combo going`);
       else betterHint();
     } else if (diff <= 0) {
       grade = 'best';
       if (advice.parkScore > bestScore) {
         // placing was fine, but parking into the empty hold was strictly longer
         grade = 'good';
-        reasons.push(`Book: hold ${req.queue[0]} first — parking keeps the combo ${advice.parkScore - bestScore} piece${advice.parkScore - bestScore === 1 ? '' : 's'} longer`);
+        reasons.push(`Book: hold ${req.queue[0]} first - parking keeps the combo ${advice.parkScore - bestScore} piece${advice.parkScore - bestScore === 1 ? '' : 's'} longer`);
       }
     } else if (userSurvivesPreview) {
       // both survive the whole preview; rank by worst-case bag continuation
@@ -389,7 +389,7 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     if (nk !== null && KEY_TO_STATE.has(nk)) {
       // canonical landing the book search didn't propose (e.g. via hold quirk)
       grade = advice.onBook ? 'good' : 'best';
-      if (!advice.onBook) reasons.push('Recovered a book residual — combo is back on track');
+      if (!advice.onBook) reasons.push('Recovered a book residual - combo is back on track');
     } else if (advice.onBook) {
       const types = continuationTypes(userAfter);
       if (types >= 3) {
@@ -397,10 +397,10 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
         reasons.push(`Left the book: only ${types} piece types continue from this residual`);
       } else if (types >= 1) {
         grade = 'mistake';
-        reasons.push(`Risky residual — only ${types} piece type${types > 1 ? 's' : ''} can continue`);
+        reasons.push(`Risky residual - only ${types} piece type${types > 1 ? 's' : ''} can continue`);
       } else {
         grade = 'killer';
-        reasons.push('Dead residual — nothing continues the combo from here');
+        reasons.push('Dead residual - nothing continues the combo from here');
       }
       betterHint();
     } else {
@@ -408,11 +408,11 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     }
   } else if (advice.moves.length > 0) {
     grade = 'killer';
-    reasons.push(`Broke the combo — ${advice.moves[0].piece}${advice.moves[0].usesHold ? ' (hold)' : ''} kept it going`);
+    reasons.push(`Broke the combo - ${advice.moves[0].piece}${advice.moves[0].usesHold ? ' (hold)' : ''} kept it going`);
     betterHint();
   } else if (advice.onBook) {
     grade = 'good';
-    reasons.push('Forced break — this queue had no continuation');
+    reasons.push('Forced break - this queue had no continuation');
   } else {
     grade = 'good'; // rebuilding after a break: no book judgement
   }
@@ -462,7 +462,7 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
   };
 }
 
-/** Off-book well cell count — the view uses it for the recovery hint. */
+/** Off-book well cell count - the view uses it for the recovery hint. */
 export function wellCells(board: Board): number {
   return wellCellCount(board);
 }

@@ -76,7 +76,7 @@ const chainMemo = new Map<OpenerTarget, boolean>();
 
 /** Does completing this target (and its TSD) land on the LST loop book?
  * Targets that don't still count as valid TKI builds, but the loop grader
- * goes off-book after them — prefer the ones that chain. */
+ * goes off-book after them - prefer the ones that chain. */
 export function chainsToLoop(t: OpenerTarget): boolean {
   const memo = chainMemo.get(t);
   if (memo !== undefined) return memo;

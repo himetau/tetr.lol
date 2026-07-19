@@ -1,4 +1,4 @@
-// Regenerates src/data/fourwide.json — the center 4-wide combo book.
+// Regenerates src/data/fourwide.json - the center 4-wide combo book.
 //
 // The 28 canonical 3-residual states are the ones DDRKirby's 4-wide trainer
 // (https://ddrkirby.com/games/4-wide-trainer/4-wide-trainer.html) enumerates:

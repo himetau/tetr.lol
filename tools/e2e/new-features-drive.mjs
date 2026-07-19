@@ -10,7 +10,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
 const fails = [];
 const ok = (name, cond, extra = '') => {
-  console.log(`${cond ? 'OK ' : 'FAIL'} ${name}${extra ? ` — ${extra}` : ''}`);
+  console.log(`${cond ? 'OK ' : 'FAIL'} ${name}${extra ? ` - ${extra}` : ''}`);
   if (!cond) fails.push(name);
 };
 
@@ -42,7 +42,7 @@ const a0 = await altOf();
 ok('quick: starts at F7 altitude', a0 >= 850 && a0 < 860, `alt=${a0}`);
 
 // drop pieces for a while; altitude climbs passively, garbage arrives.
-// topping out under brutal pressure is a legitimate end — the results
+// topping out under brutal pressure is a legitimate end - the results
 // overlay then carries the evidence instead of the live HUD.
 ok('quick: garbage meter present', (await page.locator('.gmeter').count()) === 1);
 ok('quick: b2b tag present', (await page.locator('.b2b-tag').count()) === 1);

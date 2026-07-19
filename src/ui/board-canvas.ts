@@ -10,7 +10,7 @@ function css(name: string): string {
 // ---- tetr.io skin sheet (extracted from the user's tetrio-plus .tpse) ----
 // public/skin/minos.png is the raw connected texture: one 384×576 region per
 // mino, each a grid of 96px tiles where the tile's row/column encodes which
-// edges are exposed (row: top/bottom, col: left/right) — derived from the
+// edges are exposed (row: top/bottom, col: left/right) - derived from the
 // pack's ghost sheet. Cells are drawn straight from the sheet so adjacent
 // cells of the same piece merge seamlessly, exactly like in tetr.io.
 
@@ -117,20 +117,20 @@ export class FieldRenderer {
   private ctx: CanvasRenderingContext2D;
   private cell = 26;
   private dpr = 1;
-  /** transparent headroom rows above the visible field — the vanish zone where
+  /** transparent headroom rows above the visible field - the vanish zone where
    * pieces spawn and float, tetr.io style (also the room for a clutch save).
    * The field background/grid never extend into it, so the board still reads
    * as 20 rows and the active piece appears to hover above the well. A
    * clutched spawn climbs one row further into the buffer, so a couple of
-   * rows past the resting spawn are drawn — enough that the last-chance piece
+   * rows past the resting spawn are drawn - enough that the last-chance piece
    * sits at the canvas's top edge instead of being clipped. */
   private bufferRows = 4;
-  /** transient highlight cells — with a piece type they render from the skin
+  /** transient highlight cells - with a piece type they render from the skin
    * sheet plus a colored outline; without one they fall back to flat color */
   highlight: { cells: [number, number][]; color: string; piece?: PieceType } | null = null;
-  /** 0..1 lock-delay progress of the grounded piece — dims it, tetr.io style */
+  /** 0..1 lock-delay progress of the grounded piece - dims it, tetr.io style */
   lockProgress = 0;
-  /** 0..1 stack-danger level — red vignette pulses in from the top */
+  /** 0..1 stack-danger level - red vignette pulses in from the top */
   danger = 0;
 
   /** column bitmask of "infinite" wall columns (4-wide drill) whose locked
@@ -430,7 +430,7 @@ export class FieldRenderer {
     ctx.beginPath();
     ctx.roundRect(px + 1, py + 1, c - 2, c - 2, 4);
     ctx.fill();
-    // subtle bevel: lit top edge, shaded bottom — makes the stack read as tiles
+    // subtle bevel: lit top edge, shaded bottom - makes the stack read as tiles
     ctx.fillStyle = 'rgba(255,255,255,0.19)';
     ctx.beginPath();
     ctx.roundRect(px + 1, py + 1, c - 2, Math.max(2, c * 0.24), [4, 4, 0, 0]);
@@ -478,7 +478,7 @@ export class FieldRenderer {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = css('--field-bg');
     ctx.fillRect(0, bufH, w, fieldH);
-    // whole-device-pixel shake only — fractional offsets antialias every
+    // whole-device-pixel shake only - fractional offsets antialias every
     // cell edge and draw seams through the pieces
     ctx.translate(Math.round(this.shakeX * this.dpr) / this.dpr, Math.round(this.shakeY * this.dpr) / this.dpr);
     // cover the sliver the shake exposes at the field edges (headroom stays clear)

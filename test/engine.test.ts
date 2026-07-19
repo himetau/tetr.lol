@@ -255,7 +255,7 @@ describe('gradePlacement', () => {
 
   it('prefers holding the T over spending it flat mid-build', () => {
     // LST start board, T arrives before the next slot exists: canon is to
-    // hold it — a flat T placement must not grade well, and the engine's
+    // hold it - a flat T placement must not grade well, and the engine's
     // top recommendation should use hold
     const rows = Array.from(Board.fromStrings(['_______X__', 'X__XX_XXXX']).rows);
     const res = gradePlacement({

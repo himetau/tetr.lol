@@ -146,7 +146,7 @@ describe('fourwide advice + grading', () => {
   });
 
   it('guaranteed worst-case depth is finite and non-trivial', () => {
-    // (note: an empty hold is NOT always better than a held piece — a held
+    // (note: an empty hold is NOT always better than a held piece - a held
     // piece can enable a rescue swap that parking cannot replicate)
     let max = 0;
     for (let s = 0; s < STATES.length; s++) {
@@ -206,7 +206,7 @@ describe('fourwide advice + grading', () => {
   it('grades a clearing move that dooms the combo within the preview as a mistake', () => {
     // flat 111_ with queue I,I,O,S: the horizontal I keeps the combo alive
     // for the whole preview, but the vertical I builds a tower the O+S can no
-    // longer continue — it clears now yet loses the combo in 3 pieces
+    // longer continue - it clears now yet loses the combo in 3 pieces
     const board = flatBoard();
     const queue = ['I', 'I', 'O', 'S'] as PieceType[];
     const adv = fourwideAdvice(board, queue, null, 0);
@@ -222,7 +222,7 @@ describe('fourwide advice + grading', () => {
     expect(r.reasons[0]).toMatch(/Combo will be lost/);
   });
 
-  it('does NOT flag a doomed queue as a mistake — everything dies, so best is best', () => {
+  it('does NOT flag a doomed queue as a mistake - everything dies, so best is best', () => {
     // if even the best line dies within the preview, losing the combo is not
     // the player's fault: playing the longest-surviving move is still best
     const board = flatBoard();

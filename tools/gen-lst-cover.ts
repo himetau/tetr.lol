@@ -99,7 +99,7 @@ for (const file of readdirSync(coverDir).filter((f) => f.endsWith('.csv')).sort(
     }
     const viable = queueRows.filter((r) => r[i + 1] === 'O').length;
     // line clears before the final placement shift every later placement's
-    // absolute coords, which the book cannot represent — skip those variants
+    // absolute coords, which the book cannot represent - skip those variants
     if (placements.some((p, j) => p.clears > 0 && j !== placements.length - 1)) {
       console.warn(`skip: ${file} solution ${i + 1} (${comments[i]}) clears lines mid-build`);
       continue;

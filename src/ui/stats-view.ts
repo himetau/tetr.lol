@@ -1,6 +1,6 @@
 // Stats page: one progress chart per mode, each tracking the number that mode
-// is actually about — LST accuracy, 4-wide combo, all-spin B2B chain, 40 lines
-// time, quick play altitude, 1v1 round share — plus lifetime totals and the
+// is actually about - LST accuracy, 4-wide combo, all-spin B2B chain, 40 lines
+// time, quick play altitude, 1v1 round share - plus lifetime totals and the
 // recent-session log. Charts are inline SVG polylines with a crosshair +
 // tooltip; the tables are the accessible fallback for everything the charts
 // show. Only ranked sessions are ever recorded (no undo, no bot assist), so
@@ -19,7 +19,7 @@ const MODE_LABEL: Record<Mode, string> = {
 
 const SHORT_LABEL: Record<Mode, string> = { lst: 'LST', fourwide: '4-wide', free: '40 Lines', quick: 'Quick play', allspin: 'All-Spin', versus: '1v1' };
 
-// one color per mode — each chart is single-series, so the colors only carry
+// one color per mode - each chart is single-series, so the colors only carry
 // identity next to text (card titles, table dots), never alone
 const SERIES_VAR: Record<Mode, string> = {
   lst: 'var(--series-lst)',
@@ -56,7 +56,7 @@ function ppsTag(s: SessionRecord): string {
 export function statsView(): HTMLElement {
   const page = document.createElement('div');
   page.className = 'page';
-  page.innerHTML = `<h1>Stats</h1><p class="sub">progress over time and lifetime numbers, stored locally — only ranked sessions count (no undo, no bot)</p>`;
+  page.innerHTML = `<h1>Stats</h1><p class="sub">progress over time and lifetime numbers, stored locally - only ranked sessions count (no undo, no bot)</p>`;
 
   const of = (m: Mode) => stats.sessions.filter((s) => s.mode === m);
   const chartCard = (title: string, color: string, points: ChartPoint[], yTicks: number[], yFmt: (v: number) => string, few: string) => {
@@ -76,7 +76,7 @@ export function statsView(): HTMLElement {
   // ---- LST: the drill is about clean loop placements → accuracy ----
   const lst = of('lst').filter((s) => gradeTotal(s.grades) > 0);
   if (lst.length > 0) {
-    chartCard('LST drill — accuracy per session', SERIES_VAR.lst,
+    chartCard('LST drill - accuracy per session', SERIES_VAR.lst,
       lst.map((s) => ({
         x: 0,
         y: gradeAccuracy(s.grades) * 100,
@@ -90,7 +90,7 @@ export function statsView(): HTMLElement {
   const fw = of('fourwide').filter((s) => s.maxCombo !== undefined);
   if (fw.length > 0) {
     const top = Math.max(...fw.map((s) => s.maxCombo!));
-    chartCard('4-wide — longest combo per session', SERIES_VAR.fourwide,
+    chartCard('4-wide - longest combo per session', SERIES_VAR.fourwide,
       fw.map((s) => ({
         x: 0,
         y: s.maxCombo!,
@@ -106,7 +106,7 @@ export function statsView(): HTMLElement {
   const asAcc = of('allspin').filter((s) => gradeTotal(s.grades) > 0);
   if (asB2b.length >= 2 || (asB2b.length > 0 && asAcc.length < 2)) {
     const top = Math.max(...asB2b.map((s) => s.maxB2b!));
-    chartCard('All-Spin — best B2B chain per session', SERIES_VAR.allspin,
+    chartCard('All-Spin - best B2B chain per session', SERIES_VAR.allspin,
       asB2b.map((s) => ({
         x: 0,
         y: s.maxB2b!,
@@ -115,7 +115,7 @@ export function statsView(): HTMLElement {
       quarterTicks(top, 8, 4), (v) => `×${Math.round(v)}`,
       'finish one more ranked all-spin drill and the trend appears here');
   } else if (asAcc.length > 0) {
-    chartCard('All-Spin — accuracy per session', SERIES_VAR.allspin,
+    chartCard('All-Spin - accuracy per session', SERIES_VAR.allspin,
       asAcc.map((s) => ({
         x: 0,
         y: gradeAccuracy(s.grades) * 100,
@@ -129,7 +129,7 @@ export function statsView(): HTMLElement {
   const sprints = of('free').filter((s) => s.sprintMs !== undefined);
   if (sprints.length > 0) {
     const slowest = Math.max(...sprints.map((r) => r.sprintMs!)) / 1000;
-    chartCard('40 Lines — time per run', SERIES_VAR.free,
+    chartCard('40 Lines - time per run', SERIES_VAR.free,
       sprints.map((s) => ({
         x: 0,
         y: s.sprintMs! / 1000,
@@ -143,7 +143,7 @@ export function statsView(): HTMLElement {
   const runs = of('quick').filter((s) => s.altitude !== undefined);
   if (runs.length > 0) {
     const top = Math.max(...runs.map((r) => r.altitude!));
-    chartCard('Quick play — altitude per run', SERIES_VAR.quick,
+    chartCard('Quick play - altitude per run', SERIES_VAR.quick,
       runs.map((s) => ({
         x: 0,
         y: s.altitude!,
@@ -156,7 +156,7 @@ export function statsView(): HTMLElement {
   // ---- 1v1: share of rounds taken per match ----
   const matches = of('versus').filter((s) => (s.wins ?? 0) + (s.losses ?? 0) > 0);
   if (matches.length > 0) {
-    chartCard('1v1 — rounds taken per match', SERIES_VAR.versus,
+    chartCard('1v1 - rounds taken per match', SERIES_VAR.versus,
       matches.map((s) => {
         const w = s.wins ?? 0;
         const l = s.losses ?? 0;
@@ -172,7 +172,7 @@ export function statsView(): HTMLElement {
 
   if (stats.sessions.length === 0) {
     const empty = card('Progress');
-    empty.appendChild(emptyNote('finish a couple of ranked sessions (5+ placements, no undo/bot — retry, top out, or leave the drill records it) and per-mode trends appear here'));
+    empty.appendChild(emptyNote('finish a couple of ranked sessions (5+ placements, no undo/bot - retry, top out, or leave the drill records it) and per-mode trends appear here'));
     page.appendChild(empty);
   }
 
@@ -189,8 +189,8 @@ export function statsView(): HTMLElement {
       const s = stats.modes[m];
       const sessions = of(m);
       const ppsVals = sessions.map(sessionPps).filter((v): v is number => v !== null);
-      const avgPps = ppsVals.length > 0 ? (ppsVals.reduce((a, b) => a + b, 0) / ppsVals.length).toFixed(2) : '—';
-      const acc = gradeTotal(s.grades) > 0 ? `${(accuracy(s) * 100).toFixed(1)}%` : '—';
+      const avgPps = ppsVals.length > 0 ? (ppsVals.reduce((a, b) => a + b, 0) / ppsVals.length).toFixed(2) : '-';
+      const acc = gradeTotal(s.grades) > 0 ? `${(accuracy(s) * 100).toFixed(1)}%` : '-';
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${modeDot(m)}${MODE_LABEL[m]}</td><td>${s.drills}</td><td>${s.pieces}</td><td>${s.tsds}</td>` +
         `<td>${acc}</td><td>${avgPps}</td><td><b>${modeRecord(m, sessions)}</b></td>`;
@@ -213,7 +213,7 @@ export function statsView(): HTMLElement {
       const tr = document.createElement('tr');
       const pps = sessionPps(s);
       tr.innerHTML = `<td>${fmtDate(s.at)}</td><td>${modeDot(s.mode)}${SHORT_LABEL[s.mode]}</td><td>${s.pieces}</td>` +
-        `<td>${pps ? pps.toFixed(2) : '—'}</td><td><b>${sessionResult(s)}</b></td>`;
+        `<td>${pps ? pps.toFixed(2) : '-'}</td><td><b>${sessionResult(s)}</b></td>`;
       t.appendChild(tr);
     }
     log.appendChild(t);
@@ -231,7 +231,7 @@ export function statsView(): HTMLElement {
     page.replaceWith(statsView());
   }));
   const note = document.createElement('span');
-  note.textContent = 'wipes the graph and lifetime numbers — cannot be undone';
+  note.textContent = 'wipes the graph and lifetime numbers - cannot be undone';
   danger.append(reset, note);
   page.appendChild(danger);
 
@@ -243,28 +243,28 @@ function modeRecord(m: Mode, sessions: SessionRecord[]): string {
   switch (m) {
     case 'fourwide': {
       const best = Math.max(0, ...sessions.map((s) => s.maxCombo ?? 0));
-      return best > 0 ? `combo ×${best}` : '—';
+      return best > 0 ? `combo ×${best}` : '-';
     }
     case 'allspin': {
       const best = Math.max(0, ...sessions.map((s) => s.maxB2b ?? 0));
-      return best > 0 ? `B2B ×${best}` : '—';
+      return best > 0 ? `B2B ×${best}` : '-';
     }
     case 'free': {
       const times = sessions.map((s) => s.sprintMs).filter((v): v is number => v !== undefined);
-      return times.length > 0 ? fmtSprint(Math.min(...times)) : '—';
+      return times.length > 0 ? fmtSprint(Math.min(...times)) : '-';
     }
     case 'quick': {
       const best = Math.max(0, ...sessions.map((s) => s.altitude ?? 0));
-      return best > 0 ? `${Math.round(best)}m` : '—';
+      return best > 0 ? `${Math.round(best)}m` : '-';
     }
     case 'versus': {
       const w = sessions.reduce((n, s) => n + (s.wins ?? 0), 0);
       const l = sessions.reduce((n, s) => n + (s.losses ?? 0), 0);
-      return w + l > 0 ? `${w}–${l} rounds` : '—';
+      return w + l > 0 ? `${w}–${l} rounds` : '-';
     }
     case 'lst': {
       const accs = sessions.filter((s) => gradeTotal(s.grades) > 0).map((s) => gradeAccuracy(s.grades));
-      return accs.length > 0 ? `${(Math.max(...accs) * 100).toFixed(0)}% acc` : '—';
+      return accs.length > 0 ? `${(Math.max(...accs) * 100).toFixed(0)}% acc` : '-';
     }
   }
 }
@@ -275,10 +275,10 @@ function sessionResult(s: SessionRecord): string {
   switch (s.mode) {
     case 'quick': return `${Math.round(s.altitude ?? 0)}m`;
     case 'versus': return `${(s.wins ?? 0) > (s.losses ?? 0) ? 'won' : 'lost'} ${s.wins ?? 0}–${s.losses ?? 0}`;
-    case 'fourwide': return s.maxCombo !== undefined ? `combo ×${s.maxCombo}${acc ? ` · ${acc}` : ''}` : acc || '—';
+    case 'fourwide': return s.maxCombo !== undefined ? `combo ×${s.maxCombo}${acc ? ` · ${acc}` : ''}` : acc || '-';
     case 'free': return s.sprintMs !== undefined ? `${fmtSprint(s.sprintMs)}${acc ? ` · ${acc}` : ''}` : 'unfinished';
-    case 'allspin': return s.maxB2b !== undefined ? `B2B ×${s.maxB2b}${acc ? ` · ${acc}` : ''}` : acc || '—';
-    case 'lst': return acc ? `${acc} accuracy` : '—';
+    case 'allspin': return s.maxB2b !== undefined ? `B2B ×${s.maxB2b}${acc ? ` · ${acc}` : ''}` : acc || '-';
+    case 'lst': return acc ? `${acc} accuracy` : '-';
   }
 }
 
@@ -292,7 +292,7 @@ function confirmRestart(onConfirm: () => void): void {
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-labelledby', 'confirm-restart-title');
   modal.innerHTML = `<h2 id="confirm-restart-title">Restart the graph?</h2>
-    <p class="sub">Every recorded session and all lifetime numbers — for every mode — are wiped for good. There is no undo.</p>`;
+    <p class="sub">Every recorded session and all lifetime numbers - for every mode - are wiped for good. There is no undo.</p>`;
 
   const close = () => {
     document.removeEventListener('keydown', onKey);
@@ -327,7 +327,7 @@ function confirmRestart(onConfirm: () => void): void {
   });
   document.addEventListener('keydown', onKey);
   document.body.appendChild(overlay);
-  cancel.focus(); // safe default — Enter declines
+  cancel.focus(); // safe default - Enter declines
 }
 
 // ---- chart plumbing ----

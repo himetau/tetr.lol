@@ -51,5 +51,5 @@ describe('all-spin generator', () => {
   });
 });
 
-// live grading of the all-spin mode is done by the real Cold Clear 2 bot —
+// live grading of the all-spin mode is done by the real Cold Clear 2 bot -
 // see test/cc2.test.ts

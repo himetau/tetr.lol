@@ -1,8 +1,8 @@
 // 1v1 vs Cold Clear: two live boards trading garbage, tetr.io style. The
 // launch overlay tunes the bot (speed, strength) and the garbage channel
-// (telegraph delay, messiness) — the same knobs as Settings → Versus.
+// (telegraph delay, messiness) - the same knobs as Settings → Versus.
 // Rounds end on a top out; first to the chosen score takes the match.
-// No grading, no undo — this mode is for playing the matchup.
+// No grading, no undo - this mode is for playing the matchup.
 
 import { Game, type LockEvent } from '../core/game';
 import { VISIBLE_H } from '../core/board';
@@ -245,7 +245,7 @@ export class VersusView {
     const box = document.createElement('div');
     box.className = 'zenith-box';
     box.innerHTML = `<h2>1v1 vs Cold Clear</h2>
-      <p class="sub">The real bot on its own board, trading garbage with you.<br>Tune it here — the same knobs live in Settings.</p>`;
+      <p class="sub">The real bot on its own board, trading garbage with you.<br>Tune it here - the same knobs live in Settings.</p>`;
 
     const opts = document.createElement('div');
     opts.className = 'zenith-opts';
@@ -280,7 +280,7 @@ export class VersusView {
 
     const save = <T,>(set: (val: T) => void) => (val: T) => { set(val); saveSettings(); };
     box.appendChild(launchSlider('bot speed', 'pps', 0.5, 4, 0.25, v.botPps, save((val) => { v.botPps = val; })));
-    // custom node budget — only meaningful when strength is 'custom'
+    // custom node budget - only meaningful when strength is 'custom'
     const nodesRow = launchSlider('bot nodes', '', 500, 100000, 500, v.botNodes, save((val) => { v.botNodes = val; }));
     nodesRow.style.display = v.botLevel === 'custom' ? '' : 'none';
     strength.addEventListener('change', () => {
@@ -296,7 +296,7 @@ export class VersusView {
     const adv = document.createElement('details');
     adv.className = 'vs-adv';
     const sum = document.createElement('summary');
-    sum.textContent = 'advanced — damage rules & handicaps';
+    sum.textContent = 'advanced - damage rules & handicaps';
     adv.appendChild(sum);
     const advBody = document.createElement('div');
     const rebuildAdv = () => {
@@ -405,7 +405,7 @@ export class VersusView {
     }
     this.bot.onAttack = (lines) => {
       this.incoming?.queue(lines, this.clock);
-      // the garbage streaks from the bot's field to your meter — it's already
+      // the garbage streaks from the bot's field to your meter - it's already
       // in the queue (cancelable) the instant it launches, tetr.io style
       this.flyGarbage(this.botPanel, this.playerMeter, lines);
     };
@@ -481,7 +481,7 @@ export class VersusView {
       this.recordMatch();
       this.roundTimer = window.setTimeout(() => this.showResults(), 900);
     } else {
-      this.showToast(`${winner === 'me' ? 'You take' : 'Cold Clear takes'} round ${this.round} — ${this.score.me}–${this.score.cc}`);
+      this.showToast(`${winner === 'me' ? 'You take' : 'Cold Clear takes'} round ${this.round} - ${this.score.me}–${this.score.cc}`);
       this.roundTimer = window.setTimeout(() => this.startRound(), 1800);
     }
   }
@@ -547,7 +547,7 @@ export class VersusView {
       return;
     }
     // a new lowest row restores the move-reset budget (guideline), measured
-    // on the lowest cell — rotation states have different cell offsets
+    // on the lowest cell - rotation states have different cell offsets
     let bottom = Infinity;
     for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
     if (bottom < this.lowestY) {
@@ -578,7 +578,7 @@ export class VersusView {
   private onLock(ev: LockEvent): void {
     this.resetLockdown();
     this.pieces++;
-    // clutch: the next piece climbed into the buffer to fit — a saved block-out
+    // clutch: the next piece climbed into the buffer to fit - a saved block-out
     if (this.game.clutched && !this.game.topOut) {
       if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
       if (settings.soundFx) clutchSound();

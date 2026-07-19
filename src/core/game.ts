@@ -52,7 +52,7 @@ export const PREVIEW_N = 5;
 /** Optional spawn behaviour. `clutchRows` gives tetr.io's "clutch clear": when
  * the normal spawn is blocked *and the lock that spawned it cleared lines*, the
  * piece is nudged up to N rows higher (into the buffer above the field) instead
- * of topping out — the clear earns you the last-chance save. A blocked spawn
+ * of topping out - the clear earns you the last-chance save. A blocked spawn
  * with no clear (or from a hold swap / reset) just tops out. `spawnLift` raises
  * the resting spawn row itself (pieces float that many rows higher). */
 export interface GameOptions {
@@ -135,7 +135,7 @@ export class Game {
     }
     this.lastMoveWasRotation = false;
     // clutch spawn: the piece rests `spawnLift` rows up; if that is buried it
-    // climbs into the buffer up to `clutchRows` further — but only when this
+    // climbs into the buffer up to `clutchRows` further - but only when this
     // spawn is a clutch-eligible one (the lock cleared lines). tetr.io's
     // last-chance save when the stack is at the ceiling.
     const baseY = SPAWN_Y + this.spawnLift;
@@ -303,7 +303,7 @@ export class Game {
 
   /** Snapshot for tetr.io's dig-difficulty garbage placement: per-column
    * stack heights plus the hole column of the SHALLOWEST (topmost) garbage
-   * row — the one the player is digging into — or −1 with no garbage left.
+   * row - the one the player is digging into - or −1 with no garbage left.
    * The anchor deliberately lags behind fresh garbage: after the well
    * relocates, the old pile on top keeps pulling re-picks back toward the
    * old column until it is dug out, which is what turns a pattern break
@@ -342,7 +342,7 @@ export class Game {
   addGarbage(holes: number[]): void {
     const n = holes.length;
     if (n === 0) return;
-    // Buried: rows that would be shoved above the top of the field are lost —
+    // Buried: rows that would be shoved above the top of the field are lost -
     // that is a top out (you got sealed under the garbage). Measured before
     // insertion, since insertGarbage silently discards the overflow.
     const buried = this.board.maxHeight() + n > BOARD_H;

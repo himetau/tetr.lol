@@ -7,7 +7,7 @@
 //    feature vector, its heuristic score, and the shaped move reward.
 // 2. Label: Monte-Carlo discounted return of the rest of the trajectory
 //    (γ=0.85, heuristic bootstrap at the horizon) MINUS the heuristic score
-//    of the position — the net learns the residual the heuristic misses,
+//    of the position - the net learns the residual the heuristic misses,
 //    so a zero net is a no-op.
 // 3. Train a 14→16→1 ReLU MLP (SGD + momentum) and export the weights with
 //    the standardization folded in.
@@ -118,7 +118,7 @@ for (let g = 0; g < GAMES; g++) {
     const y = Math.max(-CLIP, Math.min(CLIP, returns[t] - heur[t]));
     samples.push({ f: feats[t], y });
   }
-  if ((g + 1) % 50 === 0) console.error(`game ${g + 1}/${GAMES} — ${samples.length} samples`);
+  if ((g + 1) % 50 === 0) console.error(`game ${g + 1}/${GAMES} - ${samples.length} samples`);
 }
 console.error(`${samples.length} samples from ${GAMES} games`);
 
@@ -220,7 +220,7 @@ for (let ep = 0; ep < EPOCHS; ep++) {
   }
   const v = valLoss();
   if (!Number.isFinite(v)) {
-    console.error(`DIVERGED at epoch ${ep + 1} — aborting without export`);
+    console.error(`DIVERGED at epoch ${ep + 1} - aborting without export`);
     process.exit(1);
   }
   if ((ep + 1) % 10 === 0) console.error(`epoch ${ep + 1}: val MSE ${v.toFixed(4)} (var=1)`);

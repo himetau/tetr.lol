@@ -24,7 +24,7 @@ export interface SessionRecord {
   maxCombo?: number;
   /** all-spin drill: longest back-to-back chain */
   maxB2b?: number;
-  /** 40 lines sprint: clear time — only present when the run reached 40 lines */
+  /** 40 lines sprint: clear time - only present when the run reached 40 lines */
   sprintMs?: number;
   /** 1v1 vs Cold Clear: rounds taken by each side */
   wins?: number;
@@ -38,7 +38,7 @@ export interface AllStats {
   sessions: SessionRecord[];
 }
 
-// predates the app's renames (→tetr.ai→tetr.lol) — kept so existing stats survive
+// predates the app's renames (→tetr.ai→tetr.lol) - kept so existing stats survive
 const KEY = 'lst-trainer-stats-v1';
 const MAX_SESSIONS = 300;
 
@@ -84,7 +84,7 @@ export function saveStats(): void {
   localStorage.setItem(KEY, JSON.stringify(stats));
 }
 
-/** Wipe everything the charts and tables draw from — a fresh start. */
+/** Wipe everything the charts and tables draw from - a fresh start. */
 export function resetStats(): void {
   for (const m of Object.keys(stats.modes) as Mode[]) stats.modes[m] = emptyMode();
   stats.sessions.length = 0;
@@ -97,7 +97,7 @@ export function recordSession(rec: SessionRecord): void {
   saveStats();
 }
 
-/** "1:23.4" — sprint clock; tenths shown by default, off for axis ticks */
+/** "1:23.4" - sprint clock; tenths shown by default, off for axis ticks */
 export function fmtSprint(ms: number, tenths = true): string {
   const t = ms / 1000;
   const m = Math.floor(t / 60);

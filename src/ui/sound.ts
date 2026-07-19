@@ -42,12 +42,12 @@ export function sfx(name: SfxName, volume = 0.5, cat: SfxCategory = 'alert', rat
       cache.set(name, a);
     }
     // reuse the cached element when idle; for an overlap use a FRESH element
-    // (loads from the browser cache) — cloneNode()+currentTime on an unloaded
+    // (loads from the browser cache) - cloneNode()+currentTime on an unloaded
     // node throws in real browsers and silently drops the sound
     const fresh = !a.paused;
     const inst = fresh ? new Audio(url) : a;
     inst.volume = level;
-    // let playbackRate shift pitch (default preservesPitch keeps it flat) — the
+    // let playbackRate shift pitch (default preservesPitch keeps it flat) - the
     // B2B jingle rides this to climb a little higher with every back-to-back
     inst.preservesPitch = false;
     inst.playbackRate = rate;
@@ -77,7 +77,7 @@ export function actionSound(action: string): void {
 export function clearSound(lines: number, tspin: boolean, b2bChain = 0, allClear = false): void {
   if (allClear) {
     sfx('allclear', 0.6, 'clear');
-    sfx('applause', 0.4, 'clear'); // the pack's allclear cue is short — layer the crowd
+    sfx('applause', 0.4, 'clear'); // the pack's allclear cue is short - layer the crowd
     return;
   }
   if (tspin) sfx(b2bChain > 1 ? 'clearbtb' : 'clearspin', 0.55, 'clear');
@@ -97,7 +97,7 @@ export function clearSound(lines: number, tspin: boolean, b2bChain = 0, allClear
 export function b2bCue(chain: number): { name: SfxName; rate: number } | null {
   if (chain < 2) return null; // back-to-back begins at the second consecutive special
   const n = chain - 1;        // audible level: B2B ×1, ×2, ×3, …
-  // the three distinct samples climb one per level (so btb_3 — the "high" one —
+  // the three distinct samples climb one per level (so btb_3 - the "high" one -
   // is heard by B2B ×3), then the top tier keeps pitching up a semitone/level
   if (n <= 3) return { name: `btb_${n}` as SfxName, rate: 1 };
   return { name: 'btb_3', rate: Math.min(2, 2 ** ((n - 3) / 12)) };
@@ -124,7 +124,7 @@ export function b2bBreakSound(): void {
   sfx('btb_break', 0.55, 'clear');
 }
 
-/** The offensive burst when a big back-to-back is cashed out as a surge — a
+/** The offensive burst when a big back-to-back is cashed out as a surge - a
  * heavy slam plus a bright rising tone, layered on the break sound; a crowd
  * roars in for the huge ones. `lines` is the surge size. */
 export function surgeSound(lines: number): void {
@@ -134,7 +134,7 @@ export function surgeSound(lines: number): void {
   if (lines >= 8) sfx('applause', 0.4, 'clear');
 }
 
-/** A big attack was sent — an escalating slam that hits harder and pitches up
+/** A big attack was sent - an escalating slam that hits harder and pitches up
  * the more lines went out (`lines`), for the "spike" feel. */
 export function bigSendSound(lines: number): void {
   const t = Math.min(1, (lines - BIG_SEND_MIN) / 12); // 0 at threshold → 1 at +12
@@ -176,15 +176,15 @@ export function damageAlertSound(): void {
 // incoming wave is high, a piercing alert when it is very high, and a
 // panicked (pitched-up) alarm when letting it all through would top you out.
 
-/** tier 1 — a high wave of garbage is incoming */
+/** tier 1 - a high wave of garbage is incoming */
 export function garbageHighSound(): void {
   sfx('damage_alert', 0.55);
 }
-/** tier 2 — the queued wave is very high */
+/** tier 2 - the queued wave is very high */
 export function garbageVeryHighSound(): void {
   sfx('hyperalert', 0.55);
 }
-/** tier 3 — letting the whole queue through would kill you */
+/** tier 3 - letting the whole queue through would kill you */
 export function garbageLethalSound(): void {
   sfx('hyperalert', 0.6, 'alert', 1.4); // pitched up into a panic
   sfx('damage_alert', 0.45);            // layered klaxon underneath
@@ -263,7 +263,7 @@ export function topoutSound(): void {
   sfx('topout', 0.55);
 }
 
-/** Quick play run over — the full game-over jingle, not just the topout hit. */
+/** Quick play run over - the full game-over jingle, not just the topout hit. */
 export function gameOverSound(): void {
   sfx('gameover', 0.55);
 }

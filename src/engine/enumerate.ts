@@ -1,11 +1,11 @@
 // Placement enumeration.
 //
-// `enumeratePlacements` — exact BFS over (x, y, rot, last-rotation-kick)
+// `enumeratePlacements` - exact BFS over (x, y, rot, last-rotation-kick)
 // with shift/rotate/soft-drop moves from spawn: finds every reachable lock
 // position including tucks and spins. Used at the top level where the user's
 // real alternatives (and their finesse paths) matter.
 //
-// `enumerateFast` — straight hard-drops per (rot, x) plus reachable T-slot
+// `enumerateFast` - straight hard-drops per (rot, x) plus reachable T-slot
 // spins for T pieces. Used inside the lookahead search where speed matters.
 
 import { Board, BOARD_W } from '../core/board';

@@ -22,20 +22,20 @@ const BIND_LABELS: Record<keyof Keybinds, string> = {
 export function settingsView(): HTMLElement {
   const page = document.createElement('div');
   page.className = 'page';
-  page.innerHTML = `<h1>Settings</h1><p class="sub">handling, keybinds and trainer behaviour — saved automatically</p>`;
+  page.innerHTML = `<h1>Settings</h1><p class="sub">handling, keybinds and trainer behaviour - saved automatically</p>`;
 
   // ---- handling ----
   const handling = card('Handling');
   handling.appendChild(sliderRow('DAS', 'delayed auto shift (ms)', 0, 300, 1, settings.handling.dasMs, (v) => {
     settings.handling.dasMs = v;
   }));
-  handling.appendChild(sliderRow('ARR', 'auto repeat rate (ms) — 0 = instant', 0, 80, 1, settings.handling.arrMs, (v) => {
+  handling.appendChild(sliderRow('ARR', 'auto repeat rate (ms) - 0 = instant', 0, 80, 1, settings.handling.arrMs, (v) => {
     settings.handling.arrMs = v;
   }));
-  handling.appendChild(sliderRow('SDF', 'soft drop factor — 41 = instant', 5, 41, 1, settings.handling.sdf, (v) => {
+  handling.appendChild(sliderRow('SDF', 'soft drop factor - 41 = instant', 5, 41, 1, settings.handling.sdf, (v) => {
     settings.handling.sdf = v;
   }));
-  handling.appendChild(sliderRow('DCD', 'DAS cut delay (ms) — pauses DAS after a rotate/hold/drop; 0 = off', 0, 100, 1, settings.handling.dcdMs, (v) => {
+  handling.appendChild(sliderRow('DCD', 'DAS cut delay (ms) - pauses DAS after a rotate/hold/drop; 0 = off', 0, 100, 1, settings.handling.dcdMs, (v) => {
     settings.handling.dcdMs = v;
   }));
   handling.appendChild(toggleRow('DAS carry across direction change', 'on = the charge is preserved, so a charged flick bounces wall-to-wall (tetr.io style); off = DAS re-charges', settings.handling.dasCarry, (v) => {
@@ -74,7 +74,7 @@ export function settingsView(): HTMLElement {
   };
   for (const m of Object.keys(EVAL_LABEL) as GradedMode[]) {
     const [name, hint] = EVAL_LABEL[m];
-    trainer.appendChild(toggleRow(name, hint + ' — off hides grades, chips and the paths panel', settings.evalDrill[m], (v) => {
+    trainer.appendChild(toggleRow(name, hint + ' - off hides grades, chips and the paths panel', settings.evalDrill[m], (v) => {
       settings.evalDrill[m] = v;
     }));
   }
@@ -99,13 +99,13 @@ export function settingsView(): HTMLElement {
   vs.appendChild(sliderRow('My attack', 'scales your outgoing garbage (%)', 25, 300, 25, v.attackScale, (val) => {
     v.attackScale = val;
   }));
-  vs.appendChild(sliderRow('Bot attack', 'scales the bot’s outgoing garbage (%) — a handicap dial', 25, 300, 25, v.botAttackScale, (val) => {
+  vs.appendChild(sliderRow('Bot attack', 'scales the bot’s outgoing garbage (%) - a handicap dial', 25, 300, 25, v.botAttackScale, (val) => {
     v.botAttackScale = val;
   }));
   vs.appendChild(sliderRow('Garbage delay', 'telegraph time (ms) before an attack can rise', 500, 5000, 250, v.garbageDelayMs, (val) => {
     v.garbageDelayMs = val;
   }));
-  vs.appendChild(sliderRow('Messiness', 'chance (%) each row re-rolls the hole within an attack — new attacks always re-roll (tetr.io: 0)', 0, 100, 5, v.messiness, (val) => {
+  vs.appendChild(sliderRow('Messiness', 'chance (%) each row re-rolls the hole within an attack - new attacks always re-roll (tetr.io: 0)', 0, 100, 5, v.messiness, (val) => {
     v.messiness = val;
   }));
   vs.appendChild(sliderRow('Garbage cap', 'max rows rising on one non-clearing lock', 1, 12, 1, v.garbageCap, (val) => {
@@ -138,7 +138,7 @@ export function settingsView(): HTMLElement {
   vs.appendChild(selectRow('4-wide opponent', 'pressure during the 4-wide drill', v.drill.fourwide, oppOptions, (val) => {
     v.drill.fourwide = val as OpponentKind;
   }));
-  vs.appendChild(selectRow('40 lines opponent', 'pressure during the sprint — turns it into a dig race', v.drill.free, oppOptions, (val) => {
+  vs.appendChild(selectRow('40 lines opponent', 'pressure during the sprint - turns it into a dig race', v.drill.free, oppOptions, (val) => {
     v.drill.free = val as OpponentKind;
   }));
   vs.appendChild(selectRow('All-Spin opponent', 'pressure during the all-spin drill', v.drill.allspin, oppOptions, (val) => {
@@ -188,7 +188,7 @@ export function settingsView(): HTMLElement {
     ['custom', 'my images'],
     ['aurora', 'aurora glow only'],
   ], (v) => { settings.background.mode = v as typeof settings.background.mode; }));
-  bg.appendChild(sliderRow('Dim', 'overlay strength — lower shows more of the image', 0, 95, 5, settings.background.dim, (v) => {
+  bg.appendChild(sliderRow('Dim', 'overlay strength - lower shows more of the image', 0, 95, 5, settings.background.dim, (v) => {
     settings.background.dim = v;
   }));
   bg.appendChild(sliderRow('Cycle', 'seconds between background changes', 15, 600, 15, settings.background.cycleSec, (v) => {
@@ -223,7 +223,7 @@ function loadCollapsed(): Set<string> {
 }
 
 /** A collapsible settings section. Rows are appended after the header, so the
- * callers' `card.appendChild(row)` still works — they land inside the
+ * callers' `card.appendChild(row)` still works - they land inside the
  * disclosure. Open/closed state persists per title. */
 function card(title: string): HTMLElement {
   const c = document.createElement('details');
@@ -384,7 +384,7 @@ function colorGrid(getPage: () => HTMLElement): HTMLElement {
 
 /** Custom background images: add files or a whole folder, stored locally. */
 function bgImagesRow(): HTMLElement {
-  const r = row('My images', 'stored in this browser/app only — adding switches the backdrop to “my images”');
+  const r = row('My images', 'stored in this browser/app only - adding switches the backdrop to “my images”');
   const label = r.querySelector('label.name') as HTMLElement;
   const countEl = document.createElement('span');
   countEl.className = 'hint';
@@ -399,7 +399,7 @@ function bgImagesRow(): HTMLElement {
     const input = document.createElement('input');
     input.type = 'file';
     if (folder) {
-      // no accept filter here — combined with webkitdirectory the Linux
+      // no accept filter here - combined with webkitdirectory the Linux
       // folder dialog applies image/* to directories and grays them all out;
       // addCustomImages drops non-image files anyway
       input.webkitdirectory = true;

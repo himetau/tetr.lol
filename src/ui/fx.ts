@@ -94,7 +94,7 @@ export function actionText(host: HTMLElement, main: string, sub = '', kind: Acti
 
 /**
  * A big "+N" attack number that punches in over the field and rattles harder
- * the more lines you sent — the bigger the spike, the larger and shakier it is.
+ * the more lines you sent - the bigger the spike, the larger and shakier it is.
  * `intensity` is 0..1 (how far above the big-send threshold the attack was).
  */
 export function sentNumber(host: HTMLElement, lines: number, intensity: number): void {

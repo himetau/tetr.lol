@@ -3,7 +3,7 @@
 // rest of the app's CSS custom properties from them (panel/deep/inset are the
 // background at different lightness, muted text is text faded toward bg, etc.)
 // so a preset or custom theme is a small, easy set to define. Add a theme by
-// dropping 8 colours in THEMES and a row in THEME_PRESETS — the editor and the
+// dropping 8 colours in THEMES and a row in THEME_PRESETS - the editor and the
 // dropdown pick it up. Be liberal with colours here: more presets are coming.
 
 import { settings } from './settings';
@@ -64,7 +64,7 @@ function luminance(hex: string): number {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
-/** The base palette currently in effect — seeds the custom editor's swatches. */
+/** The base palette currently in effect - seeds the custom editor's swatches. */
 export function activePalette(): Palette {
   const p = settings.palette;
   if (p.preset === 'custom') return { ...THEMES['rose-pine'], ...p.custom };

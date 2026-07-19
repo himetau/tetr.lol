@@ -61,7 +61,7 @@ const y = runs.map((r) => r.received);
 
 // Non-negative least squares with monotonicity (pressure never drops with
 // floor): parameterize rate_f = sum of non-negative increments d_0..d_f,
-// which keeps the problem linear — design matrix becomes suffix sums.
+// which keeps the problem linear - design matrix becomes suffix sums.
 const Xc = X.map((row) => {
   const out = new Array(FLOOR_COUNT).fill(0);
   for (let j = 0; j < FLOOR_COUNT; j++) {

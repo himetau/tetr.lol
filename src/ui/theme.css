@@ -1,5 +1,5 @@
 /* Application-shell aesthetic, tetr.io-inspired, on a Catppuccin-leaning
-   palette (Mocha dark / Latte light) with a mauve accent — deliberately not
+   palette (Mocha dark / Latte light) with a mauve accent - deliberately not
    a strict port; piece colors come from the user's tetr.io skin. */
 
 /* bundled so the pixel font renders everywhere, not just where it's installed;
@@ -22,7 +22,7 @@
   --font-display: "Roboto Condensed", "Roboto", "Noto Sans", sans-serif;
   --font-mono: "Maple Mono", "FiraCode Nerd Font", ui-monospace, monospace; */
 
-  /* Catppuccin Latte — solid (no glass), mauve accent */
+  /* Catppuccin Latte - solid (no glass), mauve accent */
   --bg: #eff1f5;
   --bg-deep: #e6e9ef;
   --bg-raised: #ffffff;
@@ -37,7 +37,7 @@
   --warn: #df8e1d;
   --bad: #d20f39;
   --line: #ccd0da;
-  /* chart series — one color per mode against --bg-raised in the slot order
+  /* chart series - one color per mode against --bg-raised in the slot order
      lst → free → fourwide → allspin (+quick) */
   --series-lst: #fe640b;
   --series-free: #1e66f5;
@@ -53,7 +53,7 @@
 }
 
 [data-theme="dark"] {
-  /* Catppuccin Mocha — solid (no glass), mauve accent */
+  /* Catppuccin Mocha - solid (no glass), mauve accent */
   --bg: #1e1e2e;
   --bg-deep: #181825;
   --bg-raised: #252537;
@@ -300,7 +300,7 @@ h3 {
     color 0.14s,
     transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-/* playful tilt on hover — the opposite of a stiff corporate rail */
+/* playful tilt on hover - the opposite of a stiff corporate rail */
 .nav-btn:hover .ico {
   color: var(--text);
   transform: rotate(-15deg) scale(1.1);
@@ -816,7 +816,7 @@ details.card:not([open]) .card-head .chevron {
   padding: 12px;
   position: relative;
 }
-/* top shine as a real overlay, not an inset shadow — the corner-shape polyfill
+/* top shine as a real overlay, not an inset shadow - the corner-shape polyfill
    drops inset shadows and its SVG layer covers element backgrounds, so this is
    the only form that renders in Firefox/Safari too (::after is free; the
    polyfill only claims ::before on shadow hosts) */
@@ -991,7 +991,7 @@ details.card:not([open]) .card-head .chevron {
       translateY(-34px) scale(0.98);
   }
 }
-/* big "+N" attack number — punches in, rattles harder for bigger spikes
+/* big "+N" attack number - punches in, rattles harder for bigger spikes
    (--sp-scale, --sp-shake, --sp-dur set inline by fx.sentNumber) */
 .sent-pop {
   position: absolute;

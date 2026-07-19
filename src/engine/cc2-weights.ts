@@ -1,6 +1,6 @@
 // Cold Clear 2 evaluation profiles. The wasm `ColdClear` constructor takes a
 // `BotConfig` JSON override (see build/cold-clear-2/src/api.rs); these are the
-// profiles we hand it. Tuning lives here in TS — no wasm rebuild needed to
+// profiles we hand it. Tuning lives here in TS - no wasm rebuild needed to
 // adjust a weight, only to add a brand-new field.
 
 export interface CC2Weights {
@@ -60,7 +60,7 @@ export const CC2_DEFAULT: CC2Config = {
  * LST-loop profile: bias hard toward a perpetual clean TSD loop.
  *  - never waste a T: both a flat T (wasted_t) and a T-spin *single* are
  *    punished, because the drill goal counts anything but a full TSD as a
- *    wasted T — hold the T for a double instead
+ *    wasted T - hold the T for a double instead
  *  - always keep a T-slot standing (boosted tslot ladder)
  *  - reward the TSD above all else
  *  - punish every non-spin clear, the quad included (off the plan)

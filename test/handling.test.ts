@@ -6,7 +6,7 @@ import { InputHandler, DEFAULT_HANDLING } from '../src/core/handling';
 // test cannot perturb the piece's x. O sits at origin x=4 (cells 4,5); the
 // right wall is origin x=8 (cells 8,9), the left wall is origin x=0.
 // Timestamps start at T0 (not 0) because update() treats lastTime===0 as
-// "uninitialised" — performance.now() is never 0 in the real loop.
+// "uninitialised" - performance.now() is never 0 in the real loop.
 const T0 = 1000;
 
 function harness(overrides: Partial<typeof DEFAULT_HANDLING> = {}) {
@@ -17,7 +17,7 @@ function harness(overrides: Partial<typeof DEFAULT_HANDLING> = {}) {
   return { g, h };
 }
 
-describe('handling — DAS bounce', () => {
+describe('handling - DAS bounce', () => {
   it('with DAS carry on, a charged flick slides straight to the opposite wall', () => {
     const { g, h } = harness({ dasMs: 100, arrMs: 0, dasCarry: true });
     h.keyDown('ArrowRight', T0);   // tap: x 4 -> 5
@@ -39,7 +39,7 @@ describe('handling — DAS bounce', () => {
 
     h.keyDown('ArrowLeft', T0 + 130);  // flick: charge is zeroed, only one cell moves
     expect(g.active!.x).toBe(7);
-    expect(g.moveLeft()).toBe(true);   // still room — it did not slide
+    expect(g.moveLeft()).toBe(true);   // still room - it did not slide
   });
 
   it('releasing back to a still-held direction also re-charges (no snap back)', () => {
@@ -53,7 +53,7 @@ describe('handling — DAS bounce', () => {
     expect(g.active!.x).toBe(0);
 
     h.keyUp('ArrowLeft', T0 + 260);   // back to the still-held right key
-    expect(g.active!.x).toBe(1);   // one step only — no instant snap to x=8
+    expect(g.active!.x).toBe(1);   // one step only - no instant snap to x=8
     h.update(T0 + 270);            // 20ms charged -> no auto-shift yet
     expect(g.active!.x).toBe(1);
   });
@@ -67,7 +67,7 @@ describe('handling — DAS bounce', () => {
     expect(g.active!.x).toBe(1);
 
     h.keyUp('ArrowLeft', T0 + 150);    // let go of the buried left key
-    expect(g.active!.x).toBe(1);   // right is still the active dir — no extra tap
+    expect(g.active!.x).toBe(1);   // right is still the active dir - no extra tap
     h.update(T0 + 160);            // 40ms charged -> DAS not elapsed, no auto-shift
     expect(g.active!.x).toBe(1);
   });
@@ -87,7 +87,7 @@ describe('handling — DAS bounce', () => {
   });
 });
 
-describe('handling — DAS cut delay', () => {
+describe('handling - DAS cut delay', () => {
   it('DCD=0: a rotate does not interrupt the DAS charge', () => {
     const { g, h } = harness({ dasMs: 100, arrMs: 0, dcdMs: 0 });
     h.keyDown('ArrowRight', T0);   // x 4 -> 5

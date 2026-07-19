@@ -168,7 +168,7 @@ export class InputHandler {
   }
 
   /** A direction change while a key stays held: tap one cell, then re-charge
-   * DAS from zero — unless `dasCarry` keeps the meter (tetr.io bounce). */
+   * DAS from zero - unless `dasCarry` keeps the meter (tetr.io bounce). */
   private changeDirection(): void {
     const dir = this.dirStack[this.dirStack.length - 1];
     if (dir === undefined) return;

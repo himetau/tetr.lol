@@ -100,7 +100,7 @@ function cellKey(cells: readonly (readonly [number, number])[]): string {
 }
 
 /**
- * The engine's preferred placement for a position — the drill's "watch"
+ * The engine's preferred placement for a position - the drill's "watch"
  * playback falls back to this when the book has nothing. Shallow search so
  * it is safe to run synchronously on the UI thread.
  */
@@ -195,7 +195,7 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
       if (bias && piece === 'I') immediateReward += I_USE_TOLL;
       // entering a loop-dead state is a permanent toll on the line
       if (bias && !findLstSite(p.after)) immediateReward += LOOP_DEATH_TOLL;
-      // breaking back-to-back is a permanent toll too — a burn that tidies
+      // breaking back-to-back is a permanent toll too - a burn that tidies
       // the stack must not outrank the move that keeps the chain
       if (bias && breaksB2b(p.linesCleared, p.spin)) immediateReward += B2B_BREAK_TOLL;
       const ev = evaluateBoard(p.after, bias);
@@ -285,7 +285,7 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
     const u = userCand.breakdown;
     const b = best.breakdown;
 
-    // in LST mode only deep burials floor the grade — shallow depth-1
+    // in LST mode only deep burials floor the grade - shallow depth-1
     // overhangs are how the book builds the next spin space
     const newHoles = u.holes - b.holes;
     const newDeep = u.deepHoles - b.deepHoles;
@@ -307,13 +307,13 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
       reasons.push(boardHadSlot ? 'Destroyed your T-spin slot' : 'Gave up the T-spin slot the best move keeps');
       atLeast('inaccuracy');
     }
-    // (spin-column check happens below, outside this block — it must fire
+    // (spin-column check happens below, outside this block - it must fire
     // even when the engine ranked the user's move #1)
     if (req.userPiece === 'T' && req.userSpin !== 'full' && hadReadySlot) {
-      reasons.push('Wasted the T piece — a full T-spin was available');
+      reasons.push('Wasted the T piece - a full T-spin was available');
       atLeast('mistake');
     } else if (req.userPiece === 'T' && req.userSpin !== 'full' && best.placement.type === 'T' && best.placement.spin === 'full') {
-      reasons.push('Wasted the T piece — a full T-spin was available');
+      reasons.push('Wasted the T piece - a full T-spin was available');
       atLeast('inaccuracy');
     }
     if (u.badOverhangs > b.badOverhangs) {
@@ -326,16 +326,16 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
       reasons.push('Stacked higher than necessary');
     }
   }
-  if (!userCand) reasons.push('Unexpected placement — engine could not match it');
+  if (!userCand) reasons.push('Unexpected placement - engine could not match it');
 
   // LST loop-viability check: absolute, against the pre-placement board and
-  // independent of ranking — even a #1-ranked move that kills the loop is a
+  // independent of ranking - even a #1-ranked move that kills the loop is a
   // canon violation. "Killed" = there was a buildable col-2 TSD site before
   // this placement and there is none after it. When the cover book proves the
   // visible queue cannot sustain the loop anyway, losing it is not the
-  // player's fault — inform, don't punish.
+  // player's fault - inform, don't punish.
   // a stage-finishing TSD is not in the build books (their T placements are
-  // implied); it is canon when the cleared result is itself a book state —
+  // implied); it is canon when the cleared result is itself a book state -
   // the col-2 heuristic otherwise mis-grades mirrored loops here
   const tsdBook =
     bias && !userOnBookMove && userCand && req.userPiece === 'T' && req.userSpin === 'full' && req.userLines >= 2
@@ -350,17 +350,17 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
       const pluggedCol = userCand.placement.cells.some(([cx]) => cx === LST_SPIN_COL) &&
         userCand.placement.after.columnHeight(LST_SPIN_COL) > 0;
       reasons.unshift(pluggedCol
-        ? 'Plugged the LST spin column (3rd column) — the loop is dead'
-        : 'Killed the LST loop — the next TSD can no longer be built');
+        ? 'Plugged the LST spin column (3rd column) - the loop is dead'
+        : 'Killed the LST loop - the next TSD can no longer be built');
       if (!bookSaysForced) {
         // if any decent alternative kept the loop alive, this was avoidable
         const avoidable = pruned.some((c) => c !== userCand && findLstSite(c.placement.after) !== null);
         atLeast(avoidable ? 'killer' : 'mistake');
       }
     } else if (!userTsd && siteBefore && siteAfter && siteAfter.missing > siteBefore.missing + 4) {
-      // right after a TSD the next site always starts from scratch — only
+      // right after a TSD the next site always starts from scratch - only
       // non-TSD moves can genuinely "move away" from it
-      reasons.push('Moved away from the next TSD — extra cells now needed to rebuild');
+      reasons.push('Moved away from the next TSD - extra cells now needed to rebuild');
       atLeast('inaccuracy');
     }
   }
@@ -368,7 +368,7 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
   // Back-to-back is canon: a plain burn breaks the chain. Only when the
   // loop is genuinely lost anyway (book proves the queue cannot sustain it,
   // it was already dead, or every alternative also burns/dies) is burning
-  // the correct recovery play — then it is not flagged at all.
+  // the correct recovery play - then it is not flagged at all.
   if (userCand && breaksB2b(req.userLines, req.userSpin)) {
     if (!bias) {
       if (best && best !== userCand) {
@@ -380,7 +380,7 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
         !breaksB2b(c.placement.linesCleared, c.placement.spin) &&
         findLstSite(c.placement.after) !== null);
       if (avoidable) {
-        reasons.unshift(`Broke back-to-back — burned ${req.userLines} line${req.userLines > 1 ? 's' : ''} without a spin`);
+        reasons.unshift(`Broke back-to-back - burned ${req.userLines} line${req.userLines > 1 ? 's' : ''} without a spin`);
         atLeast('mistake');
       }
     }
@@ -389,19 +389,19 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
   // A quad keeps B2B but is off the 20-TSD plan: the I belongs in hold or
   // placed as neutral filler, never spent on a clear.
   if (bias && userCand && req.userPiece === 'I' && req.userLines === 4) {
-    reasons.push('Quad — off the LST plan: every clear should be a T-spin, keep the I as filler');
+    reasons.push('Quad - off the LST plan: every clear should be a T-spin, keep the I as filler');
     atLeast('inaccuracy');
   }
 
-  // A TSS keeps B2B too, but it spends the T for half the payoff — the
+  // A TSS keeps B2B too, but it spends the T for half the payoff - the
   // 20-TSD goal counts it as a wasted T.
   if (bias && userCand && req.userPiece === 'T' && req.userSpin === 'full' && req.userLines === 1) {
-    reasons.push('TSS — spent the T for one line; the goal takes full TSDs only');
+    reasons.push('TSS - spent the T for one line; the goal takes full TSDs only');
     atLeast('inaccuracy');
   }
 
   // a full TSD that leaves the loop alive is the loop doing exactly what it
-  // is for — whatever the lookahead gap says, never flag it as bad play
+  // is for - whatever the lookahead gap says, never flag it as bad play
   if (bias && userTsd && userCand && findLstSite(userCand.placement.after) && GRADE_RANK[grade] > GRADE_RANK.good) {
     grade = 'good';
   }
@@ -410,15 +410,15 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
   if (tsdBook.onBook && userCand) {
     grade = 'best';
     reasons.length = 0;
-    reasons.push(`Book TSD — into ${shortSolutionName(tsdBook.solutions[0])}`);
+    reasons.push(`Book TSD - into ${shortSolutionName(tsdBook.solutions[0])}`);
   } else if (book.onBook && userCand) {
     if (userOnBook) {
       // canon move: whatever the heuristic thought, this is the book line
       grade = 'best';
       reasons.length = 0;
-      reasons.push(`Book move — ${shortSolutionName(book.solutions[0])}`);
+      reasons.push(`Book move - ${shortSolutionName(book.solutions[0])}`);
     } else if (bookSaysForced) {
-      reasons.push('Book: no continuation covers this queue — the loop cannot be sustained this bag');
+      reasons.push('Book: no continuation covers this queue - the loop cannot be sustained this bag');
     } else if (book.moves.length > 0) {
       const m = book.moves.find((mv) => !mv.usesHold) ?? book.moves[0];
       const xs = m.cells.map(([cx]) => cx);
@@ -427,13 +427,13 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
       reasons.push(`Book keeps the loop: ${m.piece}${m.usesHold ? ' after holding' : ''} on column${lo === hi ? '' : 's'} ${lo}${lo === hi ? '' : `–${hi}`}`);
       if (!userTsd) atLeast('inaccuracy'); // a loop-keeping TSD off the book is a different valid line
     } else if (book.holdIsBook) {
-      reasons.push(`Book: hold the ${req.userPiece} — it is needed later in this build`);
+      reasons.push(`Book: hold the ${req.userPiece} - it is needed later in this build`);
       if (!userTsd) atLeast('inaccuracy');
     }
   }
 
   // concrete improvement hint: name the engine's preferred move (unless the
-  // book already named its own — two competing suggestions is how the old
+  // book already named its own - two competing suggestions is how the old
   // engine talked the player out of the loop)
   const bookHinted = book.onBook && !userOnBook && (book.moves.length > 0 || book.holdIsBook);
   if (userCand && best && best !== userCand && GRADE_RANK[grade] >= GRADE_RANK.inaccuracy && !bookHinted) {
@@ -445,7 +445,7 @@ export function gradePlacement(req: GradeRequest, search: SearchOptions = DEFAUL
     reasons.push(`Better: ${best.placement.type}${holdNote} on column${lo === hi ? '' : 's'} ${lo}${lo === hi ? '' : `–${hi}`}${spinNote}`);
   }
 
-  // a clean verdict never carries scolding — when the final grade is
+  // a clean verdict never carries scolding - when the final grade is
   // best/good, advisory negatives would contradict the chip; keep only
   // book context
   if (GRADE_RANK[grade] <= GRADE_RANK.good) {

@@ -1,5 +1,5 @@
 // Quick play: a single-player simulator of TETR.IO QUICK PLAY (Zenith
-// Tower) at a chosen starting altitude — per-floor gravity/lock delay,
+// Tower) at a chosen starting altitude - per-floor gravity/lock delay,
 // bot-generated garbage pressure, climb speed, and altitude scoring.
 // No grading here: this mode is for feeling out the speed, not the loop.
 
@@ -25,7 +25,7 @@ export class ZenithView {
   readonly root: HTMLElement;
   // pieces spawn 3 rows above the field (tetr.io's vanish zone); a blocked
   // spawn clutches up through the remaining hidden rows (tetr.io's clutch
-  // clear) — the last-chance save when the stack is at the ceiling
+  // clear) - the last-chance save when the stack is at the ceiling
   private game = new Game(undefined, { spawnLift: 3, clutchRows: 1 });
   private input: InputHandler;
   private renderer: FieldRenderer;
@@ -112,7 +112,7 @@ export class ZenithView {
   }
 
   destroy(): void {
-    // leaving mid-climb abandons the run — only topped-out runs are recorded
+    // leaving mid-climb abandons the run - only topped-out runs are recorded
     this.endRun(false);
     cancelAnimationFrame(this.rafId);
     this.unsubSettings();
@@ -174,7 +174,7 @@ export class ZenithView {
     strip.append(meter);
     row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
-    // the run readout lives on a canvas along the board's bottom edge —
+    // the run readout lives on a canvas along the board's bottom edge -
     // altitude count, floor progress, climb-speed meter, surge sparks
     this.altimeter = new ZenithAltimeter(BOARD_W * this.cellSize());
     this.fieldPanel.appendChild(this.altimeter.el);
@@ -214,7 +214,7 @@ export class ZenithView {
       <p class="sub">${QP_HINTS[Math.floor(Math.random() * QP_HINTS.length)]}</p>`;
     box.appendChild(head);
 
-    // floor picker — plain themed boxes, pick your starting altitude
+    // floor picker - plain themed boxes, pick your starting altitude
     const grid = document.createElement('div');
     grid.className = 'qp-floors';
     let selectedBtn: HTMLElement | null = null;
@@ -284,7 +284,7 @@ export class ZenithView {
     box.appendChild(start);
 
     this.overlay.appendChild(box);
-    this.hud.innerHTML = `<div class="meta">—</div>`;
+    this.hud.innerHTML = `<div class="meta">-</div>`;
   }
 
   private showResults(): void {
@@ -308,7 +308,7 @@ export class ZenithView {
   }
 
   private startRun(): void {
-    // retry restarts the run outright — an abandoned climb records nothing
+    // retry restarts the run outright - an abandoned climb records nothing
     this.endRun(false);
     this.overlay.classList.remove('show', 'results');
     this.overlay.replaceChildren();
@@ -375,7 +375,7 @@ export class ZenithView {
 
   /**
    * Close out the active run. Only a naturally finished (topped-out) run
-   * persists — its pieces/TSDs fold into lifetime stats here, so abandoned
+   * persists - its pieces/TSDs fold into lifetime stats here, so abandoned
    * runs leave no trace in the charts or totals.
    */
   private endRun(persist: boolean): void {
@@ -426,7 +426,7 @@ export class ZenithView {
   private onLock(ev: LockEvent): void {
     const r = this.run;
     this.pieces++;
-    // clutch: the next piece climbed into the buffer to fit — a saved block-out
+    // clutch: the next piece climbed into the buffer to fit - a saved block-out
     if (this.game.clutched && !this.game.topOut) {
       if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
       if (settings.soundFx) clutchSound();
@@ -481,7 +481,7 @@ export class ZenithView {
         }
         if (out.surged > 0) {
           this.altimeter.surge(out.surged + out.sent);
-          this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
+          this.showToast(`SURGE - ${out.surged + out.sent + out.canceled} lines`);
         } else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
         // combo (>=2 consecutive clears) just ended without a clear
@@ -537,7 +537,7 @@ export class ZenithView {
     const a = this.game.active;
     if (!r || !a) return;
     // reaching a new lowest row restores the move-reset budget (guideline).
-    // Measured on the lowest CELL, not the piece origin — rotation states
+    // Measured on the lowest CELL, not the piece origin - rotation states
     // have different cell offsets and would fake "lower" on a flat floor.
     let bottom = Infinity;
     for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
@@ -620,16 +620,16 @@ export class ZenithView {
       this.lastFloor = fi;
       if (settings.soundFx) levelUpSound();
       if (settings.effects) actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), 'floor');
-      else this.showToast(`Floor ${fi + 1} — ${FLOORS[fi].name}`);
+      else this.showToast(`Floor ${fi + 1} - ${FLOORS[fi].name}`);
     }
     if (!this.pbPlayed && r.altitude > this.bestAltitude) {
       this.pbPlayed = true;
       if (settings.soundFx) personalBestSound();
-      this.showToast(`New personal best — past ${Math.round(this.bestAltitude)}m!`);
+      this.showToast(`New personal best - past ${Math.round(this.bestAltitude)}m!`);
     }
 
     // tetr.io-style meter on the board's left edge: solid red = active
-    // (rises on your next non-clearing lock), translucent = telegraphed —
+    // (rises on your next non-clearing lock), translucent = telegraphed -
     // both remain cancelable until they rise
     const cell = this.cellSize();
     const active = Math.min(r.activeLines(), 20);
@@ -641,7 +641,7 @@ export class ZenithView {
     this.b2bTag.set('B2B', r.b2b, r.b2b >= 4);
 
     // altitude/floor/climb speed live on the altimeter canvas under the
-    // board — the side panel keeps the secondary numbers
+    // board - the side panel keeps the secondary numbers
     this.hud.innerHTML =
       `<div class="meta m-time">time <b>${fmtTime(r.timeMs)}</b></div>` +
       `<div class="meta m-sent">sent <b>${r.linesSent}</b></div>` +

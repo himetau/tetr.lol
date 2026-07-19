@@ -59,7 +59,7 @@ describe('lst cover book', () => {
       const mirrorOk = byQueue.get(queue.split('').map((c) => MIRROR[c]).join('')) === true;
       const mine = bookAdvice(new Board(), queue.split('') as PieceType[], null).sustainable;
       if (!mine) {
-        // pessimism would produce false "loop is dead" verdicts — never allowed
+        // pessimism would produce false "loop is dead" verdicts - never allowed
         expect(sfinderOk || mirrorOk).toBe(false);
       } else if (!sfinderOk && !mirrorOk) {
         optimistic++; // permissible: any-order + SRS+ kicks beat sfinder's model
@@ -70,7 +70,7 @@ describe('lst cover book', () => {
 
   it('chains from a four.lol TKI opener into the bag-2 book', () => {
     // build each TKI book target, T-spin-double it, and require that at least
-    // one resulting board is a bag-2 book start — otherwise the book would
+    // one resulting board is a bag-2 book start - otherwise the book would
     // never activate in real play
     const starts = new Set<string>();
     const startBoard = boardFrom(bag2Group.start);
@@ -160,7 +160,7 @@ describe('lst cover book', () => {
 
   it('never grades a loop-keeping TSD worse than good (four.lol corpus)', { timeout: 30000 }, () => {
     // the loop's mandatory TSD used to be flagged as "destroyed your T-spin
-    // slot" / "moved away from the next TSD" — self-defeating for LST
+    // slot" / "moved away from the next TSD" - self-defeating for LST
     const queue = ['T', 'I', 'J', 'Z', 'S', 'L'] as PieceType[];
     let checked = 0;
     for (const section of (lstPatterns as any).lst) {

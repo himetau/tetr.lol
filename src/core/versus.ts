@@ -1,5 +1,5 @@
 // Versus (1v1-style) garbage machinery, shared by the 1v1 mode and the
-// drill-mode opponents. Pure logic — no DOM, no workers — so it stays
+// drill-mode opponents. Pure logic - no DOM, no workers - so it stays
 // unit-testable. tetr.io semantics throughout:
 //
 //  - attacks TELEGRAPH first (delayMs), then become ACTIVE; both states are
@@ -8,7 +8,7 @@
 //  - every NEW attack re-rolls the hole column uniformly (tetr.io TL:
 //    "change on attack" = 100%; the re-roll may land on the same column,
 //    ~10%, so back-to-back same-column chunks happen); within one attack
-//    the hole only moves with the messiness chance (TL: 0% — each attack
+//    the hole only moves with the messiness chance (TL: 0% - each attack
 //    is one clean chunk of cheese)
 //
 // All knobs live in GarbageConfig so the settings screen / launch overlay
@@ -31,7 +31,7 @@ export const DEFAULT_GARBAGE: GarbageConfig = {
   holeMax: 9,
 };
 
-/** Every dial of the versus damage table — all user-tunable. */
+/** Every dial of the versus damage table - all user-tunable. */
 export interface AttackRules {
   spinMult: number;   // full-spin attack = floor(lines × this)
   quadAttack: number; // lines a quad sends
@@ -94,7 +94,7 @@ export class GarbageQueue {
     this.holeCol = this.randomHole();
   }
 
-  /** Uniform re-roll over the allowed columns — may land on the same one,
+  /** Uniform re-roll over the allowed columns - may land on the same one,
    * exactly like tetr.io (no `messiness_nosame` in standard rules). */
   private randomHole(): number {
     const span = this.cfg.holeMax - this.cfg.holeMin + 1;
@@ -112,7 +112,7 @@ export class GarbageQueue {
     return this.incoming.reduce((n, a) => n + a.lines, 0);
   }
 
-  /** lines whose telegraph elapsed — they rise on the next non-clearing lock */
+  /** lines whose telegraph elapsed - they rise on the next non-clearing lock */
   active(nowMs: number): number {
     return this.incoming.reduce((n, a) => n + (a.entersAtMs <= nowMs ? a.lines : 0), 0);
   }
@@ -173,7 +173,7 @@ const PRESSURE_TABLE: Record<Pressure, { gapMs: number; max: number }> = {
 
 /**
  * Quickplay-style scheduled pressure: attacks arrive on a randomized clock,
- * skewed toward small pokes with occasional dumps — the same shape the
+ * skewed toward small pokes with occasional dumps - the same shape the
  * Zenith simulator uses, minus the altitude scaling. Cancels reduce nothing
  * here (there is no opponent to hurt); the queue handles canceling.
  */

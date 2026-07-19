@@ -50,7 +50,7 @@ describe('Cold Clear 2 (all-spin) bot', () => {
 
   it('never breaks an active back-to-back on a spin-able board', () => {
     // with B2B live and a spin available, the bot must keep the chain: it plays
-    // a spin/quad or simply builds — never a plain 1-3 line burn
+    // a spin/quad or simply builds - never a plain 1-3 line burn
     for (let seed = 1; seed <= 12; seed++) {
       const { board, spinPiece } = genAllspin(seed, false);
       const queue = spinPiece + 'OTILJSZ'.replace(spinPiece, '');
@@ -62,7 +62,7 @@ describe('Cold Clear 2 (all-spin) bot', () => {
 
   it('accepts the LST-loop weights override and takes a ready TSD', () => {
     // a board with a standing col-2 T-slot: base row full but col 2, slot row
-    // (y1) open at cols 1-3 — dropping a T here is a T-spin double
+    // (y1) open at cols 1-3 - dropping a T here is a T-spin double
     const board = Board.fromStrings(['XX_XXXXXXX', 'X_____XXXX'].reverse());
     const m = suggest(board, 'TOSILJZ', '', true, CC2_LST_LOOP_JSON);
     expect(m, 'loop-tuned bot returned no move (bad weights JSON?)').not.toBeNull();

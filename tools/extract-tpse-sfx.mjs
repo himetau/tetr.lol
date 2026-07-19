@@ -52,7 +52,7 @@ let total = 0;
 for (const name of WANTED) {
   const entry = atlas[name];
   if (!entry) {
-    console.warn(`SKIP ${name} — not in pack`);
+    console.warn(`SKIP ${name} - not in pack`);
     continue;
   }
   const [startMs, durMs] = entry;
