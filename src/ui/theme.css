@@ -59,27 +59,23 @@
   outline: none;
 }
 
-/* blocky diagonal corners (tetr.io-style chamfer) on every rounded block.
-   --corner-shape mirrors the native property for the hyperellipse polyfill
-   (Firefox/Safari have no corner-shape; the polyfill scans for the custom prop) */
-* {
+/* blocky diagonal corners (tetr.io-style chamfer) on the raised panel surfaces
+   ONLY — everything else keeps its normal rounded corners. --corner-shape drives
+   both the native property (Chrome, via the polyfill's bridge) and the
+   Firefox/Safari JS fallback, and the polyfill registers it as non-inheriting, so
+   declaring it here does not leak the bevel onto the controls inside a panel.
+   Keeping it off buttons/selects/inputs also avoids the polyfill's border-SVG
+   flicker on hover/focus. */
+.card,
+.side-col .panel,
+.field-panel,
+.reason-toast,
+.paths-dock,
+.paths-modal,
+.chart-tooltip,
+.zenith-overlay {
   corner-shape: bevel;
   --corner-shape: bevel;
-}
-/* …but true circles and pill controls stay round, not diamonds/hexagons */
-.b2b-bubble,
-.qp-toggle-dot,
-.death-warn,
-.mode-dot,
-.set-row input[type="range"]::-webkit-slider-thumb,
-.set-row input[type="range"]::-moz-range-thumb,
-.garbage-bolt,
-.grade-chip,
-.qp-seg,
-.qp-seg-btn,
-.qp-toggle {
-  corner-shape: round;
-  --corner-shape: round;
 }
 
 html,
@@ -104,6 +100,15 @@ input,
 textarea,
 select {
   user-select: auto;
+}
+/* form controls default to the UA font; make them inherit the app body font so
+   nothing (e.g. the quick-play floor buttons) leaks a system font. Class-based
+   controls like `.btn` still win via higher specificity. */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 /* flat blocky backdrop: a static tetr.io-style grid over the deep bg,

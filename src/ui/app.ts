@@ -67,6 +67,8 @@ const TAGLINES = [
   "Sodium free",
   "We're working on it",
   "Thank srabb for the text font",
+  "Stole my friends server to run this site btw",
+  "No mechanics stolen from tetrio"
 ];
 
 export function startApp(root: HTMLElement): void {
