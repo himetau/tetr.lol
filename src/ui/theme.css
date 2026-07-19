@@ -3,13 +3,19 @@
    a strict port; piece colors come from the user's tetr.io skin. */
 
 :root {
+  /* --- FONT TEST: Departure Mono (blocky pixel, square proportions) --- */
+  --font-body: "Departure Mono", ui-monospace, monospace;
+  --font-display: "Departure Mono", ui-monospace, monospace;
+  --font-mono: "Departure Mono", ui-monospace, monospace;
+  /* originals:
   --font-body: "Roboto", "Noto Sans", system-ui, sans-serif;
   --font-display: "Roboto Condensed", "Roboto", "Noto Sans", sans-serif;
-  --font-mono: "Maple Mono", "FiraCode Nerd Font", ui-monospace, monospace;
+  --font-mono: "Maple Mono", "FiraCode Nerd Font", ui-monospace, monospace; */
 
+  /* Catppuccin Latte — solid (no glass), mauve accent */
   --bg: #eff1f5;
   --bg-deep: #e6e9ef;
-  --bg-raised: rgba(255, 255, 255, 0.85);
+  --bg-raised: #ffffff;
   --bg-inset: #dce0e8;
   --text: #4c4f69;
   --text-dim: #7c7f93;
@@ -20,7 +26,7 @@
   --good: #40a02b;
   --warn: #df8e1d;
   --bad: #d20f39;
-  --line: rgba(76, 79, 105, 0.15);
+  --line: #ccd0da;
   /* chart series — one color per mode against --bg-raised in the slot order
      lst → free → fourwide → allspin (+quick) */
   --series-lst: #fe640b;
@@ -30,18 +36,19 @@
   --series-quick: #df8e1d;
   --series-versus: #179299;
   --field-bg: #292c3c;
-  --field-grid: rgba(255, 255, 255, 0.06);
-  --shadow:
-    0 1px 2px rgba(76, 79, 105, 0.06), 0 8px 28px rgba(76, 79, 105, 0.12);
-  --radius: 10px;
-  --radius-sm: 6px;
+  --field-grid: #343849;
+  /* flat blocky depth, but rounded */
+  --shadow: 3px 3px 0 #c4c8d2;
+  --radius: 6px;
+  --radius-sm: 4px;
 }
 
 [data-theme="dark"] {
+  /* Catppuccin Mocha — solid (no glass), mauve accent */
   --bg: #1e1e2e;
   --bg-deep: #181825;
-  --bg-raised: rgba(36, 36, 52, 0.8);
-  --bg-inset: rgba(17, 17, 27, 0.72);
+  --bg-raised: #252537;
+  --bg-inset: #15151f;
   --text: #cdd6f4;
   --text-dim: #9399b2;
   --accent: #cba6f7;
@@ -51,7 +58,7 @@
   --good: #a6e3a1;
   --warn: #f9e2af;
   --bad: #f38ba8;
-  --line: rgba(205, 214, 244, 0.1);
+  --line: #363652;
   --series-lst: #fab387;
   --series-free: #89b4fa;
   --series-fourwide: #a6e3a1;
@@ -59,12 +66,32 @@
   --series-quick: #f9e2af;
   --series-versus: #94e2d5;
   --field-bg: #11111b;
-  --field-grid: rgba(205, 214, 244, 0.05);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 36px rgba(0, 0, 0, 0.4);
+  --field-grid: #22222f;
+  --shadow: 3px 3px 0 #141420;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* blocky diagonal corners (tetr.io-style chamfer) on every rounded block */
+* {
+  corner-shape: bevel;
+}
+/* …but true circles and pill controls stay round, not diamonds/hexagons */
+.b2b-bubble,
+.qp-toggle-dot,
+.death-warn,
+.mode-dot,
+.toggle::after,
+.set-row input[type="range"]::-webkit-slider-thumb,
+.set-row input[type="range"]::-moz-range-thumb,
+.garbage-bolt,
+.grade-chip,
+.qp-seg,
+.qp-seg-btn,
+.qp-toggle {
+  corner-shape: round;
 }
 
 html,
@@ -79,6 +106,7 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
+  -webkit-text-stroke: 0.42px currentColor; /* FONT TEST: thicken pixel text */
   -webkit-font-smoothing: antialiased;
   /* app, not a document */
   user-select: none;
@@ -90,62 +118,25 @@ select {
   user-select: auto;
 }
 
-/* slow aurora wash behind everything — the app breathes */
-body::before,
-body::after {
+/* flat blocky backdrop: a static tetr.io-style grid over the deep bg,
+   no soft aurora glow (that read as generic "vibe-coded" gradient) */
+body::before {
   content: "";
   position: fixed;
-  inset: -30%;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
-  filter: blur(70px);
-}
-body::before {
-  background:
-    radial-gradient(
-      38% 34% at 22% 18%,
-      color-mix(in srgb, var(--accent) 13%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      42% 40% at 82% 82%,
-      color-mix(in srgb, var(--accent2) 11%, transparent),
-      transparent 70%
-    );
-  animation: aurora-a 46s ease-in-out infinite alternate;
-}
-body::after {
-  background: radial-gradient(
-    30% 30% at 70% 20%,
-    color-mix(in srgb, var(--series-allspin) 10%, transparent),
-    transparent 70%
-  );
-  animation: aurora-b 61s ease-in-out infinite alternate;
-}
-@keyframes aurora-a {
-  from {
-    transform: translate3d(-4%, -3%, 0) rotate(0deg);
-  }
-  to {
-    transform: translate3d(5%, 4%, 0) rotate(8deg);
-  }
-}
-@keyframes aurora-b {
-  from {
-    transform: translate3d(3%, 5%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-5%, -4%, 0) scale(1.15);
-  }
-}
-/* an image background replaces the aurora glow */
-body.has-bg::before,
-body.has-bg::after {
-  display: none;
+  --grid-line: color-mix(in srgb, var(--line) 38%, var(--bg));
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 34px 34px;
 }
 
-/* ---- rotating backgrounds (tetr.io style) ---- */
+/* ---- rotating backgrounds: hidden to keep the flat Departure look ---- */
 .bg-root {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: -2;
@@ -210,8 +201,8 @@ h3 {
   flex-direction: column;
   gap: 4px;
   border-right: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg-deep) 72%, transparent);
-  backdrop-filter: blur(14px);
+  background: var(--bg-deep);
+  backdrop-filter: none;
   flex-shrink: 0;
 }
 
@@ -247,12 +238,12 @@ h3 {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  /* right gutter gives the active tab room to scale into without spilling
-     past the rail edge */
-  margin-right: 14px;
+  padding: 9px 24px;
+  /* bleed past the sidebar's 12px padding so the button spans the full rail
+     width, edge to edge */
+  margin: 0 -12px;
   border: none;
-  border-radius: 12px;
+  border-radius: 0; /* completely blocky */
   background: transparent;
   color: var(--text-dim);
   font-size: 15px;
@@ -270,20 +261,17 @@ h3 {
     transform 0.24s cubic-bezier(0.34, 1.5, 0.5, 1);
 }
 .nav-btn:hover {
-  background: color-mix(in srgb, var(--text) 7%, transparent);
+  background: color-mix(in srgb, var(--text) 8%, var(--bg-deep));
   color: var(--text);
 }
 .nav-btn:active {
-  transform: scale(0.975);
+  transform: none;
 }
-/* the selected tab lifts and grows — a springy pop when switching */
+/* selected tab: a solid fill with a hard accent bar on the left, no gradient */
 .nav-btn.active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
+  box-shadow: inset 4px 0 0 var(--accent);
   color: var(--text);
-  transform: scale(1.06);
-}
-.nav-btn.active:active {
-  transform: scale(1.02);
 }
 .nav-btn .ico {
   width: 28px;
@@ -464,7 +452,7 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   padding: 20px 22px;
   margin-bottom: 18px;
 }
@@ -713,7 +701,7 @@ details.card:not([open]) .card-head .chevron {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   padding: 10px;
 }
 .side-col .panel .label {
@@ -736,7 +724,7 @@ details.card:not([open]) .card-head .chevron {
   box-shadow:
     var(--shadow),
     inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   padding: 12px;
   position: relative;
 }
@@ -987,7 +975,7 @@ details.card:not([open]) .card-head .chevron {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: var(--bg-raised);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   white-space: nowrap;
@@ -1038,7 +1026,7 @@ details.card:not([open]) .card-head .chevron {
   border-radius: var(--radius-sm);
   font-size: 13px;
   background: var(--bg-raised);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   color: var(--text);
@@ -1056,6 +1044,14 @@ details.card:not([open]) .card-head .chevron {
   transform: translate(-50%, calc(100% + 4px));
 }
 
+/* FONT TEST: numeric readouts stay un-thickened ("the numbers are fine") */
+.sess-grid .sc .v,
+.zenith-hud .meta b,
+.zenith-hud .m-sent b,
+.zenith-hud .m-taken b {
+  -webkit-text-stroke-width: 0;
+}
+
 /* session panel: compact label/value tiles instead of a stacked text list */
 .sess-grid {
   display: grid;
@@ -1071,7 +1067,7 @@ details.card:not([open]) .card-head .chevron {
   padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-inset) 65%, transparent);
+  background: var(--bg-inset);
 }
 .sess-grid .sc .k {
   font-family: var(--font-display);
@@ -1085,11 +1081,13 @@ details.card:not([open]) .card-head .chevron {
   text-overflow: ellipsis;
 }
 .sess-grid .sc .v {
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sess-grid .sc.wide {
   grid-column: 1 / -1;
@@ -1199,7 +1197,7 @@ details.card:not([open]) .card-head .chevron {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -1311,7 +1309,7 @@ details.card:not([open]) .card-head .chevron {
   align-items: center;
   justify-content: center;
   z-index: 50;
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
 }
 .paths-modal {
   background: var(--bg);
@@ -1559,8 +1557,8 @@ details.card:not([open]) .card-head .chevron {
   display: none;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--bg) 84%, transparent);
-  backdrop-filter: blur(3px);
+  background: var(--bg);
+  backdrop-filter: none;
   z-index: 6;
 }
 .zenith-overlay.show {
@@ -2066,7 +2064,7 @@ table.stats tbody tr:hover {
   padding: 4px 10px;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   font-size: 12px;
