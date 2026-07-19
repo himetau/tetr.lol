@@ -14,6 +14,13 @@ export interface BackgroundSettings {
   dim: number;      // percent, 0..100 — overlay strength over the image
 }
 
+export interface PaletteSettings {
+  /** built-in theme key, 'auto' (follow light/dark), or 'custom' */
+  preset: string;
+  /** per-variable colour overrides for the custom theme (CSS var → hex) */
+  custom: Record<string, string>;
+}
+
 /** What applies pressure in a drill: nothing, quickplay-style scheduled
  * garbage, or a real Cold Clear bot playing its own hidden board. */
 export type OpponentKind = 'off' | 'garbage' | 'bot';
@@ -51,6 +58,7 @@ export interface AppSettings {
   handling: HandlingSettings;
   binds: Keybinds;
   theme: 'light' | 'dark';
+  palette: PaletteSettings;
   background: BackgroundSettings;
   boardZoom: number; // percent, 60..160
   ghost: boolean;
@@ -75,6 +83,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   handling: { ...DEFAULT_HANDLING },
   binds: structuredClone(DEFAULT_KEYBINDS),
   theme: 'dark',
+  palette: { preset: 'rose-pine', custom: {} },
   background: { mode: 'scenes', cycleSec: 120, dim: 70 },
   boardZoom: 100,
   ghost: true,
@@ -127,6 +136,7 @@ export function loadSettings(): AppSettings {
       handling: { ...def.handling, ...parsed.handling },
       binds: { ...def.binds, ...parsed.binds },
       volume: { ...def.volume, ...parsed.volume },
+      palette: { ...def.palette, ...parsed.palette, custom: { ...parsed.palette?.custom } },
       background: { ...def.background, ...parsed.background },
       evalDrill: { ...def.evalDrill, ...parsed.evalDrill },
       versus: {
@@ -146,6 +156,10 @@ export function loadSettings(): AppSettings {
     delete (merged as unknown as Record<string, unknown>).autoRestartTki;
     // migration: cancelDasOnDirChange inverted into dasCarry (default off, no bounce)
     delete (merged.handling as unknown as Record<string, unknown>).cancelDasOnDirChange;
+    // migration: the 'auto' theme was removed — keep the user's light/dark look
+    if (merged.palette.preset === 'auto') {
+      merged.palette.preset = merged.theme === 'light' ? 'latte' : 'mocha';
+    }
     return merged;
   } catch {
     return structuredClone(DEFAULT_SETTINGS);
@@ -165,8 +179,4 @@ export function onSettingsChange(l: Listener): () => void {
     const i = listeners.indexOf(l);
     if (i >= 0) listeners.splice(i, 1);
   };
-}
-
-export function applyTheme(): void {
-  document.documentElement.dataset.theme = settings.theme;
 }

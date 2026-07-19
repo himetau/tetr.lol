@@ -64,6 +64,32 @@ function svgUrl(body: string): string {
 
 const BLUR = `<filter id='b' x='-40%' y='-40%' width='180%' height='180%'><feGaussianBlur stdDeviation='90'/></filter>`;
 
+/** synthwave perspective grid below the horizon (y≈562) */
+function synthGrid(): string {
+  let out = '';
+  for (let i = -12; i <= 12; i++) {
+    const xb = 800 + i * 180;
+    out += `<line x1='800' y1='562' x2='${xb.toFixed(0)}' y2='900' stroke='#cba6f7' stroke-width='2' opacity='0.28'/>`;
+  }
+  let y = 562, step = 10;
+  while (y < 900) {
+    out += `<line x1='0' y1='${y.toFixed(0)}' x2='1600' y2='${y.toFixed(0)}' stroke='#cba6f7' stroke-width='2' opacity='0.28'/>`;
+    y += step; step *= 1.35;
+  }
+  return out;
+}
+
+/** diagonal rain streaks */
+function rain(n: number, seed: number): string {
+  const rnd = lcg(seed);
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = rnd() * 1750, y = rnd() * 950, len = 22 + rnd() * 46;
+    out += `<line x1='${x.toFixed(0)}' y1='${y.toFixed(0)}' x2='${(x - 16).toFixed(0)}' y2='${(y + len).toFixed(0)}' stroke='#b4befe' stroke-width='1.6' opacity='${(0.08 + rnd() * 0.22).toFixed(2)}'/>`;
+  }
+  return out;
+}
+
 const SCENES: string[] = [
   // nebula — mauve/blue/teal clouds over deep space
   svgUrl(`<rect width='1600' height='900' fill='#0f0f1c'/>${BLUR}
@@ -109,6 +135,55 @@ const SCENES: string[] = [
     <path d='M0,560 C400,480 700,640 1100,560 C1350,510 1500,570 1600,540 L1600,900 L0,900 Z' fill='#332433' opacity='0.9'/>
     <path d='M0,700 C350,630 750,760 1150,690 C1400,650 1550,710 1600,690 L1600,900 L0,900 Z' fill='#251a26'/>
     <path d='M0,820 C450,760 900,860 1300,800 L1600,830 L1600,900 L0,900 Z' fill='#191019'/>`),
+  // synthwave — a retro sun and neon perspective grid
+  svgUrl(`<defs>
+      <linearGradient id='sw' x1='0' y1='0' x2='0' y2='1'>
+        <stop offset='0' stop-color='#160f22'/><stop offset='0.62' stop-color='#3a1f3a'/>
+        <stop offset='0.62' stop-color='#0d0a14'/><stop offset='1' stop-color='#0d0a14'/>
+      </linearGradient>
+      <linearGradient id='sun' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#f9e2af'/><stop offset='1' stop-color='#f38ba8'/></linearGradient>
+    </defs>
+    <rect width='1600' height='900' fill='url(#sw)'/>
+    ${stars(50, 71, 480)}
+    <circle cx='800' cy='430' r='168' fill='url(#sun)'/>
+    <g fill='#160f22'><rect x='632' y='452' width='336' height='8'/><rect x='632' y='474' width='336' height='12'/><rect x='632' y='502' width='336' height='16'/><rect x='632' y='536' width='336' height='22'/></g>
+    ${synthGrid()}`),
+  // sakura — soft pink blooms and drifting petals
+  svgUrl(`<defs><linearGradient id='sk' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0' stop-color='#2a1a2a'/><stop offset='1' stop-color='#3a2030'/>
+    </linearGradient></defs>
+    <rect width='1600' height='900' fill='url(#sk)'/>${BLUR}
+    <g filter='url(#b)'><circle cx='1150' cy='240' r='260' fill='#f5c2e7' opacity='0.3'/><circle cx='380' cy='520' r='230' fill='#f38ba8' opacity='0.18'/></g>
+    ${stars(95, 91, 900, '#f5c2e7')}`),
+  // sunset — warm sky over a dark sea with a low sun and reflection
+  svgUrl(`<defs><linearGradient id='ss' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0' stop-color='#f9c08a'/><stop offset='0.34' stop-color='#f38ba8'/><stop offset='0.55' stop-color='#7a5a9a'/>
+      <stop offset='0.55' stop-color='#1e2036'/><stop offset='1' stop-color='#11111b'/>
+    </linearGradient></defs>
+    <rect width='1600' height='900' fill='url(#ss)'/>
+    <circle cx='800' cy='430' r='118' fill='#ffe9c0' opacity='0.95'/>
+    <g fill='#ffe9c0' opacity='0.4'><rect x='700' y='512' width='200' height='6'/><rect x='678' y='544' width='244' height='8'/><rect x='648' y='584' width='304' height='10'/><rect x='612' y='636' width='376' height='12'/></g>`),
+  // rolling hills — layered green ridges under a moon
+  svgUrl(`<defs><linearGradient id='hl' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0' stop-color='#12202a'/><stop offset='1' stop-color='#16281f'/>
+    </linearGradient></defs>
+    <rect width='1600' height='900' fill='url(#hl)'/>${BLUR}
+    <circle cx='340' cy='210' r='54' fill='#e6eec9' opacity='0.92'/>
+    <circle cx='340' cy='210' r='104' fill='#e6eec9' opacity='0.16' filter='url(#b)'/>
+    ${stars(70, 101, 420, '#cdd6c0')}
+    <path d='M0,900 0,610 C300,540 520,650 860,600 C1160,556 1360,640 1600,590 L1600,900 Z' fill='#1c3327'/>
+    <path d='M0,900 0,720 C340,660 620,760 960,710 C1240,668 1420,740 1600,700 L1600,900 Z' fill='#16281f'/>
+    <path d='M0,900 0,820 C380,770 760,860 1160,810 C1400,782 1520,830 1600,812 L1600,900 Z' fill='#0f1c16'/>`),
+  // rainy night — cool dark blue with streaks and blurred city lights
+  svgUrl(`<rect width='1600' height='900' fill='#0c0f1a'/>${BLUR}
+    <g filter='url(#b)'>
+      <circle cx='420' cy='620' r='60' fill='#f9e2af' opacity='0.3'/>
+      <circle cx='700' cy='660' r='46' fill='#89b4fa' opacity='0.3'/>
+      <circle cx='1080' cy='600' r='70' fill='#cba6f7' opacity='0.26'/>
+      <circle cx='1360' cy='650' r='50' fill='#a6e3a1' opacity='0.24'/>
+    </g>
+    ${rain(160, 131)}
+    <rect x='0' y='740' width='1600' height='160' fill='#080a12' opacity='0.85'/>`),
 ];
 
 // ---- the layer ----

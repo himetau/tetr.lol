@@ -37,8 +37,7 @@
   --series-versus: #179299;
   --field-bg: #292c3c;
   --field-grid: #343849;
-  /* flat blocky depth, but rounded */
-  --shadow: 3px 3px 0 #c4c8d2;
+  --shadow: 0 2px 10px rgba(76, 79, 105, 0.12);
   --radius: 6px;
   --radius-sm: 4px;
 }
@@ -67,11 +66,12 @@
   --series-versus: #94e2d5;
   --field-bg: #11111b;
   --field-grid: #22222f;
-  --shadow: 3px 3px 0 #141420;
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 * {
   box-sizing: border-box;
+  outline: none;
 }
 
 /* blocky diagonal corners (tetr.io-style chamfer) on every rounded block */
@@ -133,10 +133,13 @@ body::before {
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 34px 34px;
 }
-
-/* ---- rotating backgrounds: hidden to keep the flat Departure look ---- */
-.bg-root {
+/* a background image replaces the grid so it doesn't wash the scene out */
+body.has-bg::before {
   display: none;
+}
+
+/* ---- rotating backgrounds (tetr.io style) ---- */
+.bg-root {
   position: fixed;
   inset: 0;
   z-index: -2;
@@ -383,6 +386,26 @@ h3 {
   color: var(--text);
   background: color-mix(in srgb, var(--text) 8%, transparent);
 }
+/* footer theme picker */
+.foot-theme {
+  border: 1px solid var(--line);
+  background: var(--bg-inset);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
+  max-width: 130px;
+  transition:
+    color 0.14s,
+    border-color 0.14s;
+}
+.foot-theme:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
 
 .cycle-hint {
   display: flex;
@@ -513,6 +536,49 @@ details.card:not([open]) .card-head .chevron {
 .set-row label.name {
   flex: 1;
   font-size: 14px;
+}
+/* full-width stacking row (e.g. the theme colour grid) */
+.set-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.set-row--stack > label.name {
+  flex: none;
+}
+.theme-colors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+}
+.theme-color {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  min-width: 0;
+}
+.theme-color input[type="color"] {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.theme-color input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.theme-color input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+.theme-reset {
+  align-self: flex-start;
 }
 .set-row .hint {
   color: var(--text-dim);
@@ -714,7 +780,7 @@ details.card:not([open]) .card-head .chevron {
 }
 .side-col canvas {
   display: block;
-  width: 100%;
+  margin: 0 auto; /* centre the fixed-size piece tiles in the panel */
 }
 
 .field-panel {

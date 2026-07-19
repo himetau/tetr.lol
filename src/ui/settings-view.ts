@@ -1,4 +1,5 @@
-import { settings, saveSettings, applyTheme, DEFAULT_SETTINGS, type VolumeSettings, type BotLevel, type OpponentKind, type GradedMode } from './settings';
+import { settings, saveSettings, DEFAULT_SETTINGS, type VolumeSettings, type BotLevel, type OpponentKind, type GradedMode } from './settings';
+import { applyTheme, activePalette, THEME_VARS, THEME_PRESETS } from './themes';
 import type { Pressure } from '../core/versus';
 import { keyDescriptor, type Keybinds } from '../core/handling';
 import { sfx } from './sound';
@@ -159,12 +160,19 @@ export function settingsView(): HTMLElement {
   sound.appendChild(volumeRow('Alerts & events', 'garbage, danger, countdowns, mistakes, milestones', 'alert', () => sfx('levelup', 0.55, 'alert')));
   page.appendChild(sound);
 
+  // ---- theme ----
+  const theme = card('Theme');
+  theme.appendChild(selectRow('Preset', 'a built-in palette, or your own colours', settings.palette.preset, THEME_PRESETS, (v) => {
+    settings.palette.preset = v;
+    applyTheme();
+    saveSettings();
+    page.replaceWith(settingsView()); // reflect the new palette in the colour grid
+  }));
+  theme.appendChild(colorGrid(() => page));
+  page.appendChild(theme);
+
   // ---- appearance ----
   const appearance = card('Appearance');
-  appearance.appendChild(selectRow('Theme', '', settings.theme, [
-    ['dark', 'dark'],
-    ['light', 'light'],
-  ], (v) => { settings.theme = v as 'dark' | 'light'; applyTheme(); }));
   appearance.appendChild(sliderRow('Board zoom', 'field size (%)', 60, 160, 5, settings.boardZoom, (v) => {
     settings.boardZoom = v;
   }));
@@ -329,6 +337,48 @@ function selectRow(name: string, hint: string, value: string, options: [string, 
     saveSettings();
   });
   r.appendChild(s);
+  return r;
+}
+
+/** A swatch grid for every palette variable. Editing any colour seeds a
+ * Custom theme from the active palette, then overrides that one variable. */
+function colorGrid(getPage: () => HTMLElement): HTMLElement {
+  const r = row('Colours', 'edit a swatch to fork the current palette into your Custom theme');
+  r.classList.add('set-row--stack');
+  const grid = document.createElement('div');
+  grid.className = 'theme-colors';
+  const pal = activePalette();
+  for (const [v, label] of THEME_VARS) {
+    const cell = document.createElement('label');
+    cell.className = 'theme-color';
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = pal[v] ?? '#000000';
+    input.addEventListener('input', () => {
+      if (settings.palette.preset !== 'custom') {
+        settings.palette.custom = { ...activePalette() };
+        settings.palette.preset = 'custom';
+      }
+      settings.palette.custom[v] = input.value;
+      applyTheme();
+      saveSettings();
+    });
+    const name = document.createElement('span');
+    name.textContent = label;
+    cell.append(input, name);
+    grid.appendChild(cell);
+  }
+  r.appendChild(grid);
+  const reset = document.createElement('button');
+  reset.className = 'btn theme-reset';
+  reset.textContent = 'Reset theme';
+  reset.addEventListener('click', () => {
+    settings.palette = { preset: 'rose-pine', custom: {} };
+    applyTheme();
+    saveSettings();
+    getPage().replaceWith(settingsView());
+  });
+  r.appendChild(reset);
   return r;
 }
 

@@ -597,10 +597,10 @@ export class FieldRenderer {
 }
 
 /** Small static canvas of a piece, for hold/next panes. */
-export function renderPieceTile(type: PieceType | null, cell = 18): HTMLCanvasElement {
+export function renderPieceTile(type: PieceType | null, cell = 18, widthCells = 5): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   const dpr = window.devicePixelRatio || 1;
-  const w = 5 * cell;
+  const w = widthCells * cell;
   const h = 3 * cell;
   canvas.width = w * dpr;
   canvas.height = h * dpr;

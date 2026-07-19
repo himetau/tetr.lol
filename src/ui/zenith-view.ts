@@ -130,7 +130,12 @@ export class ZenithView {
   private build(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'game-wrap';
-    const colW = `${Math.max(130, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
+    // panel width hugs a 4.2-cell-wide piece tile; pieces are sized so the
+    // I-piece nearly fills that width, and the panel grows taller to fit.
+    // The Next queue's tiles are 1.5× the hold size, so its column is wider.
+    const qc = Math.round(this.cellSize() * 0.62);
+    const colW = `${Math.max(104, Math.round(4.2 * qc) + 24)}px`;
+    const colWq = `${Math.max(104, Math.round(4.2 * Math.round(qc * 1.5)) + 24)}px`;
 
     const left = document.createElement('div');
     left.className = 'side-col';
@@ -185,7 +190,7 @@ export class ZenithView {
 
     const right = document.createElement('div');
     right.className = 'side-col';
-    right.style.width = colW;
+    right.style.width = colWq;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
 
@@ -593,12 +598,14 @@ export class ZenithView {
 
   private refreshPanes(): void {
     const cell = this.cellSize();
-    const holdCell = Math.max(10, Math.round(cell * 0.68));
-    const queueCell = Math.max(8, Math.round(cell * 0.55));
+    // hold and next: same cell size, same 4.2-cell tile so pieces fill the
+    // panel width (matches the colW formula in build())
+    const holdCell = Math.max(10, Math.round(cell * 0.62));
+    const queueCell = Math.round(holdCell * 1.5); // 1.5× bigger next pieces
     this.holdBox.querySelector('canvas')?.remove();
-    this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
+    this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell, 4.2));
     for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
-    for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell));
+    for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell, 4.2));
   }
 
   private updateHud(): void {

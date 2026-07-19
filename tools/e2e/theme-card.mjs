@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const shots = process.argv[2] ?? '/tmp/shots';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
+await page.goto('http://localhost:5199/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+await page.getByText('SETTINGS', { exact: false }).first().click();
+await page.waitForTimeout(500);
+const themeCard = page.locator('.card', { hasText: 'Theme' }).first();
+await themeCard.scrollIntoViewIfNeeded();
+await page.waitForTimeout(300);
+await themeCard.screenshot({ path: `${shots}/theme-card.png` });
+await browser.close();

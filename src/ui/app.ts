@@ -1,4 +1,5 @@
-import { applyTheme, settings, saveSettings } from './settings';
+import { settings, saveSettings } from './settings';
+import { applyTheme, THEME_PRESETS } from './themes';
 import { GameView } from './game-view';
 import { ZenithView } from './zenith-view';
 import { VersusView } from './versus-view';
@@ -138,22 +139,33 @@ export function startApp(root: HTMLElement): void {
     buttons.set(item.name, b);
   }
 
-  // footer: quick theme flip without a trip to settings
+  // footer: pick the theme without a trip to settings
   const foot = document.createElement('div');
   foot.className = 'side-foot';
-  const themeBtn = document.createElement('button');
-  themeBtn.className = 'foot-btn';
-  const themeLabel = () =>
-    settings.theme === 'dark' ? `${ICONS.moon}<span>dark</span>` : `${ICONS.sun}<span>light</span>`;
-  themeBtn.innerHTML = themeLabel();
-  themeBtn.title = 'Toggle theme';
-  themeBtn.addEventListener('click', () => {
-    settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+  const themeSel = document.createElement('select');
+  themeSel.className = 'foot-theme';
+  themeSel.title = 'Theme';
+  // the collapsed control always reads "Theme", not the active theme's name
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Theme';
+  ph.disabled = true;
+  ph.selected = true;
+  ph.hidden = true;
+  themeSel.appendChild(ph);
+  for (const [key, label] of THEME_PRESETS) {
+    const o = document.createElement('option');
+    o.value = key;
+    o.textContent = label;
+    themeSel.appendChild(o);
+  }
+  themeSel.addEventListener('change', () => {
+    settings.palette.preset = themeSel.value;
     applyTheme();
     saveSettings();
-    themeBtn.innerHTML = themeLabel();
+    themeSel.selectedIndex = 0; // snap back so it keeps showing "Theme"
   });
-  foot.appendChild(themeBtn);
+  foot.appendChild(themeSel);
   const cycleHint = document.createElement('span');
   cycleHint.className = 'cycle-hint';
   cycleHint.innerHTML = `<kbd>[</kbd><kbd>]</kbd><span>tabs</span>`;

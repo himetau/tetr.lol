@@ -174,6 +174,15 @@ export class GameView {
     return Math.max(10, Math.min(44, zoomed));
   }
 
+  /** Next-queue piece cell size — 1.5× the hold/preview base so the pieces
+   * read large; its column widens to match. */
+  private queueCell(): number {
+    return Math.round(Math.max(8, Math.round(this.cellSize() * 0.55)) * 1.5);
+  }
+  private queueColW(): string {
+    return `${Math.max(110, 5 * this.queueCell() + 24)}px`;
+  }
+
   destroy(): void {
     this.flushSession();
     cancelAnimationFrame(this.rafId);
@@ -206,7 +215,7 @@ export class GameView {
     this.renderer.setCellSize(this.cellSize());
     const colW = `${Math.max(110, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
     this.leftCol.style.width = colW;
-    this.rightCol.style.width = colW;
+    this.rightCol.style.width = this.queueColW();
     this.applyEvalVisibility();
     if (this.evalSel) this.evalSel.value = this.evalOn() ? 'on' : 'off';
     this.refreshPanes();
@@ -334,7 +343,7 @@ export class GameView {
 
     const right = document.createElement('div');
     right.className = 'side-col';
-    right.style.width = colW;
+    right.style.width = this.queueColW();
     this.rightCol = right;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
@@ -1328,7 +1337,7 @@ export class GameView {
     // hold/next tiles scale with the board zoom, like tetr.io
     const cell = this.cellSize();
     const holdCell = Math.max(10, Math.round(cell * 0.68));
-    const queueCell = Math.max(8, Math.round(cell * 0.55));
+    const queueCell = this.queueCell(); // 1.5× larger next pieces
     this.holdBox.querySelector('canvas')?.remove();
     this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
     for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
