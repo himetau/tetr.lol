@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FLOORS, floorIndexAt, attackFor, ZenithRun } from '../src/core/zenith';
+import { FLOORS, floorIndexAt, attackFor, ZenithRun, garbageFavor, columnWeights, speedCap, windupSplit } from '../src/core/zenith';
 import { Board, BOARD_H } from '../src/core/board';
 import { Game } from '../src/core/game';
 import { mulberry32 } from '../src/core/rng';
@@ -110,6 +110,172 @@ describe('zenith mechanics', () => {
     const out = run.onClear(2, 'full', false);
     expect(out.canceled).toBeGreaterThan(0);
     expect(run.activeLines()).toBeLessThan(before);
+  });
+});
+
+describe('gravity (io_qp2_rule)', () => {
+  it('base mode ramps with time: g = 0.02 + 0.0005·s (cells/frame)', () => {
+    const run = new ZenithRun(0, 'normal', false, () => 0.5);
+    expect(run.gravityCps()).toBeCloseTo(0.02 * 60, 5); // 1.2 cps at t=0
+    run.tick(60000); // +60s → g = 0.02 + 0.03 = 0.05 cells/frame
+    expect(run.gravityCps()).toBeCloseTo(0.05 * 60, 3); // 3.0 cps
+  });
+
+  it('gravity mod ramps 0.5G (F1) → 3.2G (F10)', () => {
+    expect(FLOORS[0].modGravity).toBeCloseTo(0.5, 5);
+    expect(FLOORS[9].modGravity).toBeCloseTo(3.2, 5);
+    expect(new ZenithRun(0, 'normal', true, () => 0.5).gravityCps()).toBeCloseTo(0.5 * 60, 5);
+  });
+});
+
+describe('climb speed cap + crossing floors', () => {
+  it('is full far from a floor and 0 just below the boundary', () => {
+    expect(speedCap(25)).toBe(1);      // mid-floor: full speed
+    expect(speedCap(49)).toBe(0);      // 1m below F2 (50m): stuck
+    expect(speedCap(48)).toBeCloseTo(0.2, 5); // 2m below: throttled
+    expect(speedCap(44)).toBe(1);      // 6m below: back to full
+  });
+
+  it('passive climb is throttled to a crawl right under a floor', () => {
+    const near = new ZenithRun(49, 'normal', false, () => 0.5);
+    near.tick(1000);
+    expect(near.altitude).toBeCloseTo(49, 5); // stuck: essentially no gain
+    const open = new ZenithRun(25, 'normal', false, () => 0.5);
+    open.tick(1000);
+    expect(open.altitude).toBeGreaterThan(25.2); // full-speed passive climb
+  });
+
+  it('a clear within 2m of the next floor punches through with +3m', () => {
+    const run = new ZenithRun(49, 'normal', false, () => 0.5);
+    run.onClear(1, 'none', false); // a plain single sends nothing, but crosses
+    expect(run.altitude).toBeGreaterThanOrEqual(52); // 49 + 3 → past 50m
+    expect(floorIndexAt(run.altitude)).toBe(1);
+  });
+});
+
+describe('windup split (big attacks)', () => {
+  it('splits attacks into up to four staggered segments below 4000m', () => {
+    expect(windupSplit(8, 0)).toEqual([4, 4]);
+    expect(windupSplit(10, 0)).toEqual([4, 4, 2]);
+    expect(windupSplit(16, 0)).toEqual([4, 4, 4, 4]);
+  });
+
+  it('imagined size grows past 4000m (+1 per 500m)', () => {
+    // at 4000m imagined = 17 → sections [4,4,4,5]; fill 17 → [4,4,4,5]
+    expect(windupSplit(17, 4000)).toEqual([4, 4, 4, 5]);
+  });
+
+  it('conserves the total lines (remainder into the last segment)', () => {
+    for (const [lines, alt] of [[8, 0], [13, 0], [20, 0], [17, 4000]] as const) {
+      expect(windupSplit(lines, alt).reduce((a, b) => a + b, 0)).toBe(lines);
+    }
+  });
+});
+
+describe('B2B / all-clear / surge', () => {
+  it('an all clear adds +2 B2B and never breaks the chain', () => {
+    const run = new ZenithRun(0, 'calm', false, () => 0.5);
+    run.onClear(2, 'full', false);   // TSD: special → b2b 1
+    run.onClear(1, 'none', true);    // plain single + all clear: +2, no break
+    expect(run.b2b).toBe(3);
+  });
+
+  it('surge on break = B2B − 3', () => {
+    const run = new ZenithRun(0, 'calm', false, () => 0.5);
+    for (let i = 0; i < 7; i++) run.onClear(2, 'full', false); // b2b → 7
+    const out = run.onClear(1, 'none', false);                 // break
+    expect(out.surged).toBe(4); // 7 − 3
+    expect(run.b2b).toBe(0);
+  });
+});
+
+describe('garbage favor (column placement)', () => {
+  it('matches the reference 33 − 3·floorNo (1-indexed)', () => {
+    expect(garbageFavor(0)).toBe(30); // floor 1
+    expect(garbageFavor(9)).toBe(3);  // floor 10
+  });
+
+  it('favor drops with the floor', () => {
+    for (let i = 1; i < FLOORS.length; i++) {
+      expect(garbageFavor(i)).toBeLessThan(garbageFavor(i - 1));
+    }
+  });
+
+  it('low floors bias the well to the edge; high floors spread it flat', () => {
+    const low = columnWeights(garbageFavor(0));   // F1: one-column well
+    const high = columnWeights(garbageFavor(9));   // F10: cheese everywhere
+    expect(low[0]).toBeGreaterThan(low[5]);        // front-loaded
+    expect(low[9]).toBe(0);                        // right edge never gets it
+    expect(Math.min(...high)).toBeGreaterThan(0);  // every column reachable
+    // the low-floor distribution is far spikier than the high-floor one
+    expect(low[0] / (low[9] + 1)).toBeGreaterThan(high[0] / (high[9] + 1));
+  });
+
+  it('the mean well column sits lower on low floors than high floors', () => {
+    const meanCol = (altitude: number) => {
+      const run = new ZenithRun(altitude, 'brutal', false, mulberry32(11));
+      const holes: number[] = [];
+      for (let i = 0; i < 6000 && holes.length < 500; i++) {
+        run.tick(100);
+        holes.push(...run.riseGarbage(8));
+      }
+      return holes.reduce((a, b) => a + b, 0) / holes.length;
+    };
+    expect(meanCol(0)).toBeLessThan(meanCol(1700));
+  });
+});
+
+describe('clutch spawn (only on a line clear, tetr.io)', () => {
+  // Bottom two rows are full except cols 0,1 (the O completes them → a clear);
+  // a `pillar` at cols 4,5 sits in the buffer so that AFTER the clear shifts it
+  // down it buries the next O's spawn, forcing the clutch to climb.
+  const clutchBoard = (pillar: number) => {
+    const rows = new Uint32Array(BOARD_H);
+    rows[0] = 0x3fc; // cols 2..9 filled, gap at 0,1
+    rows[1] = 0x3fc;
+    for (let y = 20; y < 20 + pillar; y++) rows[y] = 0b110000; // cols 4,5
+    return new Board(rows);
+  };
+  // slide the spawned O to cols 0,1 and drop it → clears the two bottom rows
+  const clearIntoClutch = (g: Game) => {
+    for (let i = 0; i < 4; i++) g.moveLeft();
+    g.hardDrop();
+  };
+
+  it('a clear that would bury the next spawn clutches it up into the buffer', () => {
+    const g = new Game(1, { clutchRows: 2 });
+    g.reset(clutchBoard(2), 1, ['O', 'O', 'O']);
+    clearIntoClutch(g);
+    expect(g.topOut).toBe(false);
+    expect(g.clutched).toBe(true);
+    expect(g.active).not.toBeNull();
+    expect(g.active!.y).toBeGreaterThan(18); // nudged above the normal spawn row
+  });
+
+  it('without clutchRows the same clear tops out on the next spawn', () => {
+    const g = new Game(1); // clutchRows defaults to 0
+    g.reset(clutchBoard(2), 1, ['O', 'O', 'O']);
+    clearIntoClutch(g);
+    expect(g.topOut).toBe(true);
+    expect(g.active).toBeNull();
+  });
+
+  it('tops out when even the buffer headroom is buried', () => {
+    const g = new Game(1, { clutchRows: 2 });
+    g.reset(clutchBoard(4), 1, ['O', 'O', 'O']); // pillar fills the whole buffer
+    clearIntoClutch(g);
+    expect(g.topOut).toBe(true);
+    expect(g.active).toBeNull();
+  });
+
+  it('a buried spawn with NO line clear tops out (clutch is clear-gated)', () => {
+    const g = new Game(1, { clutchRows: 2 });
+    // cols 4,5 walled to row 20: the very first spawn is buried, but nothing
+    // was cleared, so the clutch must not engage
+    const wall = Uint32Array.from(Array.from({ length: BOARD_H }, (_, y) => (y < 20 ? 0b110000 : 0)));
+    g.reset(new Board(wall), 1, ['O', 'O', 'O']);
+    expect(g.topOut).toBe(true);
+    expect(g.active).toBeNull();
   });
 });
 

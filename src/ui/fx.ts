@@ -37,6 +37,31 @@ export function actionText(host: HTMLElement, main: string, sub = '', kind: Acti
   layer.appendChild(el);
 }
 
+/**
+ * A big "+N" attack number that punches in over the field and rattles harder
+ * the more lines you sent — the bigger the spike, the larger and shakier it is.
+ * `intensity` is 0..1 (how far above the big-send threshold the attack was).
+ */
+export function sentNumber(host: HTMLElement, lines: number, intensity: number): void {
+  let layer = host.querySelector<HTMLElement>(':scope > .action-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'action-layer';
+    host.appendChild(layer);
+  }
+  const t = Math.max(0, Math.min(1, intensity));
+  const el = document.createElement('div');
+  el.className = 'sent-pop';
+  el.textContent = `+${lines}`;
+  el.style.setProperty('--sp-scale', `${1 + t * 1.2}`);  // grows with the spike
+  el.style.setProperty('--sp-shake', `${2 + t * 12}px`);  // rattles harder
+  el.style.setProperty('--sp-dur', `${0.5 + t * 0.5}s`);  // lingers a touch longer
+  el.addEventListener('animationend', (e) => {
+    if (e.target === el) el.remove();
+  });
+  layer.appendChild(el);
+}
+
 const LINES_NAME = ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD'];
 
 export interface ActionLabel {

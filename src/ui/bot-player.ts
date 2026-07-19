@@ -44,7 +44,8 @@ export class BotPlayer {
   private destroyed = false;
 
   constructor(private opts: BotOptions) {
-    this.game = new Game(opts.seed);
+    // match the human board: pieces float 2 rows above the field
+    this.game = new Game(opts.seed, { spawnLift: 3, clutchRows: 1 });
     this.incoming = new GarbageQueue(opts.garbage);
     this.game.onLock = (ev) => this.onLock(ev);
     // grace period before the first move so the countdown feels fair

@@ -5,23 +5,27 @@
 // No grading, no undo — this mode is for playing the matchup.
 
 import { Game, type LockEvent } from '../core/game';
+import { VISIBLE_H } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
 import { settings, saveSettings, onSettingsChange, botNodesOf, DEFAULT_SETTINGS, type BotLevel } from './settings';
 import { GarbageQueue, versusAttack, scaleAttack, type GarbageConfig } from '../core/versus';
 import { BotPlayer } from './bot-player';
 import {
-  clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound,
-  spinSound, comboBreakSound, countdownSound, goSound, damageAlertSound, clutchSound,
-  personalBestSound, gameOverSound, topoutSound, lockSound,
+  clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, b2bSound,
+  spinSound, comboBreakSound, countdownSound, goSound, clutchSound, GarbageWarner,
+  personalBestSound, gameOverSound, topoutSound, lockSound, surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
-import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
 import { PIECE_COLORS, cellsAt } from '../core/pieces';
 
 export class VersusView {
   readonly root: HTMLElement;
-  private game = new Game();
+  // pieces spawn in the vanish zone, floating 3 rows above the field; a
+  // blocked spawn clutches up through the remaining hidden rows (tetr.io's
+  // clutch clear) instead of topping out outright
+  private game = new Game(undefined, { spawnLift: 3, clutchRows: 1 });
   private input: InputHandler;
   private renderer: FieldRenderer;
   private botRenderer: FieldRenderer;
@@ -45,6 +49,8 @@ export class VersusView {
   private tsses = 0;
   private lastPending = 0;
   private matchRecorded = false;
+  private warner = new GarbageWarner();
+  private deathWarn!: HTMLElement; // the pulsing "!" when the queue would kill you
 
   // gravity mode: guideline Extended Placement Lock Down (same as quick play)
   private gravAcc = 0;
@@ -64,6 +70,8 @@ export class VersusView {
   private gmActive!: HTMLElement;
   private gmQueued!: HTMLElement;
   private botGm!: HTMLElement;
+  private playerMeter!: HTMLElement; // garbage-bolt landing point (player side)
+  private botMeter!: HTMLElement;    // garbage-bolt landing point (bot side)
   private toastTimer = 0;
   private roundTimer = 0;
   private countdownTimers: number[] = [];
@@ -119,7 +127,8 @@ export class VersusView {
   }
 
   private cellSize(): number {
-    const fit = Math.max(14, Math.min(30, Math.floor((window.innerHeight - 140) / 21)));
+    // 20 visible rows + 3 vanish rows above the field
+    const fit = Math.max(14, Math.min(30, Math.floor((window.innerHeight - 140) / 24)));
     const zoomed = Math.round(fit * (settings.boardZoom / 100));
     return Math.max(10, Math.min(40, zoomed));
   }
@@ -167,14 +176,18 @@ export class VersusView {
     this.gmActive = document.createElement('div');
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
+    this.playerMeter = meter;
     strip.append(this.b2bTag, meter);
-    row.append(strip, this.renderer.canvas);
+    row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
     this.toast = document.createElement('div');
     this.toast.className = 'reason-toast';
     this.overlay = document.createElement('div');
     this.overlay.className = 'zenith-overlay';
-    this.fieldPanel.append(this.toast, this.overlay);
+    this.deathWarn = document.createElement('div');
+    this.deathWarn.className = 'death-warn';
+    this.deathWarn.textContent = '!';
+    this.fieldPanel.append(this.toast, this.overlay, this.deathWarn);
 
     const right = document.createElement('div');
     right.className = 'side-col';
@@ -199,8 +212,9 @@ export class VersusView {
     this.botGm = document.createElement('div');
     this.botGm.className = 'gm-active';
     botMeter.appendChild(this.botGm);
+    this.botMeter = botMeter;
     botStrip.appendChild(botMeter);
-    botRow.append(botStrip, this.botRenderer.canvas);
+    botRow.append(botStrip, this.botRenderer.el);
     this.botPanel.appendChild(botRow);
     this.botHud = document.createElement('div');
     this.botHud.className = 'vs-bot-hud';
@@ -368,6 +382,8 @@ export class VersusView {
     this.b2b = 0;
     this.combo = -1;
     this.lastPending = 0;
+    this.warner.reset();
+    this.deathWarn.classList.remove('show');
     this.b2bTag.textContent = '';
     this.gmActive.style.height = '0px';
     this.gmQueued.style.height = '0px';
@@ -390,6 +406,9 @@ export class VersusView {
     }
     this.bot.onAttack = (lines) => {
       this.incoming?.queue(lines, this.clock);
+      // the garbage streaks from the bot's field to your meter — it's already
+      // in the queue (cancelable) the instant it launches, tetr.io style
+      this.flyGarbage(this.botPanel, this.playerMeter, lines);
     };
     this.bot.onTopOut = () => this.endRound('me');
     this.bot.onLockEvent = (ev) => this.onBotLock(ev);
@@ -560,6 +579,11 @@ export class VersusView {
   private onLock(ev: LockEvent): void {
     this.resetLockdown();
     this.pieces++;
+    // clutch: the next piece climbed into the buffer to fit — a saved block-out
+    if (this.game.clutched && !this.game.topOut) {
+      if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
+      if (settings.soundFx) clutchSound();
+    }
     if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) this.tsds++;
     else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) this.tsses++;
     if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
@@ -584,12 +608,23 @@ export class VersusView {
         if (sentNow > 0) {
           this.sent += sentNow;
           this.bot?.receiveAttack(sentNow);
+          this.flyGarbage(this.fieldPanel, this.botMeter, sentNow);
         }
         if (settings.soundFx) {
-          if (b2bBefore > 0 && this.b2b === 0) b2bBreakSound();
+          if (b2bBefore > 0 && this.b2b === 0) {
+            b2bBreakSound();
+            if (b2bBefore >= BIG_SEND_MIN) surgeSound(b2bBefore); // cashing out a big chain
+          }
           clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
+          b2bSound(this.b2b); // rising jingle, climbs with the chain
           if (this.combo >= 1) comboSound(this.combo, keepsB2b);
           if (canceled >= 4) clutchSound();
+          if (sentNow >= BIG_SEND_MIN) bigSendSound(sentNow); // spike slam
+        }
+        // big attack: a shaking "+N" number and a field kick that scale with it
+        if (settings.effects && sentNow >= BIG_SEND_MIN) {
+          sentNumber(this.fieldPanel, sentNow, (sentNow - BIG_SEND_MIN) / 12);
+          this.renderer.kick(2 + Math.min(10, sentNow));
         }
         if (settings.effects) {
           if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
@@ -611,6 +646,7 @@ export class VersusView {
           this.taken += rows.length;
           if (settings.soundFx) garbageSound(rows.length);
           this.renderer.fxGarbage(rows.length);
+          this.renderer.fxGarbageIn(rows.length);
         }
       }
       this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
@@ -650,11 +686,12 @@ export class VersusView {
       this.matchMs += dt;
       this.bot?.update(dt);
       const inc = this.incoming?.pending() ?? 0;
-      if (inc > this.lastPending && settings.soundFx) {
-        garbageQueuedSound(inc - this.lastPending);
-        if (inc >= 8 && this.lastPending < 8) damageAlertSound();
-      }
+      if (inc > this.lastPending && settings.soundFx) garbageQueuedSound(inc - this.lastPending);
       this.lastPending = inc;
+      // escalating incoming-garbage warnings + the death "!" (letting the whole
+      // queue through would bury the stack past the top of the field)
+      const lethal = this.warner.update(inc, this.game.board.maxHeight() + inc >= VISIBLE_H, settings.soundFx);
+      this.deathWarn.classList.toggle('show', lethal);
       // meters + danger vignettes
       const cell = this.cellSize();
       const active = Math.min(this.incoming?.active(this.clock) ?? 0, 20);
@@ -703,6 +740,38 @@ export class VersusView {
     this.toast.classList.add('show');
     clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 2600);
+  }
+
+  /**
+   * A fast garbage "bolt" streaking from the attacker's field to the target's
+   * garbage meter, tetr.io style. Purely cosmetic: the lines are already in
+   * the receiver's queue (so they stay cancelable while the bolt is in flight,
+   * and committed rows in the board are not). Thickness scales with the size
+   * of the attack; the bolt fades as it merges into the meter.
+   */
+  private flyGarbage(fromEl: HTMLElement, toEl: HTMLElement, lines: number): void {
+    if (!settings.effects || lines <= 0) return;
+    const from = fromEl.getBoundingClientRect();
+    const to = toEl.getBoundingClientRect();
+    const x0 = from.left + from.width / 2;
+    const y0 = from.top + from.height / 2;
+    const x1 = to.left + to.width / 2;
+    const y1 = to.top + to.height / 2;
+    const bolt = document.createElement('div');
+    bolt.className = 'garbage-bolt';
+    bolt.style.left = `${x0}px`;
+    bolt.style.top = `${y0}px`;
+    bolt.style.height = `${Math.max(6, Math.min(20, lines) * 3)}px`;
+    const angle = (Math.atan2(y1 - y0, x1 - x0) * 180) / Math.PI;
+    bolt.style.transform = `translate(0px, 0px) rotate(${angle}deg)`;
+    document.body.appendChild(bolt);
+    requestAnimationFrame(() => {
+      bolt.style.transform = `translate(${x1 - x0}px, ${y1 - y0}px) rotate(${angle}deg)`;
+      bolt.style.opacity = '0.1';
+    });
+    const done = () => bolt.remove();
+    bolt.addEventListener('transitionend', done, { once: true });
+    window.setTimeout(done, 600); // safety net if transitionend is missed
   }
 }
 

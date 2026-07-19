@@ -30,20 +30,29 @@ function mixed(base: number, cat: SfxCategory): number {
   return Math.max(0, Math.min(1, base * (v.master / 100) * catGain));
 }
 
-export function sfx(name: SfxName, volume = 0.5, cat: SfxCategory = 'alert'): void {
+export function sfx(name: SfxName, volume = 0.5, cat: SfxCategory = 'alert', rate = 1): void {
   try {
     const level = mixed(volume, cat);
-    if (level <= 0) return;
+    if (!(level > 0)) return; // also guards NaN volumes
+    const url = `${import.meta.env.BASE_URL}sfx/${name}.ogg`;
     let a = cache.get(name);
     if (!a) {
-      a = new Audio(`${import.meta.env.BASE_URL}sfx/${name}.ogg`);
+      a = new Audio(url);
       a.preload = 'auto';
       cache.set(name, a);
     }
-    // reuse the cached element when idle, otherwise overlap with a clone
-    const inst = a.paused ? a : (a.cloneNode() as HTMLAudioElement);
+    // reuse the cached element when idle; for an overlap use a FRESH element
+    // (loads from the browser cache) — cloneNode()+currentTime on an unloaded
+    // node throws in real browsers and silently drops the sound
+    const fresh = !a.paused;
+    const inst = fresh ? new Audio(url) : a;
     inst.volume = level;
-    inst.currentTime = 0;
+    // let playbackRate shift pitch (default preservesPitch keeps it flat) — the
+    // B2B jingle rides this to climb a little higher with every back-to-back
+    inst.preservesPitch = false;
+    inst.playbackRate = rate;
+    // a fresh element already starts at 0; only rewind the reused (loaded) one
+    if (!fresh) { try { inst.currentTime = 0; } catch { /* not seekable yet */ } }
     void inst.play().catch(() => { /* autoplay not unlocked yet */ });
   } catch {
     // audio unavailable; ignore
@@ -74,10 +83,30 @@ export function clearSound(lines: number, tspin: boolean, b2bChain = 0, allClear
   if (tspin) sfx(b2bChain > 1 ? 'clearbtb' : 'clearspin', 0.55, 'clear');
   else if (lines >= 4) sfx(b2bChain > 1 ? 'clearbtb' : 'clearquad', 0.55, 'clear');
   else sfx('clearline', 0.5, 'clear');
-  // tetr.io layers a rising B2B jingle as the chain grows
-  if (b2bChain === 4) sfx('btb_1', 0.5, 'clear');
-  else if (b2bChain === 8) sfx('btb_2', 0.5, 'clear');
-  else if (b2bChain === 12) sfx('btb_3', 0.5, 'clear');
+  // the rising B2B jingle (b2bSound) is layered by the caller, which knows
+  // whether this clear actually kept the back-to-back chain going
+}
+
+/**
+ * The sample + pitch for a back-to-back at `chain` (pure, so it can be tested).
+ * Steps up through the three sampled tiers (btb_1 → btb_2 → btb_3) as the chain
+ * grows and pitches ~a semitone higher within each tier, so the top tier keeps
+ * rising indefinitely instead of the sound only firing at a few fixed
+ * milestones. Returns null below the first audible back-to-back.
+ */
+export function b2bCue(chain: number): { name: SfxName; rate: number } | null {
+  if (chain < 2) return null; // back-to-back begins at the second consecutive special
+  const n = chain - 1;        // audible level: B2B ×1, ×2, ×3, …
+  // the three distinct samples climb one per level (so btb_3 — the "high" one —
+  // is heard by B2B ×3), then the top tier keeps pitching up a semitone/level
+  if (n <= 3) return { name: `btb_${n}` as SfxName, rate: 1 };
+  return { name: 'btb_3', rate: Math.min(2, 2 ** ((n - 3) / 12)) };
+}
+
+/** Progressive back-to-back jingle, tetr.io style: climbs with the chain. */
+export function b2bSound(chain: number): void {
+  const cue = b2bCue(chain);
+  if (cue) sfx(cue.name, 0.5, 'clear', cue.rate);
 }
 
 /** Escalating combo jingle; "power" clears (spin/quad) get the loud variant. */
@@ -94,6 +123,28 @@ export function gradeSound(grade: 'mistake' | 'killer'): void {
 export function b2bBreakSound(): void {
   sfx('btb_break', 0.55, 'clear');
 }
+
+/** The offensive burst when a big back-to-back is cashed out as a surge — a
+ * heavy slam plus a bright rising tone, layered on the break sound; a crowd
+ * roars in for the huge ones. `lines` is the surge size. */
+export function surgeSound(lines: number): void {
+  const big = Math.min(1, lines / 12);
+  sfx('garbagesmash', 0.55 + 0.15 * big, 'clear');
+  sfx('btb_3', 0.5, 'clear', 1.25); // bright surge tone on top
+  if (lines >= 8) sfx('applause', 0.4, 'clear');
+}
+
+/** A big attack was sent — an escalating slam that hits harder and pitches up
+ * the more lines went out (`lines`), for the "spike" feel. */
+export function bigSendSound(lines: number): void {
+  const t = Math.min(1, (lines - BIG_SEND_MIN) / 12); // 0 at threshold → 1 at +12
+  sfx('garbagesmash', 0.4 + 0.25 * t, 'clear', 1 + 0.18 * t);
+  if (lines >= 12) sfx('applause', 0.35, 'clear');
+}
+
+/** Attack size at which the "big send" sound + shaking number kick in (a full
+ * clear's worth). Tune to taste to match tetr.io's spike feel. */
+export const BIG_SEND_MIN = 4;
 
 /** A piece was spun into place (T-spin or all-spin), clear or not. */
 export function spinSound(): void {
@@ -118,6 +169,59 @@ export function goSound(): void {
 /** Warning klaxon when a big wave of garbage is queued against you. */
 export function damageAlertSound(): void {
   sfx('damage_alert', 0.55);
+}
+
+// ---- escalating incoming-garbage warnings -------------------------------
+// three rising tiers off the pack's two alert samples: a klaxon when the
+// incoming wave is high, a piercing alert when it is very high, and a
+// panicked (pitched-up) alarm when letting it all through would top you out.
+
+/** tier 1 — a high wave of garbage is incoming */
+export function garbageHighSound(): void {
+  sfx('damage_alert', 0.55);
+}
+/** tier 2 — the queued wave is very high */
+export function garbageVeryHighSound(): void {
+  sfx('hyperalert', 0.55);
+}
+/** tier 3 — letting the whole queue through would kill you */
+export function garbageLethalSound(): void {
+  sfx('hyperalert', 0.6, 'alert', 1.4); // pitched up into a panic
+  sfx('damage_alert', 0.45);            // layered klaxon underneath
+}
+
+/**
+ * Rising-edge tracker for the three incoming-garbage warnings, so each klaxon
+ * fires once when its threshold is first crossed (not every frame). Feed it the
+ * current queued line count and whether letting the whole queue through tops
+ * you out; it plays the right escalating alarm and reports the lethal state
+ * (for the on-screen "!" warning).
+ */
+export class GarbageWarner {
+  private high = false;
+  private veryHigh = false;
+  private lethal = false;
+
+  /** thresholds: "high" and "very high" queued line counts */
+  constructor(private highAt = 8, private veryHighAt = 16) {}
+
+  update(queued: number, willTopOut: boolean, soundOn: boolean): boolean {
+    if (willTopOut) {
+      if (!this.lethal && soundOn) garbageLethalSound();
+    } else if (queued >= this.veryHighAt) {
+      if (!this.veryHigh && soundOn) garbageVeryHighSound();
+    } else if (queued >= this.highAt) {
+      if (!this.high && soundOn) garbageHighSound();
+    }
+    this.high = queued >= this.highAt;
+    this.veryHigh = queued >= this.veryHighAt;
+    this.lethal = willTopOut;
+    return willTopOut;
+  }
+
+  reset(): void {
+    this.high = this.veryHigh = this.lethal = false;
+  }
 }
 
 /** The stack has climbed into the danger zone. */

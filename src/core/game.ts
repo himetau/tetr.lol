@@ -49,6 +49,17 @@ export const SPAWN_X = 4;
 export const SPAWN_Y = 18;
 export const PREVIEW_N = 5;
 
+/** Optional spawn behaviour. `clutchRows` gives tetr.io's "clutch clear": when
+ * the normal spawn is blocked *and the lock that spawned it cleared lines*, the
+ * piece is nudged up to N rows higher (into the buffer above the field) instead
+ * of topping out — the clear earns you the last-chance save. A blocked spawn
+ * with no clear (or from a hold swap / reset) just tops out. `spawnLift` raises
+ * the resting spawn row itself (pieces float that many rows higher). */
+export interface GameOptions {
+  spawnLift?: number;
+  clutchRows?: number;
+}
+
 export class Game {
   board = new Board();
   /** per-cell piece colors for the locked stack (null = gray/unknown) */
@@ -61,6 +72,11 @@ export class Game {
   /** successful piece movement (lock-delay reset hook for gravity modes) */
   onMove: ((kind: 'shift' | 'rotate' | 'drop') => void) | null = null;
   topOut = false;
+  /** the last spawn had to be nudged up into the buffer to fit (a clutch) */
+  clutched = false;
+
+  private spawnLift: number;
+  private clutchRows: number;
 
   private bag: SevenBag;
   private queue: PieceType[] = [];
@@ -70,8 +86,10 @@ export class Game {
   private history: Snapshot[] = [];
   private current: Snapshot | null = null; // snapshot of the live decision point
 
-  constructor(seed?: number) {
+  constructor(seed?: number, opts: GameOptions = {}) {
     this.bag = new SevenBag(seed);
+    this.spawnLift = opts.spawnLift ?? 0;
+    this.clutchRows = opts.clutchRows ?? 0;
     this.refillQueue();
     this.spawn();
   }
@@ -100,7 +118,7 @@ export class Game {
    * Spawn a piece. `realSpawn` marks a new decision point (records the undo
    * snapshot); hold-swaps pass false so undo rewinds to before the hold.
    */
-  private spawn(type?: PieceType, realSpawn = true): boolean {
+  private spawn(type?: PieceType, realSpawn = true, allowClutch = false): boolean {
     const t = type ?? this.queue.shift()!;
     this.refillQueue();
     if (realSpawn) {
@@ -115,14 +133,24 @@ export class Game {
       };
       this.usedHoldThisPiece = false;
     }
-    this.active = { type: t, rot: 0, x: SPAWN_X, y: SPAWN_Y };
     this.lastMoveWasRotation = false;
-    if (this.board.collides(cellsAt(t, 0, SPAWN_X, SPAWN_Y))) {
-      this.topOut = true;
-      this.active = null;
-      return false;
+    // clutch spawn: the piece rests `spawnLift` rows up; if that is buried it
+    // climbs into the buffer up to `clutchRows` further — but only when this
+    // spawn is a clutch-eligible one (the lock cleared lines). tetr.io's
+    // last-chance save when the stack is at the ceiling.
+    const baseY = SPAWN_Y + this.spawnLift;
+    const maxK = allowClutch ? this.clutchRows : 0;
+    for (let k = 0; k <= maxK; k++) {
+      const y = baseY + k;
+      if (!this.board.collides(cellsAt(t, 0, SPAWN_X, y))) {
+        this.active = { type: t, rot: 0, x: SPAWN_X, y };
+        this.clutched = k > 0;
+        return true;
+      }
     }
-    return true;
+    this.topOut = true;
+    this.active = null;
+    return false;
   }
 
   private tryShift(dx: number, dy: number): boolean {
@@ -267,7 +295,8 @@ export class Game {
 
     this.pieceIndex++;
     this.canHold = true;
-    this.spawn();
+    // a clear earns the clutch: only then may the next spawn climb the buffer
+    this.spawn(undefined, true, cleared.length > 0);
     this.onLock?.(ev);
     return ev;
   }

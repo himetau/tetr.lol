@@ -741,6 +741,18 @@ details.card:not([open]) .card-head .chevron {
   display: block;
   border-radius: var(--radius-sm);
 }
+/* the well is the visible field's box; the canvas is taller (it also paints the
+   vanish rows) and is pinned to the floor, so the buffer spills up out of the
+   panel and the active piece floats over the page background, tetr.io style */
+.field-well {
+  position: relative;
+  flex-shrink: 0;
+}
+.field-well canvas {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
 
 /* board-left strip: incoming-garbage meter + B2B counter (tetr.io style) */
 .field-row {
@@ -783,6 +795,37 @@ details.card:not([open]) .card-head .chevron {
   }
   50% {
     opacity: 0.6;
+  }
+}
+/* garbage travel: a fast red capsule streaking from the attacker's field into
+   the target's garbage meter (tetr.io style). Positioned at the source in
+   viewport space, then transformed to the destination. Bright leading head. */
+.garbage-bolt {
+  position: fixed;
+  z-index: 60;
+  width: 54px;
+  margin-left: -27px; /* center the capsule on the source point */
+  margin-top: -3px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 1;
+  transform-origin: 50% 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--bad) 55%, transparent) 45%,
+    var(--bad) 80%,
+    #fff
+  );
+  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--bad) 70%, transparent);
+  transition:
+    transform 0.24s cubic-bezier(0.32, 0.9, 0.38, 1),
+    opacity 0.24s ease-out;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .garbage-bolt {
+    display: none;
   }
 }
 .b2b-tag {
@@ -857,6 +900,56 @@ details.card:not([open]) .card-head .chevron {
     opacity: 0;
     transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg))
       translateY(-34px) scale(0.98);
+  }
+}
+/* big "+N" attack number — punches in, rattles harder for bigger spikes
+   (--sp-scale, --sp-shake, --sp-dur set inline by fx.sentNumber) */
+.sent-pop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44%;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--warn);
+  text-shadow:
+    0 0 12px color-mix(in srgb, var(--warn) 70%, transparent),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+  animation: sent-pop var(--sp-dur, 0.6s) cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+@keyframes sent-pop {
+  0% {
+    opacity: 0;
+    transform: scale(calc(var(--sp-scale, 1) * 0.4)) translateX(0);
+  }
+  16% {
+    opacity: 1;
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -1));
+  }
+  26% {
+    transform: scale(var(--sp-scale, 1)) translateX(var(--sp-shake, 4px));
+  }
+  36% {
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -0.6));
+  }
+  46% {
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * 0.4));
+  }
+  60% {
+    transform: scale(var(--sp-scale, 1)) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(calc(var(--sp-scale, 1) * 1.02)) translateY(-30px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sent-pop {
+    animation: none;
+    opacity: 1;
   }
 }
 .at-spin .at-main {
@@ -1813,6 +1906,52 @@ details.card:not([open]) .card-head .chevron {
   }
   to {
     opacity: 0;
+  }
+}
+
+/* death warning: a pulsing red "!" over the field while letting the queued
+   garbage through would top you out */
+.death-warn {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bad) 25%, transparent);
+  border: 2px solid var(--bad);
+  color: var(--bad);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 10px var(--bad);
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--bad) 60%, transparent);
+}
+.death-warn.show {
+  display: flex;
+  animation: death-warn-pulse 0.6s ease-in-out infinite;
+}
+@keyframes death-warn-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateX(-50%) scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .death-warn.show {
+    animation: none;
+    opacity: 1;
   }
 }
 

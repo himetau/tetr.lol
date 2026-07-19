@@ -4,6 +4,7 @@
 // No grading here: this mode is for feeling out the speed, not the loop.
 
 import { Game, type LockEvent } from '../core/game';
+import { VISIBLE_H } from '../core/board';
 import { cellsAt } from '../core/pieces';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
@@ -11,16 +12,20 @@ import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
 import {
   lockSound, clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound,
-  b2bBreakSound, spinSound, comboBreakSound, countdownSound, goSound, damageAlertSound,
+  b2bBreakSound, b2bSound, spinSound, comboBreakSound, countdownSound, goSound, GarbageWarner,
   dangerSound, clutchSound, levelUpSound, personalBestSound, gameOverSound,
+  surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
-import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
 import { PIECE_COLORS } from '../core/pieces';
 
 export class ZenithView {
   readonly root: HTMLElement;
-  private game = new Game();
+  // pieces spawn 3 rows above the field (tetr.io's vanish zone); a blocked
+  // spawn clutches up through the remaining hidden rows (tetr.io's clutch
+  // clear) — the last-chance save when the stack is at the ceiling
+  private game = new Game(undefined, { spawnLift: 3, clutchRows: 1 });
   private input: InputHandler;
   private renderer: FieldRenderer;
   private rafId = 0;
@@ -49,6 +54,8 @@ export class ZenithView {
   private queueBox!: HTMLElement;
   private hud!: HTMLElement;
   private toast!: HTMLElement;
+  private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
+  private warner = new GarbageWarner();
   private overlay!: HTMLElement;
   private b2bTag!: HTMLElement;
   private gmActive!: HTMLElement;
@@ -111,7 +118,8 @@ export class ZenithView {
   }
 
   private cellSize(): number {
-    const fit = Math.max(14, Math.min(34, Math.floor((window.innerHeight - 140) / 21)));
+    // 20 visible rows + 3 buffer rows for the clutch zone
+    const fit = Math.max(14, Math.min(34, Math.floor((window.innerHeight - 140) / 24)));
     const zoomed = Math.round(fit * (settings.boardZoom / 100));
     return Math.max(10, Math.min(44, zoomed));
   }
@@ -156,13 +164,16 @@ export class ZenithView {
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
     strip.append(this.b2bTag, meter);
-    row.append(strip, this.renderer.canvas);
+    row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
     this.toast = document.createElement('div');
     this.toast.className = 'reason-toast';
     this.overlay = document.createElement('div');
     this.overlay.className = 'zenith-overlay';
-    this.fieldPanel.append(this.toast, this.overlay);
+    this.deathWarn = document.createElement('div');
+    this.deathWarn.className = 'death-warn';
+    this.deathWarn.textContent = '!';
+    this.fieldPanel.append(this.toast, this.overlay, this.deathWarn);
 
     const right = document.createElement('div');
     right.className = 'side-col';
@@ -293,6 +304,8 @@ export class ZenithView {
     this.overlay.replaceChildren();
     this.game.reset();
     this.run = new ZenithRun(this.startAltitude, this.pressure, this.gravityMod);
+    this.warner.reset();
+    this.deathWarn.classList.remove('show');
     this.gravAcc = 0;
     this.resetLockdown();
     this.pieces = 0;
@@ -402,6 +415,11 @@ export class ZenithView {
   private onLock(ev: LockEvent): void {
     const r = this.run;
     this.pieces++;
+    // clutch: the next piece climbed into the buffer to fit — a saved block-out
+    if (this.game.clutched && !this.game.topOut) {
+      if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
+      if (settings.soundFx) clutchSound();
+    }
     // tsd/tss stats are T-spins specifically, not the new all-spins
     if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
       this.tsds++;
@@ -424,10 +442,20 @@ export class ZenithView {
         if (settings.soundFx) {
           if (b2bBefore > 0 && r.b2b === 0) b2bBreakSound();
           clearSound(ev.linesCleared, ev.spin === 'full', r.b2b, ev.boardAfter.isEmpty());
+          b2bSound(r.b2b); // rising jingle, climbs with the chain
           // escalating combo jingle from the second consecutive clear
           if (r.combo >= 1) comboSound(r.combo, ev.spin !== 'none' || ev.linesCleared === 4);
           // blocked a big wave right before it hit
           if (out.canceled >= 4) clutchSound();
+          // the surge burst on a broken chain, else the spike sound for a big send
+          if (out.surged > 0) surgeSound(out.surged + out.sent);
+          else if (out.sent >= BIG_SEND_MIN) bigSendSound(out.sent);
+        }
+        // big attack: a shaking "+N" number and a field kick that scale with it
+        const spike = out.surged + out.sent;
+        if (settings.effects && spike >= BIG_SEND_MIN) {
+          sentNumber(this.fieldPanel, spike, (spike - BIG_SEND_MIN) / 12);
+          this.renderer.kick(2 + Math.min(10, spike));
         }
         if (settings.effects) {
           if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
@@ -453,6 +481,7 @@ export class ZenithView {
           this.lastIncoming = r.incomingLines();
           if (settings.soundFx) garbageSound(rows.length);
           this.renderer.fxGarbage(rows.length);
+          this.renderer.fxGarbageIn(rows.length);
         }
       }
     }
@@ -533,14 +562,14 @@ export class ZenithView {
     if (r && !this.counting && !this.game.topOut) {
       this.input.update(t);
       r.tick(dt);
-      // telegraph sound when new garbage gets queued against you, plus a
-      // danger klaxon once a big wave (8+) is stacked up and still growing
+      // telegraph sound when new garbage gets queued against you
       const inc = r.incomingLines();
-      if (inc > this.lastIncoming && settings.soundFx) {
-        garbageQueuedSound(inc - this.lastIncoming);
-        if (inc >= 8 && this.lastIncoming < 8) damageAlertSound();
-      }
+      if (inc > this.lastIncoming && settings.soundFx) garbageQueuedSound(inc - this.lastIncoming);
       this.lastIncoming = inc;
+      // escalating incoming-garbage warnings + the death "!" (letting the whole
+      // queue through would bury the stack past the top of the field)
+      const lethal = this.warner.update(inc, this.game.board.maxHeight() + inc >= VISIBLE_H, settings.soundFx);
+      this.deathWarn.classList.toggle('show', lethal);
       this.applyGravity(dt);
       this.updateHud();
       // red vignette bleeds in as the stack climbs toward the top

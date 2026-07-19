@@ -103,11 +103,28 @@ interface Trail { x0: number; x1: number; yTop: number; age: number; color: stri
 
 const P_MAX = 500;
 
+// incoming garbage rises into the board one row every this many ms (~3 frames
+// at 60fps): the stack is snapped up instantly on the board, but drawn settling
+// down one row per step so the garbage visibly pushes up from the floor
+const GARBAGE_RISE_MS_PER_ROW = 50;
+
 export class FieldRenderer {
   readonly canvas: HTMLCanvasElement;
+  /** wrapper sized to the VISIBLE field only; the canvas is anchored to its
+   * bottom so the buffer rows overflow above it, floating over the page
+   * background instead of expanding the field panel (tetr.io vanish zone) */
+  readonly el: HTMLDivElement;
   private ctx: CanvasRenderingContext2D;
   private cell = 26;
   private dpr = 1;
+  /** transparent headroom rows above the visible field — the vanish zone where
+   * pieces spawn and float, tetr.io style (also the room for a clutch save).
+   * The field background/grid never extend into it, so the board still reads
+   * as 20 rows and the active piece appears to hover above the well. A
+   * clutched spawn climbs one row further into the buffer, so a couple of
+   * rows past the resting spawn are drawn — enough that the last-chance piece
+   * sits at the canvas's top edge instead of being clipped. */
+  private bufferRows = 4;
   /** transient highlight cells — with a piece type they render from the skin
    * sheet plus a colored outline; without one they fall back to flat color */
   highlight: { cells: [number, number][]; color: string; piece?: PieceType } | null = null;
@@ -115,6 +132,10 @@ export class FieldRenderer {
   lockProgress = 0;
   /** 0..1 stack-danger level — red vignette pulses in from the top */
   danger = 0;
+  /** freshly-inserted garbage rising into the board (tetr.io style): the bottom
+   * `rows` are real on the board already, but the stack is drawn `rows` lower
+   * and settles up one row at a time so the garbage pushes up from the floor */
+  private garbageReveal: { rows: number; age: number } | null = null;
 
   private particles: Particle[] = [];
   private rowFlashes: RowFlash[] = [];
@@ -125,10 +146,19 @@ export class FieldRenderer {
   private shakeY = 0;
   private fxT = 0;
 
-  constructor(cellSize = 26) {
+  constructor(cellSize = 26, bufferRows = 4) {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d')!;
+    this.bufferRows = bufferRows;
+    this.el = document.createElement('div');
+    this.el.className = 'field-well';
+    this.el.appendChild(this.canvas);
     this.setCellSize(cellSize);
+  }
+
+  /** rows the canvas actually draws: the visible field plus the buffer above */
+  private get rows(): number {
+    return VISIBLE_H + this.bufferRows;
   }
 
   /** Resize the field (live zoom changes). Resets the canvas state. */
@@ -137,15 +167,20 @@ export class FieldRenderer {
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
     this.canvas.width = BOARD_W * this.cell * dpr;
-    this.canvas.height = VISIBLE_H * this.cell * dpr;
+    this.canvas.height = this.rows * this.cell * dpr;
     this.canvas.style.width = `${BOARD_W * this.cell}px`;
-    this.canvas.style.height = `${VISIBLE_H * this.cell}px`;
+    this.canvas.style.height = `${this.rows * this.cell}px`;
+    // the well is only the visible field tall; the canvas (which also draws the
+    // buffer rows) is pinned to the well's floor, so the buffer spills upward
+    this.el.style.width = `${BOARD_W * this.cell}px`;
+    this.el.style.height = `${VISIBLE_H * this.cell}px`;
     this.ctx.scale(dpr, dpr);
   }
 
-  // y=0 board row is drawn at the bottom; rows above the field are clipped.
+  // y=0 board row is drawn at the bottom; buffer rows sit above the field, and
+  // anything above the buffer is clipped.
   private py(y: number): number {
-    return (VISIBLE_H - 1 - y) * this.cell;
+    return (this.rows - 1 - y) * this.cell;
   }
 
   // ---- fx API (all no-ops when reduced effects is on) ----
@@ -209,7 +244,7 @@ export class FieldRenderer {
   fxAllClear(): void {
     if (!this.fxOn) return;
     const w = BOARD_W * this.cell;
-    const h = VISIBLE_H * this.cell;
+    const h = this.rows * this.cell;
     const palette = Object.values(PIECE_COLORS);
     for (let i = 0; i < 90; i++) {
       this.spawn({
@@ -229,7 +264,7 @@ export class FieldRenderer {
   fxGarbage(rows: number): void {
     if (!this.fxOn) return;
     const w = BOARD_W * this.cell;
-    const h = VISIBLE_H * this.cell;
+    const h = this.rows * this.cell;
     const bad = css('--bad') || '#ff5c5c';
     for (let i = 0; i < rows * 10; i++) {
       this.spawn({
@@ -244,11 +279,25 @@ export class FieldRenderer {
     this.kick(2 + rows * 1.2);
   }
 
+  /** Start the rise for `rows` freshly-inserted garbage rows (they already sit
+   * at the board's bottom; this only paces the settle-up draw). */
+  fxGarbageIn(rows: number): void {
+    if (!this.fxOn || rows <= 0) { this.garbageReveal = null; return; }
+    this.garbageReveal = { rows, age: 0 };
+  }
+
+  /** rows the stack is still drawn below its settled position (0 = settled) */
+  private garbageRiseRows(): number {
+    const g = this.garbageReveal;
+    if (!g) return 0;
+    return Math.max(0, g.rows - Math.floor(g.age / GARBAGE_RISE_MS_PER_ROW));
+  }
+
   /** Top out: the field takes a hit and the stack blows apart. */
   fxTopout(board: Board, colors: (PieceType | null)[][] | null): void {
     if (!this.fxOn) return;
     const dim = css('--text-dim') || '#8b93ab';
-    for (let y = 0; y < VISIBLE_H; y++) {
+    for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < BOARD_W; x++) {
         if (!board.filled(x, y) || Math.random() > 0.3) continue;
         const t = colors?.[y]?.[x];
@@ -306,6 +355,9 @@ export class FieldRenderer {
     this.rowFlashes = this.rowFlashes.filter((f) => (f.age += dt) < 260);
     this.cellFlashes = this.cellFlashes.filter((f) => (f.age += dt) < 140);
     this.trails = this.trails.filter((t) => (t.age += dt) < 160);
+    if (this.garbageReveal && (this.garbageReveal.age += dt) >= this.garbageReveal.rows * GARBAGE_RISE_MS_PER_ROW) {
+      this.garbageReveal = null;
+    }
   }
 
   private drawFx(): void {
@@ -335,7 +387,7 @@ export class FieldRenderer {
       ctx.globalAlpha = a;
       ctx.fillStyle = '#ffffff';
       for (const [x, y] of f.cells) {
-        if (y >= VISIBLE_H) continue;
+        if (y >= this.rows) continue;
         ctx.beginPath();
         ctx.roundRect(x * this.cell + 1, this.py(y) + 1, this.cell - 2, this.cell - 2, 4);
         ctx.fill();
@@ -412,17 +464,22 @@ export class FieldRenderer {
 
     const ctx = this.ctx;
     const w = BOARD_W * this.cell;
-    const h = VISIBLE_H * this.cell;
+    const h = this.rows * this.cell;
+    const bufH = this.bufferRows * this.cell; // transparent headroom above field
+    const fieldH = VISIBLE_H * this.cell;
     ctx.save();
+    // the headroom stays transparent so the active piece reads as floating
+    // ABOVE the board; the field background covers only the visible 20 rows
+    ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = css('--field-bg');
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, bufH, w, fieldH);
     // whole-device-pixel shake only — fractional offsets antialias every
     // cell edge and draw seams through the pieces
     ctx.translate(Math.round(this.shakeX * this.dpr) / this.dpr, Math.round(this.shakeY * this.dpr) / this.dpr);
-    // cover the sliver the shake exposes at the edges
+    // cover the sliver the shake exposes at the field edges (headroom stays clear)
     if (this.shakeMag > 0) {
       ctx.fillStyle = css('--field-bg');
-      ctx.fillRect(-14, -14, w + 28, h + 28);
+      ctx.fillRect(-14, bufH, w + 28, fieldH + 14);
     }
 
     if (settings.grid) {
@@ -430,7 +487,7 @@ export class FieldRenderer {
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = 1; x < BOARD_W; x++) {
-        ctx.moveTo(x * this.cell + 0.5, 0);
+        ctx.moveTo(x * this.cell + 0.5, bufH);
         ctx.lineTo(x * this.cell + 0.5, h);
       }
       for (let y = 0; y < VISIBLE_H - 1; y++) {
@@ -448,7 +505,15 @@ export class FieldRenderer {
       if (!game.board.filled(x, y)) return null;
       return game.colors?.[y]?.[x] ?? 'G';
     };
-    for (let y = 0; y < VISIBLE_H; y++) {
+    // freshly-inserted garbage rise: the whole stack is snapped up on the board,
+    // but drawn `rise` rows lower and settled up one row at a time, so the
+    // garbage pushes up from the floor (cells below the floor clip off-canvas)
+    const rise = this.garbageRiseRows();
+    if (rise > 0) {
+      ctx.save();
+      ctx.translate(0, Math.round(rise * this.cell * this.dpr) / this.dpr);
+    }
+    for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < BOARD_W; x++) {
         const k = keyAt(x, y);
         if (!k) continue;
@@ -460,6 +525,7 @@ export class FieldRenderer {
         }, 0.95);
       }
     }
+    if (rise > 0) ctx.restore();
 
     // highlight (last placement / alternative preview): the real piece skin
     // with a colored outline so it still reads as "the suggested move"
@@ -468,7 +534,7 @@ export class FieldRenderer {
       if (hl.piece && skinReady) {
         const n = pieceNeighbors(hl.cells);
         for (const [x, y] of hl.cells) {
-          if (y < VISIBLE_H) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
+          if (y < this.rows) this.drawSkinCell(x, y, hl.piece, n(x, y), 0.95);
         }
         ctx.strokeStyle = hl.color;
         ctx.lineWidth = Math.max(1.5, this.cell * 0.08);
@@ -476,7 +542,7 @@ export class FieldRenderer {
         // stroke only the piece's outer edges, not the seams between its cells
         const has = (x: number, y: number) => hl.cells.some(([cx, cy]) => cx === x && cy === y);
         for (const [x, y] of hl.cells) {
-          if (y >= VISIBLE_H) continue;
+          if (y >= this.rows) continue;
           const px = x * this.cell;
           const py = this.py(y);
           if (!has(x, y + 1)) { ctx.moveTo(px, py); ctx.lineTo(px + this.cell, py); }
@@ -487,7 +553,7 @@ export class FieldRenderer {
         ctx.stroke();
       } else {
         for (const [x, y] of hl.cells) {
-          if (y < VISIBLE_H) this.drawCell(x, y, hl.color, 0.95);
+          if (y < this.rows) this.drawCell(x, y, hl.color, 0.95);
         }
       }
     }
@@ -501,7 +567,7 @@ export class FieldRenderer {
           const gcells = cellsAt(a.type, a.rot, a.x, gy);
           const gn = pieceNeighbors(gcells);
           for (const [x, y] of gcells) {
-            if (y < VISIBLE_H) {
+            if (y < this.rows) {
               if (skinReady) this.drawSkinCell(x, y, a.type, gn(x, y), 0.3);
               else this.drawGhostCell(x, y, PIECE_COLORS[a.type]);
             }
@@ -512,19 +578,19 @@ export class FieldRenderer {
       const cells = cellsAt(a.type, a.rot, a.x, a.y);
       const n = pieceNeighbors(cells);
       for (const [x, y] of cells) {
-        if (y < VISIBLE_H) this.drawSkinCell(x, y, a.type, n(x, y), alpha);
+        if (y < this.rows) this.drawSkinCell(x, y, a.type, n(x, y), alpha);
       }
     }
 
     this.drawFx();
 
-    // danger vignette: red bleed from the top as the stack climbs
+    // danger vignette: red bleed from the field's top edge as the stack climbs
     if (this.danger > 0) {
-      const grad = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+      const grad = ctx.createLinearGradient(0, bufH, 0, bufH + fieldH * 0.55);
       grad.addColorStop(0, `rgba(255, 60, 60, ${0.28 * this.danger})`);
       grad.addColorStop(1, 'rgba(255, 60, 60, 0)');
       ctx.fillStyle = grad;
-      ctx.fillRect(-14, -14, w + 28, h * 0.55);
+      ctx.fillRect(-14, bufH, w + 28, fieldH * 0.55);
     }
     ctx.restore();
   }

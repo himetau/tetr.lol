@@ -9,7 +9,7 @@
 // input and the run ends at 40 cleared lines; placements get generic grading.
 
 import { Game, type LockEvent } from '../core/game';
-import { Board } from '../core/board';
+import { Board, VISIBLE_H } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile, renderMiniBoard } from './board-canvas';
 import { settings, saveSettings, onSettingsChange, botNodesOf, type OpponentKind } from './settings';
@@ -26,10 +26,11 @@ import { CC2_LST_LOOP_JSON } from '../engine/cc2-weights';
 import { buildFourwideStart, refillWalls, WELL_X, WELL_W } from '../engine/fourwide';
 import { genAllspin } from '../engine/allspin-gen';
 import {
-  gradeSound, actionSound, clearSound, comboSound, b2bBreakSound, topoutSound,
-  personalBestSound, garbageSound, garbageQueuedSound, damageAlertSound, clutchSound,
+  gradeSound, actionSound, clearSound, comboSound, b2bBreakSound, b2bSound, topoutSound,
+  personalBestSound, garbageSound, garbageQueuedSound, clutchSound, GarbageWarner,
+  surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
-import { actionText, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
 import { stats, saveStats, gradeAccuracy, emptyGrades, recordSession, fmtSprint, type Mode } from './stats';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
@@ -95,12 +96,14 @@ export class GameView {
   private vsTaken = 0;
   private vsKos = 0;
   private vsLastPending = 0; // for the telegraph sound
+  private warner = new GarbageWarner();
   private gmActive!: HTMLElement;
   private gmQueued!: HTMLElement;
 
   // feedback elements
   private chip!: HTMLElement;
   private toast!: HTMLElement;
+  private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
   private fieldPanel!: HTMLElement;
   private b2bTag!: HTMLElement;
   private b2b = 0;
@@ -143,7 +146,10 @@ export class GameView {
 
   constructor(mode: Mode) {
     this.mode = mode;
-    this.game = new Game();
+    // pieces spawn in the vanish zone, floating 3 rows above the field; a
+    // blocked spawn clutches up through the remaining hidden rows (tetr.io's
+    // clutch clear) instead of topping out outright
+    this.game = new Game(undefined, { spawnLift: 3, clutchRows: 1 });
     this.input = new InputHandler(this.game);
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
@@ -162,7 +168,8 @@ export class GameView {
   }
 
   private cellSize(): number {
-    const fit = Math.max(14, Math.min(34, Math.floor((window.innerHeight - 140) / 21)));
+    // 20 visible rows + 3 vanish rows above the field
+    const fit = Math.max(14, Math.min(34, Math.floor((window.innerHeight - 140) / 24)));
     const zoomed = Math.round(fit * (settings.boardZoom / 100));
     return Math.max(10, Math.min(44, zoomed));
   }
@@ -315,13 +322,16 @@ export class GameView {
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
     strip.append(this.b2bTag, meter);
-    row.append(strip, this.renderer.canvas);
+    row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
     this.chip = document.createElement('div');
     this.chip.className = 'grade-chip';
     this.toast = document.createElement('div');
     this.toast.className = 'reason-toast';
-    this.fieldPanel.append(this.chip, this.toast);
+    this.deathWarn = document.createElement('div');
+    this.deathWarn.className = 'death-warn';
+    this.deathWarn.textContent = '!';
+    this.fieldPanel.append(this.chip, this.toast, this.deathWarn);
 
     const right = document.createElement('div');
     right.className = 'side-col';
@@ -503,6 +513,8 @@ export class GameView {
     this.vsTaken = 0;
     this.vsKos = 0;
     this.vsLastPending = 0;
+    this.warner.reset();
+    this.deathWarn.classList.remove('show');
     this.gmActive.style.height = '0px';
     this.gmQueued.style.height = '0px';
     if (kind === 'off') {
@@ -566,11 +578,12 @@ export class GameView {
     if (o.sched) for (const lines of o.sched.tick(dt)) o.queue.queue(lines, this.vsClock);
     o.bot?.update(dt);
     const pending = o.queue.pending();
-    if (pending > this.vsLastPending && settings.soundFx) {
-      garbageQueuedSound(pending - this.vsLastPending);
-      if (pending >= 8 && this.vsLastPending < 8) damageAlertSound();
-    }
+    if (pending > this.vsLastPending && settings.soundFx) garbageQueuedSound(pending - this.vsLastPending);
     this.vsLastPending = pending;
+    // escalating incoming-garbage warnings + the death "!" (letting the whole
+    // queue through would bury the stack past the top of the field)
+    const lethal = this.warner.update(pending, this.game.board.maxHeight() + pending >= VISIBLE_H, settings.soundFx);
+    this.deathWarn.classList.toggle('show', lethal);
     const cell = this.cellSize();
     const active = Math.min(o.queue.active(this.vsClock), 20);
     const queued = Math.min(pending - active, 20 - active);
@@ -599,6 +612,14 @@ export class GameView {
         o.bot?.receiveAttack(sent);
       }
       if (canceled >= 4 && settings.soundFx) clutchSound();
+      // big attack: spike slam + a shaking "+N" number and a scaling field kick
+      if (sent >= BIG_SEND_MIN) {
+        if (settings.soundFx) bigSendSound(sent);
+        if (settings.effects) {
+          sentNumber(this.fieldPanel, sent, (sent - BIG_SEND_MIN) / 12);
+          this.renderer.kick(2 + Math.min(10, sent));
+        }
+      }
     } else {
       const rows = o.queue.rise(this.vsClock);
       if (rows.length > 0) {
@@ -606,6 +627,7 @@ export class GameView {
         this.vsTaken += rows.length;
         if (settings.soundFx) garbageSound(rows.length);
         this.renderer.fxGarbage(rows.length);
+        this.renderer.fxGarbageIn(rows.length);
       }
     }
     this.vsLastPending = o.queue.pending();
@@ -680,6 +702,12 @@ export class GameView {
   private onLock(ev: LockEvent): void {
     if (this.playStart === 0) this.playStart = Date.now(); // bot-first edge case
     this.lastLockAt = Date.now();
+    // clutch: the just-spawned next piece had to climb into the buffer to fit —
+    // a saved block-out, announced tetr.io style
+    if (this.game.clutched && !this.game.topOut) {
+      if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
+      if (settings.soundFx) clutchSound();
+    }
     this.comboHistory.push(this.combo);
     const b2bBefore = this.b2b; // chain state going into this placement
     if (this.mode === 'fourwide') {
@@ -715,10 +743,16 @@ export class GameView {
         this.b2b++;
         this.maxB2b = Math.max(this.maxB2b, this.b2b);
       } else {
-        if (this.b2b > 0 && settings.soundFx) b2bBreakSound();
+        if (this.b2b > 0 && settings.soundFx) {
+          b2bBreakSound();
+          if (this.b2b >= BIG_SEND_MIN) surgeSound(this.b2b); // cashing out a big chain
+        }
         this.b2b = 0;
       }
-      if (settings.soundFx) clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
+      if (settings.soundFx) {
+        clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
+        b2bSound(this.b2b); // rising jingle, climbs with the chain
+      }
     }
     this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
     this.fxOnLock(ev, this.b2b, 0);
