@@ -31,6 +31,7 @@ import {
   surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
 import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
+import { SceneBackground, MODE_HUE, hotHue } from './scene-background';
 import { stats, saveStats, gradeAccuracy, emptyGrades, recordSession, fmtSprint, type Mode } from './stats';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
@@ -107,6 +108,7 @@ export class GameView {
   private topOutHandled = false; // death screen/sound fired for this top out
   private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
   private fieldPanel!: HTMLElement;
+  private background!: SceneBackground;
   private b2bTag!: ChainBubble;
   private b2b = 0;
   private maxB2b = 0;
@@ -194,6 +196,7 @@ export class GameView {
   destroy(): void {
     this.flushSession();
     cancelAnimationFrame(this.rafId);
+    this.background.destroy();
     clearTimeout(this.retryTimer);
     this.unsubSettings();
     this.cc2?.destroy();
@@ -232,7 +235,11 @@ export class GameView {
 
   private build(): HTMLElement {
     const wrap = document.createElement('div');
-    wrap.className = 'game-wrap';
+    wrap.className = 'game-wrap has-scene';
+    // full-scene falling-particle backdrop behind every panel, tinted to match
+    // this drill's stats colour and reactive to placement pace / clears
+    this.background = new SceneBackground(wrap, MODE_HUE[this.mode] ?? 205);
+    wrap.appendChild(this.background.el);
     // side columns grow with zoom so the scaled piece tiles fit; the left one
     // matches the (wider) queue column so stat labels and selects have room
     const left = document.createElement('div');
@@ -460,6 +467,7 @@ export class GameView {
     }
     this.b2b = 0;
     this.b2bTag.reset();
+    this.background.reset();
     // all-spin is a keep-the-chain drill: start mid-B2B so every clear must be
     // a spin/quad, and warm the Cold Clear worker so the first grade is quick
     if (this.mode === 'allspin') {
@@ -721,8 +729,15 @@ export class GameView {
     this.renderer.fxLock(ev.cells);
     this.renderer.fxDrop(ev.cells, color);
     if (ev.linesCleared === 0) return;
-    if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
-    else this.renderer.fxClear(clearedRowsOf(ev), [color, '#ffffff']);
+    if (ev.boardAfter.isEmpty()) {
+      this.renderer.fxAllClear();
+      this.background.pulse(8, 30);
+      this.background.sweep(30); // an all-clear drops a bright boundary
+    } else {
+      this.renderer.fxClear(clearedRowsOf(ev), [color, '#ffffff']);
+      // whoosh scales with the clear: line count + any active chain
+      this.background.pulse(ev.linesCleared + Math.max(b2b, combo) * 0.5, ev.spin !== 'none' ? 16 : 0);
+    }
     const label = lockActionLabel(ev);
     if (label) {
       const sub = [b2b >= 2 ? `B2B ×${b2b}` : '', combo >= 2 ? `COMBO ×${combo}` : '']
@@ -1477,6 +1492,20 @@ export class GameView {
       this.clockAt = t;
       this.refreshSession();
     }
+    // backdrop: fall speed off placement pace, colour off the live chain -
+    // a long B2B / combo visibly reddens the shaft, cooling back down when broken
+    const live = this.playStart !== 0 && !this.paused && !this.game.topOut;
+    let pps = 0;
+    if (live && this.session.pieces >= 2) {
+      const ms = (this.lastLockAt || Date.now()) - this.playStart;
+      if (ms > 500) pps = this.session.pieces / (ms / 1000);
+    }
+    const chain = Math.max(0, this.b2b, this.combo);
+    this.background.setEnergy(live ? Math.min(1, pps / 4) : 0);
+    this.background.setPush(live ? Math.min(120, chain * 8) : 0);
+    this.background.setHue(hotHue(MODE_HUE[this.mode] ?? 205, chain / 10));
+    this.background.frame(dt);
+
     if (this.preview) {
       // render preview: boardBefore with its real skins + the alternative
       // placement as its own piece skin, outlined

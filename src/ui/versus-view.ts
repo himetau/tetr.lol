@@ -18,6 +18,7 @@ import {
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
 import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
+import { SceneBackground, MODE_HUE, hotHue } from './scene-background';
 import { PIECE_COLORS, cellsAt } from '../core/pieces';
 
 export class VersusView {
@@ -59,6 +60,7 @@ export class VersusView {
   private lowestY = Infinity;
 
   private fieldPanel!: HTMLElement;
+  private background!: SceneBackground;
   private botPanel!: HTMLElement;
   private leftCol!: HTMLElement;
   private rightCol!: HTMLElement;
@@ -124,6 +126,7 @@ export class VersusView {
   destroy(): void {
     this.recordMatch(); // leaving mid-match still banks finished rounds
     cancelAnimationFrame(this.rafId);
+    this.background.destroy();
     clearTimeout(this.roundTimer);
     this.clearCountdown();
     this.unsubSettings();
@@ -147,7 +150,10 @@ export class VersusView {
 
   private build(): HTMLElement {
     const wrap = document.createElement('div');
-    wrap.className = 'game-wrap';
+    wrap.className = 'game-wrap has-scene';
+    // full-scene falling-particle backdrop behind every panel (teal 1v1 tint)
+    this.background = new SceneBackground(wrap, MODE_HUE.versus);
+    wrap.appendChild(this.background.el);
     // side columns share the sizing of every other mode (hug the queue tiles)
     const colW = sideColWidth(this.cellSize());
 
@@ -393,6 +399,7 @@ export class VersusView {
     this.clock = 0;
     this.b2b = 0;
     this.combo = -1;
+    this.background.reset();
     this.lastPending = 0;
     this.warner.reset();
     this.deathWarn.classList.remove('show');
@@ -639,8 +646,16 @@ export class VersusView {
           this.renderer.kick(2 + Math.min(10, sentNow));
         }
         if (settings.effects) {
-          if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
-          else this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+          if (ev.boardAfter.isEmpty()) {
+            this.renderer.fxAllClear();
+            this.background.pulse(8, 30);
+            this.background.sweep(30);
+          } else {
+            this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+            this.background.pulse(ev.linesCleared + Math.max(this.b2b, this.combo) * 0.5, ev.spin !== 'none' ? 16 : 0);
+          }
+          // a spike slam drops a bright boundary down the shaft
+          if (sentNow >= BIG_SEND_MIN) this.background.sweep(12);
           const label = lockActionLabel(ev);
           if (label) {
             const sub = [this.b2b >= 2 ? `B2B ×${this.b2b}` : '', this.combo >= 1 ? `COMBO ×${this.combo}` : '', sentNow > 0 ? `+${sentNow}` : '']
@@ -714,7 +729,17 @@ export class VersusView {
       this.renderer.danger = Math.max(0, Math.min(1, (this.game.board.maxHeight() - 12) / 6));
       this.botRenderer.danger = Math.max(0, Math.min(1, ((this.bot?.game.board.maxHeight() ?? 0) - 12) / 6));
       this.updateHud();
+      // backdrop: fall speed off placement pace, colour off the live chain
+      const pps = this.matchMs > 500 && this.pieces >= 2 ? this.pieces / (this.matchMs / 1000) : 0;
+      const chain = Math.max(0, this.b2b, this.combo);
+      this.background.setEnergy(Math.min(1, pps / 4));
+      this.background.setPush(Math.min(120, chain * 8));
+      this.background.setHue(hotHue(MODE_HUE.versus, chain / 10));
+    } else {
+      this.background.setEnergy(0);
+      this.background.setPush(0);
     }
+    this.background.frame(dt);
     this.renderer.render(this.game);
     if (this.bot) this.botRenderer.render(this.bot.game);
   }

@@ -764,6 +764,22 @@ details.card:not([open]) .card-head .chevron {
   min-height: 0;
 }
 
+/* every mode: a full-scene falling-particle backdrop sits behind the panels.
+   The canvas fills the wrap at z 0; every other flex child rides above it */
+.game-wrap.has-scene {
+  position: relative;
+}
+.scene-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.game-wrap.has-scene > *:not(.scene-bg) {
+  position: relative;
+  z-index: 1;
+}
+
 .side-col {
   display: flex;
   flex-direction: column;
@@ -1574,6 +1590,34 @@ details.card:not([open]) .card-head .chevron {
 }
 .chain-slot.show .b2b-bubble.pop {
   animation: b2b-pop 0.32s ease;
+}
+/* snapped chain: a hard shake, a flash-white crack, then burst outward + fade.
+   Wins over the show/hide scale (it runs while the slot is still `show`). */
+.chain-slot.show .b2b-bubble.breaking {
+  animation: b2b-break 0.5s cubic-bezier(0.3, 0, 0.2, 1) forwards;
+}
+@keyframes b2b-break {
+  0% {
+    scale: 1;
+    opacity: 1;
+    filter: brightness(1);
+  }
+  18% {
+    scale: 1.28 0.82;
+    translate: -3px 0;
+    filter: brightness(2.4) saturate(0.4);
+    border-color: #fff;
+  }
+  36% {
+    scale: 0.86 1.24;
+    translate: 3px 0;
+    filter: brightness(1.6);
+  }
+  100% {
+    scale: 1.9;
+    opacity: 0;
+    filter: brightness(1.2) blur(2px);
+  }
 }
 @keyframes b2b-drift {
   0%,

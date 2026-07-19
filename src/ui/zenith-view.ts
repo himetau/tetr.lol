@@ -9,6 +9,7 @@ import { cellsAt } from '../core/pieces';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
 import { ZenithAltimeter } from './zenith-altimeter';
+import { SceneBackground, altHue } from './scene-background';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
 import {
@@ -64,6 +65,8 @@ export class ZenithView {
   private gmActive!: HTMLElement;
   private gmQueued!: HTMLElement;
   private altimeter!: ZenithAltimeter;
+  private background!: SceneBackground;
+  private bgAlt: number | null = null; // last altitude sampled for the backdrop
   private toastTimer = 0;
   private lastIncoming = 0;
   // countdown before the run goes live (input + clock held until "go")
@@ -120,6 +123,7 @@ export class ZenithView {
     // leaving mid-climb abandons the run - only topped-out runs are recorded
     this.endRun(false);
     cancelAnimationFrame(this.rafId);
+    this.background.destroy();
     this.unsubSettings();
     document.removeEventListener('keydown', this.keydown);
     document.removeEventListener('keyup', this.keyup);
@@ -134,7 +138,11 @@ export class ZenithView {
 
   private build(): HTMLElement {
     const wrap = document.createElement('div');
-    wrap.className = 'game-wrap';
+    wrap.className = 'game-wrap has-scene';
+    // full-scene falling-particle backdrop, painted behind every panel;
+    // retinted with altitude as the climb heats up
+    this.background = new SceneBackground(wrap, altHue(0));
+    wrap.appendChild(this.background.el);
     // side columns share the sizing of every other mode (hug the queue tiles)
     const colWq = sideColWidth(this.cellSize());
 
@@ -332,6 +340,9 @@ export class ZenithView {
     this.lastFloor = floorIndexAt(this.startAltitude);
     this.inDanger = false;
     this.altimeter.reset(this.startAltitude);
+    this.background.reset();
+    this.background.setHue(altHue(this.startAltitude));
+    this.bgAlt = null;
     // PB jingle only when there is a real record to chase from below
     this.bestAltitude = Math.max(0, ...stats.sessions.filter((s) => s.mode === 'quick').map((s) => s.altitude ?? 0));
     this.pbPlayed = this.bestAltitude < Math.max(50, this.startAltitude + 10);
@@ -485,6 +496,7 @@ export class ZenithView {
         }
         if (out.surged > 0) {
           this.altimeter.surge(out.surged + out.sent);
+          this.background.pulse(out.surged + out.sent, 20);
           this.showToast(`SURGE - ${out.surged + out.sent + out.canceled} lines`);
         } else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
@@ -591,10 +603,22 @@ export class ZenithView {
       this.updateHud();
       // red vignette bleeds in as the stack climbs toward the top
       this.renderer.danger = Math.max(0, Math.min(1, (this.game.board.maxHeight() - 12) / 6));
+      // drive the backdrop off the climb: fall speed from m/s, hue from
+      // altitude, an extra push near hyperspeed ranks
+      if (this.bgAlt !== null && dt > 0) {
+        const mps = Math.min(30, Math.max(0, (r.altitude - this.bgAlt) / (dt / 1000)));
+        this.background.setEnergy(Math.min(1, mps / 6));
+      }
+      this.bgAlt = r.altitude;
+      this.background.setHue(altHue(r.altitude));
+      this.background.setPush(Math.max(0, r.climbRank - 4) * 26);
     } else {
       this.renderer.danger = 0;
+      this.background.setEnergy(0);
+      this.background.setPush(0);
     }
     this.altimeter.frame(this.run, dt);
+    this.background.frame(dt);
     this.renderer.render(this.game);
   }
 
@@ -622,8 +646,10 @@ export class ZenithView {
     if (fi > this.lastFloor) {
       this.lastFloor = fi;
       if (settings.soundFx) levelUpSound();
-      if (settings.effects) actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), 'floor');
-      else this.showToast(`Floor ${fi + 1} - ${FLOORS[fi].name}`);
+      if (settings.effects) {
+        actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), 'floor');
+        this.background.sweep(6);
+      } else this.showToast(`Floor ${fi + 1} - ${FLOORS[fi].name}`);
     }
     if (!this.pbPlayed && r.altitude > this.bestAltitude) {
       this.pbPlayed = true;

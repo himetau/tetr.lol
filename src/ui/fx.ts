@@ -33,9 +33,11 @@ export class ChainBubble {
     this.el.append(float);
   }
 
-  /** Show `label ×count`; hidden while count < 1. */
+  /** Show `label ×count`. Dropping to 0 from a live chain shatters the bubble
+   * (a chain that big shouldn't just fade); use reset() to hide instantly. */
   set(label: string, count: number, charged = false): void {
     if (count >= 1) {
+      this.bubbleEl.classList.remove('breaking');
       this.labelEl.textContent = label;
       this.bubbleEl.textContent = `×${count}`;
       const hue = Math.max(5, 50 - (count - 1) * 6);
@@ -47,15 +49,37 @@ export class ChainBubble {
         void this.bubbleEl.offsetWidth; // restart the pop animation
         this.bubbleEl.classList.add('pop');
       }
-    } else {
-      this.el.classList.remove('show');
-      this.bubbleEl.classList.remove('charged', 'pop');
+    } else if (this.last >= 1) {
+      this.shatter(); // going 0 from a live chain: burst (then hides itself)
     }
+    // else already hidden or mid-shatter - leave the burst to finish
     this.last = count;
   }
 
+  /** Burst the bubble apart, then hide - the visual for a snapped chain. */
+  private shatter(): void {
+    const b = this.bubbleEl;
+    b.classList.remove('pop', 'charged');
+    // keep the slot shown so the burst is visible; hide once it finishes
+    b.classList.remove('breaking');
+    void b.offsetWidth;
+    b.classList.add('breaking');
+    const done = (e: AnimationEvent) => {
+      if (e.target !== b) return;
+      b.removeEventListener('animationend', done);
+      this.hide();
+    };
+    b.addEventListener('animationend', done);
+  }
+
+  private hide(): void {
+    this.el.classList.remove('show');
+    this.bubbleEl.classList.remove('charged', 'pop', 'breaking');
+  }
+
   reset(): void {
-    this.set('', 0);
+    this.hide();
+    this.last = 0;
   }
 }
 
