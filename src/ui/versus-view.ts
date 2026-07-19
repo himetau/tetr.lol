@@ -7,7 +7,7 @@
 import { Game, type LockEvent } from '../core/game';
 import { VISIBLE_H } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
-import { FieldRenderer, renderPieceTile } from './board-canvas';
+import { FieldRenderer, renderPieceTile, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
 import { settings, saveSettings, onSettingsChange, botNodesOf, DEFAULT_SETTINGS, type BotLevel } from './settings';
 import { GarbageQueue, versusAttack, scaleAttack, type GarbageConfig } from '../core/versus';
 import { BotPlayer } from './bot-player';
@@ -60,6 +60,8 @@ export class VersusView {
 
   private fieldPanel!: HTMLElement;
   private botPanel!: HTMLElement;
+  private leftCol!: HTMLElement;
+  private rightCol!: HTMLElement;
   private holdBox!: HTMLElement;
   private queueBox!: HTMLElement;
   private hud!: HTMLElement;
@@ -108,6 +110,9 @@ export class VersusView {
       this.input.binds = settings.binds;
       this.renderer.setCellSize(this.cellSize());
       this.botRenderer.setCellSize(this.botCellSize());
+      this.leftCol.style.width = sideColWidth(this.cellSize());
+      this.rightCol.style.width = sideColWidth(this.cellSize());
+      this.refreshPanes();
     });
     this.showLaunch();
     document.addEventListener('keydown', this.keydown);
@@ -127,24 +132,28 @@ export class VersusView {
   }
 
   private cellSize(): number {
-    // 20 visible rows + 3 vanish rows above the field
-    const fit = Math.max(14, Math.min(30, Math.floor((window.innerHeight - 140) / 24)));
+    // 20 visible rows + 3 vanish rows above the field - the same formula as
+    // the drill and quick play views, so the main board never shrinks in 1v1
+    const fit = Math.max(14, Math.min(34, Math.floor((window.innerHeight - 140) / 24)));
     const zoomed = Math.round(fit * (settings.boardZoom / 100));
-    return Math.max(10, Math.min(40, zoomed));
+    return Math.max(10, Math.min(44, zoomed));
   }
 
   private botCellSize(): number {
-    return Math.max(8, Math.round(this.cellSize() * 0.62));
+    // the opponent's board is the one that gives up space for the 1v1 layout
+    return Math.max(8, Math.round(this.cellSize() * 0.55));
   }
 
   private build(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'game-wrap';
-    const colW = `${Math.max(120, 5 * Math.round(this.cellSize() * 0.68) + 24)}px`;
+    // side columns share the sizing of every other mode (hug the queue tiles)
+    const colW = sideColWidth(this.cellSize());
 
     const left = document.createElement('div');
     left.className = 'side-col';
     left.style.width = colW;
+    this.leftCol = left;
     this.holdBox = panel('Hold');
     left.appendChild(this.holdBox);
     const match = panel('Match');
@@ -191,6 +200,7 @@ export class VersusView {
     const right = document.createElement('div');
     right.className = 'side-col';
     right.style.width = colW;
+    this.rightCol = right;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
 
@@ -709,9 +719,10 @@ export class VersusView {
   // ---- panes / hud ----
 
   private refreshPanes(): void {
+    // hold/next tiles: the shared sizing used by every mode
     const cell = this.cellSize();
-    const holdCell = Math.max(10, Math.round(cell * 0.68));
-    const queueCell = Math.max(8, Math.round(cell * 0.55));
+    const holdCell = holdCellOf(cell);
+    const queueCell = queueCellOf(cell);
     this.holdBox.querySelector('canvas')?.remove();
     this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
     for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
@@ -723,10 +734,13 @@ export class VersusView {
     const botTag = v.botLevel === 'custom' ? `${v.botNodes} nodes` : v.botLevel;
     this.hud.innerHTML =
       `<div class="alt vs-score">${this.score.me}<small>–</small>${this.score.cc}</div>` +
-      `<div class="floor">first to ${v.firstTo} · round ${Math.max(1, this.round)}</div>` +
+      // deliberately two lines - the column is too narrow for one
+      `<div class="floor">first to ${v.firstTo}</div>` +
+      `<div class="floor">round ${Math.max(1, this.round)}</div>` +
       `<div class="meta">time <b>${fmtTime(this.clock)}</b></div>` +
       `<div class="meta">sent <b>${this.sent}</b> · taken <b>${this.taken}</b></div>` +
-      `<div class="meta">bot <b>${botTag}</b> · <b>${v.botPps}</b> pps</div>`;
+      `<div class="meta">bot <b>${botTag}</b></div>` +
+      `<div class="meta"><b>${v.botPps}</b> pps</div>`;
     const bot = this.bot;
     this.botHud.innerHTML = bot
       ? `sent <b>${bot.linesSent}</b> · taken <b>${bot.garbageTaken}</b>` +

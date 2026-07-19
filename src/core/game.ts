@@ -54,10 +54,13 @@ export const PREVIEW_N = 5;
  * piece is nudged up to N rows higher (into the buffer above the field) instead
  * of topping out - the clear earns you the last-chance save. A blocked spawn
  * with no clear (or from a hold swap / reset) just tops out. `spawnLift` raises
- * the resting spawn row itself (pieces float that many rows higher). */
+ * the resting spawn row itself (pieces float that many rows higher).
+ * `wallCols` marks infinite-wall columns (the 4-wide drill) that don't count
+ * as stack when deciding whether incoming garbage buries the board. */
 export interface GameOptions {
   spawnLift?: number;
   clutchRows?: number;
+  wallCols?: number;
 }
 
 export class Game {
@@ -77,6 +80,7 @@ export class Game {
 
   private spawnLift: number;
   private clutchRows: number;
+  private wallCols: number;
 
   private bag: SevenBag;
   private queue: PieceType[] = [];
@@ -90,6 +94,7 @@ export class Game {
     this.bag = new SevenBag(seed);
     this.spawnLift = opts.spawnLift ?? 0;
     this.clutchRows = opts.clutchRows ?? 0;
+    this.wallCols = opts.wallCols ?? 0;
     this.refillQueue();
     this.spawn();
   }
@@ -344,8 +349,9 @@ export class Game {
     if (n === 0) return;
     // Buried: rows that would be shoved above the top of the field are lost -
     // that is a top out (you got sealed under the garbage). Measured before
-    // insertion, since insertGarbage silently discards the overflow.
-    const buried = this.board.maxHeight() + n > BOARD_H;
+    // insertion, since insertGarbage silently discards the overflow. Wall
+    // columns (4-wide) are ignored - only the real stack can bury you.
+    const buried = this.board.maxHeight(this.wallCols) + n > BOARD_H;
     this.board.insertGarbage(holes);
     this.colors.splice(BOARD_H - n, n);
     for (let i = 0; i < n; i++) this.colors.unshift(new Array<PieceType | null>(BOARD_W).fill(null));

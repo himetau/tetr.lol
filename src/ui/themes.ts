@@ -36,7 +36,8 @@ export type Palette = Record<string, string>;
 
 export const THEMES: Record<string, Palette> = {
   mocha: { bg: '#1e1e2e', text: '#cdd6f4', accent: '#cba6f7', accent2: '#89dceb', good: '#a6e3a1', warn: '#f9e2af', bad: '#f38ba8', line: '#363652' },
-  latte: { bg: '#eff1f5', text: '#4c4f69', accent: '#8839ef', accent2: '#04a5e5', good: '#40a02b', warn: '#df8e1d', bad: '#d20f39', line: '#ccd0da' },
+  // monochrome amber-on-charcoal HUD, after the Departure Mono specimen
+  ember: { bg: '#222222', text: '#ebe6dd', accent: '#ffa232', accent2: '#ffc46e', good: '#98c379', warn: '#ffd35c', bad: '#ff5c47', line: '#3a3a3a' },
   dracula: { bg: '#282a36', text: '#f8f8f2', accent: '#bd93f9', accent2: '#8be9fd', good: '#50fa7b', warn: '#f1fa8c', bad: '#ff5555', line: '#44475a' },
   nord: { bg: '#2e3440', text: '#eceff4', accent: '#88c0d0', accent2: '#b48ead', good: '#a3be8c', warn: '#ebcb8b', bad: '#bf616a', line: '#434c5e' },
   gruvbox: { bg: '#282828', text: '#ebdbb2', accent: '#fabd2f', accent2: '#8ec07c', good: '#b8bb26', warn: '#fe8019', bad: '#fb4934', line: '#504945' },
@@ -47,15 +48,17 @@ export const THEMES: Record<string, Palette> = {
 export const THEME_PRESETS: [string, string][] = [
   ['rose-pine', 'Rosé Pine'],
   ['mocha', 'Catppuccin Mocha'],
-  ['latte', 'Catppuccin Latte'],
+  ['ember', 'Ember'],
   ['dracula', 'Dracula'],
   ['nord', 'Nord'],
   ['gruvbox', 'Gruvbox'],
   ['custom', 'Custom'],
 ];
 
-/** presets that should render on a light stylesheet base (shadows, series). */
-const LIGHT = new Set(['latte']);
+/** presets that should render on a light stylesheet base (shadows, series).
+ * Currently empty - every preset is dark - but the mechanism stays for
+ * future light presets. */
+const LIGHT = new Set<string>([]);
 
 /** relative luminance (0..1) of a #rrggbb colour */
 function luminance(hex: string): number {

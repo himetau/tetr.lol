@@ -7,7 +7,7 @@ import { Game, type LockEvent } from '../core/game';
 import { VISIBLE_H, BOARD_W } from '../core/board';
 import { cellsAt } from '../core/pieces';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
-import { FieldRenderer, renderPieceTile } from './board-canvas';
+import { FieldRenderer, renderPieceTile, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
 import { ZenithAltimeter } from './zenith-altimeter';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
@@ -51,6 +51,8 @@ export class ZenithView {
   private gravityMod = false;
 
   private fieldPanel!: HTMLElement;
+  private leftCol!: HTMLElement;
+  private rightCol!: HTMLElement;
   private holdBox!: HTMLElement;
   private queueBox!: HTMLElement;
   private hud!: HTMLElement;
@@ -104,6 +106,9 @@ export class ZenithView {
       this.input.binds = settings.binds;
       this.renderer.setCellSize(this.cellSize());
       this.altimeter.setWidth(BOARD_W * this.cellSize());
+      this.leftCol.style.width = sideColWidth(this.cellSize());
+      this.rightCol.style.width = sideColWidth(this.cellSize());
+      this.refreshPanes();
     });
     this.showLaunch();
     document.addEventListener('keydown', this.keydown);
@@ -130,15 +135,13 @@ export class ZenithView {
   private build(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'game-wrap';
-    // panel width hugs a 4.2-cell-wide piece tile; pieces are sized so the
-    // I-piece nearly fills that width, and the panel grows taller to fit.
-    // The Next queue's tiles are 1.5× the hold size, so its column is wider.
-    const qc = Math.round(this.cellSize() * 0.62);
-    const colWq = `${Math.max(104, Math.round(4.2 * Math.round(qc * 1.5)) + 24)}px`;
+    // side columns share the sizing of every other mode (hug the queue tiles)
+    const colWq = sideColWidth(this.cellSize());
 
     const left = document.createElement('div');
     left.className = 'side-col';
     left.style.width = colWq; /* match the queue column so text has room */
+    this.leftCol = left;
     this.holdBox = panel('Hold');
     left.appendChild(this.holdBox);
     const runPanel = panel('Run');
@@ -190,6 +193,7 @@ export class ZenithView {
     const right = document.createElement('div');
     right.className = 'side-col';
     right.style.width = colWq;
+    this.rightCol = right;
     this.queueBox = panel('Next');
     right.append(this.b2bTag.el, this.queueBox);
 
@@ -597,15 +601,14 @@ export class ZenithView {
   // ---- panes / hud ----
 
   private refreshPanes(): void {
+    // hold/next tiles: the shared sizing used by every mode
     const cell = this.cellSize();
-    // hold and next: same cell size, same 4.2-cell tile so pieces fill the
-    // panel width (matches the colW formula in build())
-    const holdCell = Math.max(10, Math.round(cell * 0.62));
-    const queueCell = Math.round(holdCell * 1.5); // 1.5× bigger next pieces
+    const holdCell = holdCellOf(cell);
+    const queueCell = queueCellOf(cell);
     this.holdBox.querySelector('canvas')?.remove();
-    this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell, 4.2));
+    this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
     for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
-    for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell, 4.2));
+    for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell));
   }
 
   private updateHud(): void {

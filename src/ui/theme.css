@@ -1,6 +1,6 @@
 /* Application-shell aesthetic, tetr.io-inspired, on a Catppuccin-leaning
-   palette (Mocha dark / Latte light) with a mauve accent - deliberately not
-   a strict port; piece colors come from the user's tetr.io skin. */
+   palette (Mocha dark) with a mauve accent - deliberately not a strict port;
+   piece colors come from the user's tetr.io skin. */
 
 /* bundled so the pixel font renders everywhere, not just where it's installed;
    block = wait for it rather than flashing a fallback (it's ~22 KB same-origin) */
@@ -22,38 +22,9 @@
   --font-display: "Roboto Condensed", "Roboto", "Noto Sans", sans-serif;
   --font-mono: "Maple Mono", "FiraCode Nerd Font", ui-monospace, monospace; */
 
-  /* Catppuccin Latte - solid (no glass), mauve accent */
-  --bg: #eff1f5;
-  --bg-deep: #e6e9ef;
-  --bg-raised: #ffffff;
-  --bg-inset: #dce0e8;
-  --text: #4c4f69;
-  --text-dim: #7c7f93;
-  --accent: #8839ef;
-  --accent2: #04a5e5;
-  --accent-soft: #e3d0fb;
-  --on-accent: #ffffff;
-  --good: #40a02b;
-  --warn: #df8e1d;
-  --bad: #d20f39;
-  --line: #ccd0da;
-  /* chart series - one color per mode against --bg-raised in the slot order
-     lst → free → fourwide → allspin (+quick) */
-  --series-lst: #fe640b;
-  --series-free: #1e66f5;
-  --series-fourwide: #40a02b;
-  --series-allspin: #8839ef;
-  --series-quick: #df8e1d;
-  --series-versus: #179299;
-  --field-bg: #292c3c;
-  --field-grid: #343849;
-  --shadow: 0 2px 10px rgba(76, 79, 105, 0.12);
-  --radius: 6px;
-  --radius-sm: 4px;
-}
-
-[data-theme="dark"] {
-  /* Catppuccin Mocha - solid (no glass), mauve accent */
+  /* Catppuccin Mocha - solid (no glass), mauve accent. Every preset is dark
+     now, so the dark palette is the root default (no light flash before
+     applyTheme runs). */
   --bg: #1e1e2e;
   --bg-deep: #181825;
   --bg-raised: #252537;
@@ -68,6 +39,8 @@
   --warn: #f9e2af;
   --bad: #f38ba8;
   --line: #363652;
+  /* chart series - one color per mode against --bg-raised in the slot order
+     lst → free → fourwide → allspin (+quick) */
   --series-lst: #fab387;
   --series-free: #89b4fa;
   --series-fourwide: #a6e3a1;
@@ -77,6 +50,8 @@
   --field-bg: #11111b;
   --field-grid: #22222f;
   --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --radius: 6px;
+  --radius-sm: 4px;
 }
 
 * {
@@ -1624,6 +1599,10 @@ details.card:not([open]) .card-head .chevron {
   letter-spacing: 0.1em;
   color: var(--accent2);
   margin: 2px 0 8px;
+}
+/* 1v1 splits "first to N" / "round M" across two lines - keep them tight */
+.zenith-hud .floor + .floor {
+  margin-top: -6px;
 }
 .zenith-hud .meta {
   font-size: 12.5px;

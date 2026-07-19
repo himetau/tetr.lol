@@ -156,9 +156,10 @@ export function loadSettings(): AppSettings {
     delete (merged as unknown as Record<string, unknown>).autoRestartTki;
     // migration: cancelDasOnDirChange inverted into dasCarry (default off, no bounce)
     delete (merged.handling as unknown as Record<string, unknown>).cancelDasOnDirChange;
-    // migration: the 'auto' theme was removed - keep the user's light/dark look
-    if (merged.palette.preset === 'auto') {
-      merged.palette.preset = merged.theme === 'light' ? 'latte' : 'mocha';
+    // migration: the 'auto' and 'latte' themes were removed - fall back to
+    // the closest remaining preset
+    if (merged.palette.preset === 'auto' || merged.palette.preset === 'latte') {
+      merged.palette.preset = 'mocha';
     }
     return merged;
   } catch {

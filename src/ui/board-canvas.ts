@@ -602,6 +602,20 @@ export class FieldRenderer {
   }
 }
 
+/** Shared hold/next pane sizing so the queue pieces and the side columns
+ * are the same size in every mode (drills, quick play, 1v1). */
+export function holdCellOf(boardCell: number): number {
+  return Math.max(10, Math.round(boardCell * 0.68));
+}
+/** Next-queue piece cell - 1.5× the hold/preview base so the pieces read large. */
+export function queueCellOf(boardCell: number): number {
+  return Math.round(Math.max(8, Math.round(boardCell * 0.55)) * 1.5);
+}
+/** Side-column width: hugs the (wider) queue tiles so both columns match. */
+export function sideColWidth(boardCell: number): string {
+  return `${Math.max(110, 5 * queueCellOf(boardCell) + 24)}px`;
+}
+
 /** Small static canvas of a piece, for hold/next panes. */
 export function renderPieceTile(type: PieceType | null, cell = 18, widthCells = 5): HTMLCanvasElement {
   const canvas = document.createElement('canvas');

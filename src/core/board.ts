@@ -57,8 +57,10 @@ export class Board {
     for (let i = 0; i < n; i++) this.rows[i] = FULL_ROW & ~(1 << holes[i]);
   }
 
-  maxHeight(): number {
-    for (let y = BOARD_H - 1; y >= 0; y--) if (this.rows[y] !== 0) return y + 1;
+  /** Tallest column, optionally ignoring a column bitmask (4-wide's
+   * infinite walls would otherwise read as a full board). */
+  maxHeight(ignoreCols = 0): number {
+    for (let y = BOARD_H - 1; y >= 0; y--) if ((this.rows[y] & ~ignoreCols) !== 0) return y + 1;
     return 0;
   }
 

@@ -11,7 +11,7 @@
 import { Game, type LockEvent } from '../core/game';
 import { Board, VISIBLE_H } from '../core/board';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
-import { FieldRenderer, renderPieceTile, renderMiniBoard } from './board-canvas';
+import { FieldRenderer, renderPieceTile, renderMiniBoard, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
 import { settings, saveSettings, onSettingsChange, botNodesOf, type OpponentKind } from './settings';
 import { EngineClient } from './engine-client';
 import { ColdClearClient, type CC2Move } from './cc2-client';
@@ -103,6 +103,8 @@ export class GameView {
   // feedback elements
   private chip!: HTMLElement;
   private toast!: HTMLElement;
+  private overlay!: HTMLElement; // top-out death screen (quickplay-style)
+  private topOutHandled = false; // death screen/sound fired for this top out
   private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
   private fieldPanel!: HTMLElement;
   private b2bTag!: ChainBubble;
@@ -148,8 +150,13 @@ export class GameView {
     this.mode = mode;
     // pieces spawn in the vanish zone, floating 3 rows above the field; a
     // blocked spawn clutches up through the remaining hidden rows (tetr.io's
-    // clutch clear) instead of topping out outright
-    this.game = new Game(undefined, { spawnLift: 3, clutchRows: 1 });
+    // clutch clear) instead of topping out outright. In 4-wide the infinite
+    // wall columns must not count as stack for garbage burial.
+    this.game = new Game(undefined, {
+      spawnLift: 3,
+      clutchRows: 1,
+      wallCols: mode === 'fourwide' ? wallMask() : 0,
+    });
     this.input = new InputHandler(this.game);
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
@@ -177,13 +184,11 @@ export class GameView {
     return Math.max(10, Math.min(44, zoomed));
   }
 
-  /** Next-queue piece cell size - 1.5× the hold/preview base so the pieces
-   * read large; its column widens to match. */
   private queueCell(): number {
-    return Math.round(Math.max(8, Math.round(this.cellSize() * 0.55)) * 1.5);
+    return queueCellOf(this.cellSize());
   }
   private queueColW(): string {
-    return `${Math.max(110, 5 * this.queueCell() + 24)}px`;
+    return sideColWidth(this.cellSize());
   }
 
   destroy(): void {
@@ -341,7 +346,9 @@ export class GameView {
     this.deathWarn = document.createElement('div');
     this.deathWarn.className = 'death-warn';
     this.deathWarn.textContent = '!';
-    this.fieldPanel.append(this.chip, this.toast, this.deathWarn);
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'zenith-overlay';
+    this.fieldPanel.append(this.chip, this.toast, this.overlay, this.deathWarn);
 
     const right = document.createElement('div');
     right.className = 'side-col';
@@ -469,6 +476,8 @@ export class GameView {
     this.preview = null;
     this.paused = false;
     this.input.enabled = true;
+    this.topOutHandled = false;
+    this.hideDeathScreen();
     this.hideFeedback();
     this.clearDock();
     this.applyEvalVisibility();
@@ -493,6 +502,8 @@ export class GameView {
       if (this.mode === 'fourwide') this.b2bTag.set('COMBO', this.combo);
       this.lastLock = null;
       this.preview = null;
+      this.topOutHandled = false;
+      this.hideDeathScreen();
       this.hideFeedback();
       this.clearDock();
       this.resume();
@@ -794,6 +805,13 @@ export class GameView {
         cells: ev.cells.map(([a, b]) => [a, b] as [number, number]),
         wasTsd: openerDone,
       });
+      // dying during the opener must still reach the death screen - the
+      // grading early-returns below would skip the shared handleTopOut call
+      if (this.game.topOut) {
+        this.handleTopOut();
+        this.refreshAll();
+        return;
+      }
       // book playback: keep phase bookkeeping, skip grading the book's own move
       if (this.botMoving) {
         if (openerDone) this.openerPhase = false;
@@ -870,7 +888,11 @@ export class GameView {
   }
 
   private handleTopOut(): void {
-    if (!this.game.topOut) return;
+    if (!this.game.topOut || this.topOutHandled) return; // bot-play paths call this twice
+    this.topOutHandled = true;
+    // dead board: bound keys must not act (or click their action sounds);
+    // retry and undo re-enable input
+    this.input.enabled = false;
     this.renderer.fxTopout(this.game.board, this.game.colors);
     if (settings.soundFx) topoutSound();
     if (settings.autoRetryTopOut) {
@@ -880,8 +902,47 @@ export class GameView {
         if (this.game.topOut) this.resetDrill();
       }, 900);
     } else {
-      this.showToast('Top out - R to retry');
+      this.showDeathScreen();
     }
+  }
+
+  /** Quickplay-style death screen over the topped-out board: the run's
+   * headline stat, the session numbers, and the ways out. */
+  private showDeathScreen(): void {
+    const s = this.session;
+    this.overlay.replaceChildren();
+    this.overlay.classList.add('show', 'results');
+    const box = document.createElement('div');
+    box.className = 'zenith-box';
+    const bits: string[] = [];
+    if (this.mode === 'lst') bits.push(`${s.tsds}/${LST_GOAL_TSDS} TSDs`);
+    if (this.mode === 'free') bits.push(`${Math.min(s.lines, 40)}/40 lines`);
+    if (this.mode === 'fourwide') bits.push(`combo ×${this.maxCombo}`);
+    if (this.mode === 'allspin') bits.push(`B2B ×${this.maxB2b}`);
+    bits.push(`${s.pieces} pieces`);
+    const pps = this.livePps();
+    if (pps !== '-') bits.push(`${pps} PPS`);
+    const activeMs = this.playStart ? Math.max(0, (this.lastLockAt || Date.now()) - this.playStart) : 0;
+    if (activeMs >= 1000) bits.push(fmtSprint(activeMs, false));
+    if (this.opp) {
+      bits.push(`${this.vsSent} sent`, `${this.vsTaken} taken`);
+      if (this.opp.bot && this.vsKos > 0) bits.push(`${this.vsKos} KO${this.vsKos > 1 ? 's' : ''}`);
+    }
+    box.innerHTML = `<h2>Top out</h2>
+      <p class="sub">${bits.join(' · ')}</p>`;
+    const row = document.createElement('div');
+    row.className = 'zenith-opts';
+    row.append(
+      btn('Retry (R)', () => this.resetDrill()),
+      btn('Undo (Ctrl+Z)', () => this.undo()),
+    );
+    box.appendChild(row);
+    this.overlay.appendChild(box);
+  }
+
+  private hideDeathScreen(): void {
+    this.overlay.classList.remove('show', 'results');
+    this.overlay.replaceChildren();
   }
 
   /**
@@ -1349,7 +1410,7 @@ export class GameView {
   private refreshPanes(): void {
     // hold/next tiles scale with the board zoom, like tetr.io
     const cell = this.cellSize();
-    const holdCell = Math.max(10, Math.round(cell * 0.68));
+    const holdCell = holdCellOf(cell);
     const queueCell = this.queueCell(); // 1.5× larger next pieces
     this.holdBox.querySelector('canvas')?.remove();
     this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
