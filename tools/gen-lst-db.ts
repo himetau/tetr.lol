@@ -5,15 +5,15 @@
 //
 // Run: npm run gen:lst-db
 
-import { readFileSync, writeFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { decoder } from 'tetris-fumen';
+import { readFileSync, writeFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { decoder } from "tetris-fumen";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 interface PatternPage {
-  rows: string[];   // top-down, piece letters or X (gray) / _ (empty)
+  rows: string[]; // top-down, piece letters or X (gray) / _ (empty)
 }
 interface Pattern {
   fumen: string;
@@ -24,20 +24,23 @@ interface Section {
   patterns: Pattern[];
 }
 
-function extract(name: 'tki' | 'lst' | '4wide'): Section[] {
-  const pd = JSON.parse(readFileSync(join(here, 'data', `${name}-pd.json`), 'utf8'));
+function extract(name: "tki" | "lst" | "4wide"): Section[] {
+  const pd = JSON.parse(readFileSync(join(here, "data", `${name}-pd.json`), "utf8"));
   const body: string = pd.result.data.mdx.body;
   const re = /mdx\(\s*"(h[23])",\s*\{[^}]*\},\s*"((?:[^"\\]|\\.)*)"\)|data:\s*"(v115@[^"]+)"/g;
-  const sections: Section[] = [{ heading: 'Intro', patterns: [] }];
+  const sections: Section[] = [{ heading: "Intro", patterns: [] }];
   let m: RegExpExecArray | null;
   while ((m = re.exec(body)) !== null) {
     if (m[1]) {
       sections.push({ heading: m[2], patterns: [] });
     } else {
-      const fumen = m[3].replace(/\?/g, '');
+      const fumen = m[3].replace(/\?/g, "");
       try {
         const pages = decoder.decode(fumen).map((pg) => ({
-          rows: pg.field.str({ reduced: true, garbage: false }).split('\n').filter((r) => r.length > 0),
+          rows: pg.field
+            .str({ reduced: true, garbage: false })
+            .split("\n")
+            .filter((r) => r.length > 0),
         }));
         sections[sections.length - 1].patterns.push({ fumen, pages });
       } catch {
@@ -48,9 +51,9 @@ function extract(name: 'tki' | 'lst' | '4wide'): Section[] {
   return sections.filter((s) => s.patterns.length > 0);
 }
 
-const tkiSections = extract('tki');
-const lstSections = extract('lst');
-const fourwideSections = extract('4wide');
+const tkiSections = extract("tki");
+const lstSections = extract("lst");
+const fourwideSections = extract("4wide");
 
 // ---- TKI targets ------------------------------------------------------
 // Pre-TSD flat-top shapes (bag-order variants) that the opener drill grades
@@ -77,20 +80,22 @@ for (const sec of tkiSections) {
 // dedupe by shape
 const seen = new Set<string>();
 const dedupedTargets = targets.filter((t) => {
-  const k = t.rows.join('|');
-  if (seen.has(k)) return false;
+  const k = t.rows.join("|");
+  if (seen.has(k)) {
+    return false;
+  }
   seen.add(k);
   return true;
 });
 
 // Post-TSD LST start board (flat-top TKI after the first TSD, J placed):
-const LST_START = ['_______X__', 'X__XX_XXXX'];
+const LST_START = ["_______X__", "X__XX_XXXX"];
 
 writeFileSync(
-  join(here, '..', 'src', 'data', 'tki.json'),
+  join(here, "..", "src", "data", "tki.json"),
   JSON.stringify(
     {
-      source: 'https://four.lol/openers/tki/',
+      source: "https://four.lol/openers/tki/",
       targets: dedupedTargets,
       lstStart: LST_START,
     },
@@ -100,10 +105,10 @@ writeFileSync(
 );
 
 writeFileSync(
-  join(here, '..', 'src', 'data', 'lst-patterns.json'),
+  join(here, "..", "src", "data", "lst-patterns.json"),
   JSON.stringify(
     {
-      source: 'https://four.lol/stacking/lst/',
+      source: "https://four.lol/stacking/lst/",
       tki: tkiSections,
       lst: lstSections,
       fourwide: fourwideSections,
@@ -114,4 +119,6 @@ writeFileSync(
 );
 
 console.log(`tki.json: ${dedupedTargets.length} targets`);
-console.log(`lst-patterns.json: tki ${tkiSections.length} sections, lst ${lstSections.length} sections, 4wide ${fourwideSections.length} sections`);
+console.log(
+  `lst-patterns.json: tki ${tkiSections.length} sections, lst ${lstSections.length} sections, 4wide ${fourwideSections.length} sections`,
+);

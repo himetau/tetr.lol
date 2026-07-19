@@ -34,7 +34,8 @@
 // ≈70 lines/min on F10 at 'normal' pressure. Elite-lobby data - 'calm'
 // approximates casual lobbies.
 
-import { BOARD_W } from './board';
+import { BOARD_W } from "./board";
+import { activeLines, cancelLines, totalLines, type QueuedAttack } from "./attack-queue";
 
 // base-mode gravity (reference "classic" preset): g starts at 0.02 cells/frame
 // and rises 0.0005 cells/frame every second, from the start of the game
@@ -43,35 +44,119 @@ const BASE_G_PER_SEC = 0.0005;
 
 export interface FloorDef {
   name: string;
-  from: number;          // altitude (m) where the floor starts
-  modGravity: number;    // G, with the Gravity mod (0.5 + 0.3·idx)
-  lockMs: number;        // Gravity mod only - base mode is a flat 500ms
+  from: number; // altitude (m) where the floor starts
+  modGravity: number; // G, with the Gravity mod (0.5 + 0.3·idx)
+  lockMs: number; // Gravity mod only - base mode is a flat 500ms
   /** within-attack hole re-roll chance X (0.03·floorNo); between attacks it is
    * Y = 2.5·X - the reference keeps one well for long stretches on low floors
    * and only sprays proper cheese near the top. */
   messiness: number;
   attackEveryMs: number; // mean gap between incoming attacks at normal pressure
-  attackMax: number;     // attack size is 1..attackMax lines
+  attackMax: number; // attack size is 1..attackMax lines
 }
 
 // modGravity = 0.02 + 0.48 (F1 bump) + 0.30·(idx) = 0.5 + 0.3·idx (cells/frame)
 // lockMs = GravLockDelay[30,29,28,27,26,24,22,20,18,16] frames → ms @60fps
 // messiness = 0.03·floorNo (floorNo = idx+1)
 export const FLOORS: FloorDef[] = [
-  { name: 'Hall of Beginnings',   from: 0,    modGravity: 0.5, lockMs: 500, messiness: 0.03, attackEveryMs: 16900, attackMax: 2 },
-  { name: 'The Hotel',            from: 50,   modGravity: 0.8, lockMs: 483, messiness: 0.06, attackEveryMs: 7400,  attackMax: 2 },
-  { name: 'The Casino',           from: 150,  modGravity: 1.1, lockMs: 467, messiness: 0.09, attackEveryMs: 5200,  attackMax: 3 },
-  { name: 'The Arena',            from: 300,  modGravity: 1.4, lockMs: 450, messiness: 0.12, attackEveryMs: 4700,  attackMax: 4 },
-  { name: 'The Museum',           from: 450,  modGravity: 1.7, lockMs: 433, messiness: 0.15, attackEveryMs: 4500,  attackMax: 5 },
-  { name: 'Abandoned Offices',    from: 650,  modGravity: 2.0, lockMs: 400, messiness: 0.18, attackEveryMs: 3600,  attackMax: 5 },
-  { name: 'The Laboratory',       from: 850,  modGravity: 2.3, lockMs: 367, messiness: 0.21, attackEveryMs: 3400,  attackMax: 6 },
-  { name: 'The Core',             from: 1100, modGravity: 2.6, lockMs: 333, messiness: 0.24, attackEveryMs: 3400,  attackMax: 6 },
-  { name: 'Corruption',           from: 1350, modGravity: 2.9, lockMs: 300, messiness: 0.27, attackEveryMs: 3300,  attackMax: 7 },
-  { name: 'Platform of the Gods', from: 1650, modGravity: 3.2, lockMs: 267, messiness: 0.30, attackEveryMs: 2800,  attackMax: 8 },
+  {
+    name: "Hall of Beginnings",
+    from: 0,
+    modGravity: 0.5,
+    lockMs: 500,
+    messiness: 0.03,
+    attackEveryMs: 16900,
+    attackMax: 2,
+  },
+  {
+    name: "The Hotel",
+    from: 50,
+    modGravity: 0.8,
+    lockMs: 483,
+    messiness: 0.06,
+    attackEveryMs: 7400,
+    attackMax: 2,
+  },
+  {
+    name: "The Casino",
+    from: 150,
+    modGravity: 1.1,
+    lockMs: 467,
+    messiness: 0.09,
+    attackEveryMs: 5200,
+    attackMax: 3,
+  },
+  {
+    name: "The Arena",
+    from: 300,
+    modGravity: 1.4,
+    lockMs: 450,
+    messiness: 0.12,
+    attackEveryMs: 4700,
+    attackMax: 4,
+  },
+  {
+    name: "The Museum",
+    from: 450,
+    modGravity: 1.7,
+    lockMs: 433,
+    messiness: 0.15,
+    attackEveryMs: 4500,
+    attackMax: 5,
+  },
+  {
+    name: "Abandoned Offices",
+    from: 650,
+    modGravity: 2.0,
+    lockMs: 400,
+    messiness: 0.18,
+    attackEveryMs: 3600,
+    attackMax: 5,
+  },
+  {
+    name: "The Laboratory",
+    from: 850,
+    modGravity: 2.3,
+    lockMs: 367,
+    messiness: 0.21,
+    attackEveryMs: 3400,
+    attackMax: 6,
+  },
+  {
+    name: "The Core",
+    from: 1100,
+    modGravity: 2.6,
+    lockMs: 333,
+    messiness: 0.24,
+    attackEveryMs: 3400,
+    attackMax: 6,
+  },
+  {
+    name: "Corruption",
+    from: 1350,
+    modGravity: 2.9,
+    lockMs: 300,
+    messiness: 0.27,
+    attackEveryMs: 3300,
+    attackMax: 7,
+  },
+  {
+    name: "Platform of the Gods",
+    from: 1650,
+    modGravity: 3.2,
+    lockMs: 267,
+    messiness: 0.3,
+    attackEveryMs: 2800,
+    attackMax: 8,
+  },
 ];
 
 export function floorIndexAt(altitude: number): number {
-  for (let i = FLOORS.length - 1; i >= 0; i--) if (altitude >= FLOORS[i].from) return i;
+  for (let i = FLOORS.length - 1; i >= 0; i--) {
+    if (altitude >= FLOORS[i].from) {
+      return i;
+    }
+  }
   return 0;
 }
 
@@ -126,7 +211,9 @@ export function garbageFavor(floorIdx: number): number {
 export function columnWeights(favor: number): number[] {
   const slope = (20 - 2 * (10 + favor)) / 9;
   const w = new Array<number>(BOARD_W);
-  for (let i = 0; i < BOARD_W; i++) w[i] = Math.max(0, 10 + favor + i * slope);
+  for (let i = 0; i < BOARD_W; i++) {
+    w[i] = Math.max(0, 10 + favor + i * slope);
+  }
   return w;
 }
 
@@ -150,13 +237,17 @@ export function pickHoleColumn(
   centerOnly: boolean,
   rng: () => number,
 ): number {
-  if (favor === 0) return Math.floor(rng() * BOARD_W); // flat favor: plain uniform (TL rule)
+  // flat favor: plain uniform (TL rule)
+  if (favor === 0) {
+    return Math.floor(rng() * BOARD_W);
+  }
   const anchor = view?.garbageAnchor ?? -1;
   const order: { x: number; s: number }[] = [];
   for (let x = 0; x < BOARD_W; x++) {
     const h = view?.heights[x] ?? 0;
     // reference: height + 5·|x − anchor| + 0.1·rand; empty columns are free
-    const s = h === 0 ? 0.1 * rng() : h + (anchor >= 0 ? 5 * Math.abs(x - anchor) : 0) + 0.1 * rng();
+    const s =
+      h === 0 ? 0.1 * rng() : h + (anchor >= 0 ? 5 * Math.abs(x - anchor) : 0) + 0.1 * rng();
     order.push({ x, s });
   }
   order.sort((a, b) => a.s - b.s);
@@ -168,10 +259,15 @@ export function pickHoleColumn(
     sum += wi;
     cum[i] = sum;
   }
-  if (sum <= 0) return order[0].x; // reference fallback
+  // reference fallback
+  if (sum <= 0) {
+    return order[0].x;
+  }
   const r = rng() * sum;
   for (let i = 0; i < BOARD_W; i++) {
-    if (cum[i] > 0 && r <= cum[i]) return order[i].x;
+    if (cum[i] > 0 && r <= cum[i]) {
+      return order[i].x;
+    }
   }
   return order[0].x;
 }
@@ -179,13 +275,27 @@ export function pickHoleColumn(
 /** Lines sent by a clear (guideline attack table; B2B/surge handled by the
  * run, since they need chain state). Spins send 2·lines, quads 4, all-clear
  * adds 3 (the Zenith rule, vs TL's 5). */
-export function attackFor(lines: number, spin: 'none' | 'mini' | 'full', combo: number, allClear: boolean): number {
+export function attackFor(
+  lines: number,
+  spin: "none" | "mini" | "full",
+  combo: number,
+  allClear: boolean,
+): number {
   let atk = 0;
-  if (spin === 'full') atk = lines * 2;
-  else if (spin === 'mini') atk = Math.max(0, lines - 1);
-  else atk = lines === 4 ? 4 : lines - 1;
+  if (spin === "full") {
+    atk = lines * 2;
+  } else if (spin === "mini") {
+    atk = Math.max(0, lines - 1);
+  } else {
+    atk = lines === 4 ? 4 : lines - 1;
+  }
   atk += Math.floor(Math.max(0, combo) / 2);
-  if (allClear) atk += 3; // Zenith: all clears send 3
+
+  // Zenith: all clears send 3
+  if (allClear) {
+    atk += 3;
+  }
+
   return atk;
 }
 
@@ -202,7 +312,9 @@ export function windupSplit(lines: number, altitude: number): number[] {
   const imagined = 16 + Math.max(0, Math.floor((altitude - 3500) / 500));
   const base = Math.floor(imagined / 4);
   const sections = [base, base, base, base];
-  for (let i = 0; i < imagined - 4 * base; i++) sections[3 - i]++;
+  for (let i = 0; i < imagined - 4 * base; i++) {
+    sections[3 - i]++;
+  }
   const segs: number[] = [];
   let atk = lines;
   for (let i = 0; i < sections.length && atk > 0; i++) {
@@ -213,19 +325,13 @@ export function windupSplit(lines: number, altitude: number): number[] {
   return segs;
 }
 
-export type Pressure = 'calm' | 'normal' | 'brutal';
+export type Pressure = "calm" | "normal" | "brutal";
 const PRESSURE_GAP: Record<Pressure, number> = { calm: 1.7, normal: 1, brutal: 0.55 };
 
-interface QueuedAttack {
-  lines: number;
-  entersAtMs: number; // telegraph ends; rises on a non-clearing lock after this
-  rising?: boolean;   // started entering the board (well re-roll happened)
-}
-
 export interface ClearOutcome {
-  sent: number;      // lines that boosted altitude
-  canceled: number;  // lines that canceled incoming garbage
-  surged: number;    // extra lines released by B2B surge
+  sent: number; // lines that boosted altitude
+  canceled: number; // lines that canceled incoming garbage
+  surged: number; // extra lines released by B2B surge
 }
 
 /**
@@ -237,8 +343,8 @@ export class ZenithRun {
   altitude: number;
   timeMs = 0;
   climbRank = 1;
-  climbProgress = 0;   // experience toward the next rank (0..4·rank)
-  b2b = 0;             // B2B charge (Zenith-style: builds, surges on break)
+  climbProgress = 0; // experience toward the next rank (0..4·rank)
+  b2b = 0; // B2B charge (Zenith-style: builds, surges on break)
   combo = -1;
   incoming: QueuedAttack[] = [];
   gravityMod: boolean;
@@ -262,11 +368,21 @@ export class ZenithRun {
   private grace = 0;
   private lastAtkMs = 0;
 
-  constructor(startAltitude: number, private pressure: Pressure, gravityMod = false, rng: () => number = Math.random) {
+  constructor(
+    startAltitude: number,
+    private pressure: Pressure,
+    gravityMod = false,
+    rng: () => number = Math.random,
+  ) {
     this.altitude = startAltitude;
     this.gravityMod = gravityMod;
     this.rng = rng;
-    this.holeCol = pickHoleColumn(garbageFavor(floorIndexAt(startAltitude)), undefined, this.centerGather(), rng);
+    this.holeCol = pickHoleColumn(
+      garbageFavor(floorIndexAt(startAltitude)),
+      undefined,
+      this.centerGather(),
+      rng,
+    );
     this.nextAttackAtMs = this.gapMs() * (0.6 + 0.8 * this.rng());
   }
 
@@ -288,7 +404,9 @@ export class ZenithRun {
   /** cells per second the active piece falls. Base mode ramps with time
    * (0.02 + 0.0005·s per frame); the Gravity mod uses the per-floor column. */
   gravityCps(): number {
-    if (this.gravityMod) return this.floor().modGravity * 60;
+    if (this.gravityMod) {
+      return this.floor().modGravity * 60;
+    }
     return (BASE_G0 + BASE_G_PER_SEC * (this.timeMs / 1000)) * 60;
   }
 
@@ -305,23 +423,25 @@ export class ZenithRun {
 
   /** all queued lines (cancelable until they actually rise) */
   incomingLines(): number {
-    return this.incoming.reduce((n, a) => n + a.lines, 0);
+    return totalLines(this.incoming);
   }
 
   /** lines whose telegraph elapsed - they rise on your next non-clearing lock */
   activeLines(): number {
-    return this.incoming.reduce((n, a) => n + (a.entersAtMs <= this.timeMs ? a.lines : 0), 0);
+    return activeLines(this.incoming, this.timeMs);
   }
 
   private gapMs(): number {
-    return this.floor().attackEveryMs * PRESSURE_GAP[this.pressure] / this.rateMult;
+    return (this.floor().attackEveryMs * PRESSURE_GAP[this.pressure]) / this.rateMult;
   }
 
   /** Garbage telegraph before an attack can rise: 5.0s on F1 down to 0.5s on
    * F10 (reference garbagephase, doubled from the source's half-frame count).
    * Attacks of 8+ lines are wound up into staggered segments instead. */
   private queueAttack(lines: number): void {
-    if (lines <= 0) return;
+    if (lines <= 0) {
+      return;
+    }
     // being attacked banks Targeting Grace (+= received lines, cap 18) and
     // marks the "last attacked" moment the release timer counts from
     this.grace = Math.min(18, this.grace + lines);
@@ -349,7 +469,7 @@ export class ZenithRun {
       this.rankLockedMs -= dtMs;
     } else {
       const r = this.climbRank;
-      this.climbProgress -= (r * r + r) / 20 * dtSec;
+      this.climbProgress -= ((r * r + r) / 20) * dtSec;
     }
     if (this.climbProgress < 0) {
       // demotion: fall to the top of the lower rank (reference adds storedXP
@@ -383,9 +503,17 @@ export class ZenithRun {
     // multiplier bumps from 8:00 on (reference Fatigue table)
     const min = this.timeMs / 60000;
     this.rateMult = 1 + 0.25 * [3, 5, 7].filter((m) => min >= m).length;
-    if (min >= 9) this.rateMult *= 1.25;
-    if (min >= 11) this.rateMult *= 1.25;
-    const bursts = [[8, 2], [10, 3], [12, 5]] as const;
+    if (min >= 9) {
+      this.rateMult *= 1.25;
+    }
+    if (min >= 11) {
+      this.rateMult *= 1.25;
+    }
+    const bursts = [
+      [8, 2],
+      [10, 3],
+      [12, 5],
+    ] as const;
     while (this.fatigueStep < bursts.length && min >= bursts[this.fatigueStep][0]) {
       this.queueAttack(bursts[this.fatigueStep][1]);
       this.fatigueStep++;
@@ -393,7 +521,10 @@ export class ZenithRun {
 
     // Targeting Grace releases 1 point every GRACE_RELEASE_MS[floor] after
     // the last attack; each release refreshes the timer (reference Loop)
-    if (this.grace > 0 && this.timeMs >= this.lastAtkMs + GRACE_RELEASE_MS[floorIndexAt(this.altitude)]) {
+    if (
+      this.grace > 0 &&
+      this.timeMs >= this.lastAtkMs + GRACE_RELEASE_MS[floorIndexAt(this.altitude)]
+    ) {
       this.grace--;
       this.lastAtkMs = this.timeMs;
     }
@@ -432,10 +563,14 @@ export class ZenithRun {
     const insert = () => {
       holes.push(this.holeCol);
       for (let x = 0; x < BOARD_W; x++) {
-        if (x !== this.holeCol) heights[x]++;
-        else if (heights[x] > 0) heights[x]++;
+        // every column rises except an empty hole column (which stays height 0)
+        if (x !== this.holeCol || heights[x] > 0) {
+          heights[x]++;
+        }
       }
-      if (anchor === -1) anchor = this.holeCol;
+      if (anchor === -1) {
+        anchor = this.holeCol;
+      }
     };
     const repick = () => {
       this.holeCol = pickHoleColumn(
@@ -445,7 +580,11 @@ export class ZenithRun {
         this.rng,
       );
     };
-    while (holes.length < cap && this.incoming.length > 0 && this.incoming[0].entersAtMs <= this.timeMs) {
+    while (
+      holes.length < cap &&
+      this.incoming.length > 0 &&
+      this.incoming[0].entersAtMs <= this.timeMs
+    ) {
       const atk = this.incoming[0];
       // the well column is persistent: it only has a CHANCE to re-pick - per
       // row with the floor's messiness X, ×2.5 (Y) between separate attacks -
@@ -453,21 +592,27 @@ export class ZenithRun {
       // (dig-difficulty ranking), so low floors keep one semi-consistent well
       if (!atk.rising) {
         atk.rising = true;
-        if (this.rng() < Math.min(1, mY)) repick();
+        if (this.rng() < Math.min(1, mY)) {
+          repick();
+        }
       }
       while (atk.lines > 0 && holes.length < cap) {
         insert();
         atk.lines--;
-        if (atk.lines > 0 && this.rng() < mX) repick();
+        if (atk.lines > 0 && this.rng() < mX) {
+          repick();
+        }
       }
-      if (atk.lines === 0) this.incoming.shift();
+      if (atk.lines === 0) {
+        this.incoming.shift();
+      }
     }
     this.garbageTaken += holes.length;
     return holes;
   }
 
   /** Player cleared lines: cancel incoming garbage first, rest is altitude. */
-  onClear(lines: number, spin: 'none' | 'mini' | 'full', allClear: boolean): ClearOutcome {
+  onClear(lines: number, spin: "none" | "mini" | "full", allClear: boolean): ClearOutcome {
     this.combo++;
     let atk = attackFor(lines, spin, this.combo, allClear);
     let surged = 0;
@@ -475,9 +620,11 @@ export class ZenithRun {
     // B2B: consecutive "special clears" (spins + quads) charge the chain and
     // add +1 attack; breaking it with a plain clear releases a surge of
     // (B2B − 3). All Clears add +2 B2B on their own and never break the chain.
-    const special = spin !== 'none' || lines === 4;
+    const special = spin !== "none" || lines === 4;
     if (special) {
-      if (this.b2b > 0) atk += 1;
+      if (this.b2b > 0) {
+        atk += 1;
+      }
       this.b2b += 1;
     } else if (!allClear) {
       if (this.b2b >= 4) {
@@ -486,17 +633,12 @@ export class ZenithRun {
       }
       this.b2b = 0;
     }
-    if (allClear) this.b2b += 2;
+    if (allClear) {
+      this.b2b += 2;
+    }
 
     // cancel queued garbage first (telegraphed or active - both cancelable)
-    let canceled = 0;
-    while (atk - canceled > 0 && this.incoming.length > 0) {
-      const head = this.incoming[0];
-      const used = Math.min(head.lines, atk - canceled);
-      head.lines -= used;
-      canceled += used;
-      if (head.lines === 0) this.incoming.shift();
-    }
+    const canceled = cancelLines(this.incoming, atk);
     const sent = atk - canceled;
 
     // sent lines boost altitude by the Climb Speed multiplier per line
@@ -504,13 +646,19 @@ export class ZenithRun {
     // crossing a floor: an action (clear/send/cancel) within 2m of the next
     // floor punches through the near-floor "stuck" zone with a flat +3m
     const toNext = nextFloorFrom(this.altitude) - this.altitude;
-    if (toNext >= 0 && toNext <= 2) this.altitude += 3;
+    if (toNext >= 0 && toNext <= 2) {
+      this.altitude += 3;
+    }
 
     // climb experience (reference AwardLines): clearing lines, sending attack,
     // and canceling garbage each award XP separately toward the next rank
     let xp = Math.min(lines, 2) + 0.05;
-    if (sent > 0) xp += sent + 0.05;
-    if (canceled > 0) xp += canceled * 0.5 + 0.05;
+    if (sent > 0) {
+      xp += sent + 0.05;
+    }
+    if (canceled > 0) {
+      xp += canceled * 0.5 + 0.05;
+    }
     this.bumpClimb(xp);
     this.linesSent += sent;
     return { sent, canceled, surged };

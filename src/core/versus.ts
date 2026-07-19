@@ -14,13 +14,15 @@
 // All knobs live in GarbageConfig so the settings screen / launch overlay
 // can tune them.
 
+import { activeLines, cancelLines, totalLines, type QueuedAttack } from "./attack-queue";
+
 export interface GarbageConfig {
-  delayMs: number;     // telegraph before an attack can rise
-  messiness: number;   // 0..1 chance each row WITHIN an attack re-rolls the hole (tetr.io TL: 0)
-  cap: number;         // max rows that rise on one non-clearing lock
+  delayMs: number; // telegraph before an attack can rise
+  messiness: number; // 0..1 chance each row WITHIN an attack re-rolls the hole (tetr.io TL: 0)
+  cap: number; // max rows that rise on one non-clearing lock
   /** allowed hole columns (4-wide restricts holes to the well) */
   holeMin: number;
-  holeMax: number;     // inclusive
+  holeMax: number; // inclusive
 }
 
 export const DEFAULT_GARBAGE: GarbageConfig = {
@@ -33,11 +35,11 @@ export const DEFAULT_GARBAGE: GarbageConfig = {
 
 /** Every dial of the versus damage table - all user-tunable. */
 export interface AttackRules {
-  spinMult: number;   // full-spin attack = floor(lines × this)
+  spinMult: number; // full-spin attack = floor(lines × this)
   quadAttack: number; // lines a quad sends
-  b2bBonus: number;   // extra lines while the B2B chain is alive
-  comboDiv: number;   // attack += floor(combo / this); 0 disables combo damage
-  allClear: number;   // lines a perfect clear adds
+  b2bBonus: number; // extra lines while the B2B chain is alive
+  comboDiv: number; // attack += floor(combo / this); 0 disables combo damage
+  allClear: number; // lines a perfect clear adds
 }
 
 /** guideline/tetr.io-flavored defaults */
@@ -57,32 +59,38 @@ export const DEFAULT_RULES: AttackRules = {
  */
 export function versusAttack(
   lines: number,
-  spin: 'none' | 'mini' | 'full',
+  spin: "none" | "mini" | "full",
   combo: number,
   b2b: number,
   allClear: boolean,
   rules: AttackRules = DEFAULT_RULES,
 ): number {
-  if (lines <= 0) return 0;
+  if (lines <= 0) {
+    return 0;
+  }
   let atk = 0;
-  if (spin === 'full') atk = Math.floor(lines * rules.spinMult);
-  else if (spin === 'mini') atk = Math.max(0, lines - 1);
-  else atk = lines === 4 ? rules.quadAttack : lines - 1;
-  if (b2b > 0 && (spin !== 'none' || lines === 4)) atk += rules.b2bBonus;
-  if (rules.comboDiv > 0) atk += Math.floor(Math.max(0, combo) / rules.comboDiv);
-  if (allClear) atk += rules.allClear;
+  if (spin === "full") {
+    atk = Math.floor(lines * rules.spinMult);
+  } else if (spin === "mini") {
+    atk = Math.max(0, lines - 1);
+  } else {
+    atk = lines === 4 ? rules.quadAttack : lines - 1;
+  }
+  if (b2b > 0 && (spin !== "none" || lines === 4)) {
+    atk += rules.b2bBonus;
+  }
+  if (rules.comboDiv > 0) {
+    atk += Math.floor(Math.max(0, combo) / rules.comboDiv);
+  }
+  if (allClear) {
+    atk += rules.allClear;
+  }
   return atk;
 }
 
 /** Apply a percentage handicap to an attack (rounded, never negative). */
 export function scaleAttack(atk: number, percent: number): number {
-  return Math.max(0, Math.round(atk * percent / 100));
-}
-
-interface QueuedAttack {
-  lines: number;
-  entersAtMs: number; // telegraph ends here
-  rising?: boolean;   // already started entering the board
+  return Math.max(0, Math.round((atk * percent) / 100));
 }
 
 /** One player's incoming garbage queue. Time is fed in by the caller. */
@@ -90,7 +98,10 @@ export class GarbageQueue {
   private incoming: QueuedAttack[] = [];
   private holeCol: number;
 
-  constructor(private cfg: GarbageConfig, private rng: () => number = Math.random) {
+  constructor(
+    private cfg: GarbageConfig,
+    private rng: () => number = Math.random,
+  ) {
     this.holeCol = this.randomHole();
   }
 
@@ -103,31 +114,25 @@ export class GarbageQueue {
 
   /** An opponent attack lands in the queue; it telegraphs before activating. */
   queue(lines: number, nowMs: number): void {
-    if (lines <= 0) return;
+    if (lines <= 0) {
+      return;
+    }
     this.incoming.push({ lines, entersAtMs: nowMs + this.cfg.delayMs });
   }
 
   /** all queued lines (cancelable until they actually rise) */
   pending(): number {
-    return this.incoming.reduce((n, a) => n + a.lines, 0);
+    return totalLines(this.incoming);
   }
 
   /** lines whose telegraph elapsed - they rise on the next non-clearing lock */
   active(nowMs: number): number {
-    return this.incoming.reduce((n, a) => n + (a.entersAtMs <= nowMs ? a.lines : 0), 0);
+    return activeLines(this.incoming, nowMs);
   }
 
   /** Cancel up to `lines` queued garbage (oldest first); returns lines used. */
   cancel(lines: number): number {
-    let canceled = 0;
-    while (lines - canceled > 0 && this.incoming.length > 0) {
-      const head = this.incoming[0];
-      const used = Math.min(head.lines, lines - canceled);
-      head.lines -= used;
-      canceled += used;
-      if (head.lines === 0) this.incoming.shift();
-    }
-    return canceled;
+    return cancelLines(this.incoming, lines);
   }
 
   /**
@@ -137,7 +142,11 @@ export class GarbageQueue {
   rise(nowMs: number): number[] {
     const holes: number[] = [];
     const m = this.cfg.messiness;
-    while (holes.length < this.cfg.cap && this.incoming.length > 0 && this.incoming[0].entersAtMs <= nowMs) {
+    while (
+      holes.length < this.cfg.cap &&
+      this.incoming.length > 0 &&
+      this.incoming[0].entersAtMs <= nowMs
+    ) {
       const atk = this.incoming[0];
       // every fresh attack re-rolls the hole (tetr.io TL "change on attack"
       // = 100%); within the attack it only moves with the messiness chance
@@ -148,9 +157,13 @@ export class GarbageQueue {
       while (atk.lines > 0 && holes.length < this.cfg.cap) {
         holes.push(this.holeCol);
         atk.lines--;
-        if (atk.lines > 0 && this.rng() < m) this.holeCol = this.randomHole();
+        if (atk.lines > 0 && this.rng() < m) {
+          this.holeCol = this.randomHole();
+        }
       }
-      if (atk.lines === 0) this.incoming.shift();
+      if (atk.lines === 0) {
+        this.incoming.shift();
+      }
     }
     return holes;
   }
@@ -162,7 +175,7 @@ export class GarbageQueue {
 
 // ---- simulated opponent (no bot) -------------------------------------------
 
-export type Pressure = 'calm' | 'normal' | 'brutal';
+export type Pressure = "calm" | "normal" | "brutal";
 
 /** mean gap between attacks / max attack size, per pressure level */
 const PRESSURE_TABLE: Record<Pressure, { gapMs: number; max: number }> = {
@@ -181,7 +194,10 @@ export class ScheduledAttacker {
   private timeMs = 0;
   private nextAtMs: number;
 
-  constructor(private pressure: Pressure, private rng: () => number = Math.random) {
+  constructor(
+    private pressure: Pressure,
+    private rng: () => number = Math.random,
+  ) {
     this.nextAtMs = this.gap() * (0.6 + 0.8 * this.rng());
   }
 

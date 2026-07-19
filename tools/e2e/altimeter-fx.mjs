@@ -1,19 +1,19 @@
 // Drive ZenithAltimeter directly with a fake surging run to eyeball the
 // heat glow + spark systems without needing a real surge via keyboard.
-import { chromium } from 'playwright';
+import { chromium } from "playwright";
 
-const shots = process.argv[2] ?? '/tmp/shots';
+const shots = process.argv[2] ?? "/tmp/shots";
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 700, height: 300 } });
-await page.goto('http://localhost:5199/');
+await page.goto("http://localhost:5199/");
 await page.waitForTimeout(400);
 
 await page.evaluate(async () => {
-  const { ZenithAltimeter } = await import('/src/ui/zenith-altimeter.ts');
-  document.body.innerHTML = '';
-  document.body.style.background = '#181825';
+  const { ZenithAltimeter } = await import("/src/ui/zenith-altimeter.ts");
+  document.body.innerHTML = "";
+  document.body.style.background = "#181825";
   const alti = new ZenithAltimeter(560);
-  alti.el.style.margin = '60px';
+  alti.el.style.margin = "60px";
   document.body.appendChild(alti.el);
   const fake = {
     altitude: 862,

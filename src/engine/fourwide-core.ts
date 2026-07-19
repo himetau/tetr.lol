@@ -3,7 +3,7 @@
 // columns either side, and a residual state is the bottom-3-rows pattern of
 // the well encoded as a 12-bit key (bit = row * 4 + col, row 0 = bottom).
 
-import { Board, BOARD_H, BOARD_W } from '../core/board';
+import { Board, BOARD_H, BOARD_W } from "../core/board";
 
 export const WELL_X = 3;
 export const WELL_W = 4;
@@ -13,7 +13,9 @@ export const WALL_H = BOARD_H;
 
 let WALL_MASK = 0;
 for (let x = 0; x < BOARD_W; x++) {
-  if (x < WELL_X || x >= WELL_X + WELL_W) WALL_MASK |= 1 << x;
+  if (x < WELL_X || x >= WELL_X + WELL_W) {
+    WALL_MASK |= 1 << x;
+  }
 }
 const WELL_MASK = ((1 << WELL_W) - 1) << WELL_X;
 
@@ -23,7 +25,9 @@ export function wallMask(): number {
 
 /** Top the wall columns back up after clears - the "infinite" sides. */
 export function refillWalls(board: Board): void {
-  for (let y = 0; y < WALL_H; y++) board.rows[y] |= WALL_MASK;
+  for (let y = 0; y < WALL_H; y++) {
+    board.rows[y] |= WALL_MASK;
+  }
 }
 
 /** Fresh trainer board: walls + a residual state in the well. */
@@ -31,7 +35,7 @@ export function stateToBoard(stateKey: number): Board {
   const b = new Board();
   refillWalls(b);
   for (let bit = 0; bit < 12; bit++) {
-    if (stateKey >>> bit & 1) {
+    if ((stateKey >>> bit) & 1) {
       const row = Math.floor(bit / WELL_W);
       const col = bit % WELL_W;
       b.rows[row] |= 1 << (WELL_X + col);
@@ -50,19 +54,17 @@ export function residualKey(board: Board): number | null {
   let count = 0;
   for (let y = 0; y < BOARD_H; y++) {
     const wellBits = (board.rows[y] & WELL_MASK) >>> WELL_X;
-    if (wellBits === 0) continue;
-    if (y >= 3) return null; // residual must live in the bottom 3 rows
+    if (wellBits === 0) {
+      continue;
+    }
+    // a residual must live in the bottom 3 rows
+    if (y >= 3) {
+      return null;
+    }
     key |= wellBits << (y * WELL_W);
-    for (let b = wellBits; b; b >>>= 1) count += b & 1;
+    for (let b = wellBits; b; b >>>= 1) {
+      count += b & 1;
+    }
   }
   return count === 3 ? key : null;
-}
-
-/** Number of filled well cells (any height) - 3 means a clean residual. */
-export function wellCellCount(board: Board): number {
-  let count = 0;
-  for (let y = 0; y < BOARD_H; y++) {
-    for (let b = (board.rows[y] & WELL_MASK) >>> WELL_X; b; b >>>= 1) count += b & 1;
-  }
-  return count;
 }

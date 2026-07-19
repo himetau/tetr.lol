@@ -1,1 +1,681 @@
-{"componentChunkName":"component---src-templates-article-layout-tsx","path":"/stacking/lst","result":{"data":{"site":{"siteMetadata":{"title":"FOUR","siteUrl":"https://four.lol"}},"mdx":{"fields":{"id":"301a1b58-2c65-55a1-8dc7-bb0ba73103d0","title":"LST Stacking","slug":"/stacking/lst"},"body":"var _excluded = [\"components\"];\n\nfunction _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }\n\nfunction _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }\n\nfunction _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }\n\n/* @jsxRuntime classic */\n\n/* @jsx mdx */\nvar _frontmatter = {\n  \"title\": \"LST Stacking\"\n};\n\nvar makeShortcode = function makeShortcode(name) {\n  return function MDXDefaultShortcode(props) {\n    console.warn(\"Component \" + name + \" was not imported, exported, or provided by MDXProvider as global scope\");\n    return mdx(\"div\", props);\n  };\n};\n\nvar Fumen = makeShortcode(\"Fumen\");\nvar Mino = makeShortcode(\"Mino\");\nvar layoutProps = {\n  _frontmatter: _frontmatter\n};\nvar MDXLayout = \"wrapper\";\nreturn function MDXContent(_ref) {\n  var components = _ref.components,\n      props = _objectWithoutProperties(_ref, _excluded);\n\n  return mdx(MDXLayout, _extends({}, layoutProps, props, {\n    components: components,\n    mdxType: \"MDXLayout\"\n  }), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"credit to \", mdx(\"strong\", {\n    parentName: \"em\"\n  }, \"kazu\"), \" for many of the examples used in this page\")), mdx(Youtube, {\n    id: \"uDE9E7tjQUE\",\n    mdxType: \"Youtube\"\n  }), mdx(Fumen, {\n    data: \"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"A very practical stacking method that can be used both in versus and Ultra. Called LST (\", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LST\"), \") stacking because you repeat \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" and \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on the left side while using the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \" to do a T-Spin Double.\"), mdx(Compare, {\n    mdxType: \"Compare\"\n  }, mdx(\"p\", null, \"LST Stacking (left) is different from \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/st\"\n  }, \"ST Stacking\"), \" (right) where you only use \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on the left two columns. Note how LST Stacking is a bit denser\\u2014this leads to a higher efficiency ceiling.\"), mdx(Fumen, {\n    data: \"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  })), mdx(ReadMore, {\n    at: \"/stacking/st\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"basics\"\n  }, \"Basics\"), mdx(\"p\", null, \"The basic idea is to repeat the following pattern with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZ\")), mdx(Fumen, {\n    data: \"v115@FfglIeglIehlHeQ4CeAtE8R4AeBtE8glQ4AeAtg0E8?glCeg0E8hlAeh0E8Q4CeAtE8R4AeBtE8glQ4AeAtg0E8glC?eg0E8hlAeh0E8Q4CeAtE8R4AeBtF8Q4AeAtF8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 16,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@FfQpIeQpIeRpHeglCenlAemlQpglAeglWpCeXpAeWp?glCenlAemlQpglAeglWpCeXpAeWpglCenlAemlQpglAeglV?pJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 16,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"basic-steps\"\n  }, \"Basic Steps\"), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \": Create an overhang with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" and then do a TSD.\"), mdx(Fumen, {\n    data: \"v115@pgQpIeQpIeRpHeA8CeH8AeI8AeG8JeAgHIhywHewwa?eAAAvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 2\"), \": Build the rest of yellow.\"), mdx(Fumen, {\n    data: \"v115@9gQpIeQpIeRpHeB8AeG8JeAgHBhVpDeVpCeWpTeAAA?\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 3\"), \": Create an overhang with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" and then do a TSD.\"), mdx(Fumen, {\n    data: \"v115@9gQpCeWpCeXpAeWpB8AeG8JeAgHpgglIehlIeglveA?AAIhywHewwaeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 4\"), \": Build the rest of orange. Repeat from \", mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \".\"), mdx(Fumen, {\n    data: \"v115@9gglIehlHeQpglBeVpB8AeG8JeAgHBhllCemlCeglZ?eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"span\", null), mdx(\"h3\", {\n    \"id\": \"fractals\"\n  }, \"Fractals\"), mdx(\"p\", null, \"When your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \" comes late on \", mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \", you can skip the TSD and build a \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/fractal\"\n  }, \"Fractal\"), \".\"), mdx(Fumen, {\n    data: \"v115@pgQpIeQpIeRpHeA8CeH8AeI8AeG8JeAgHtgVpDeVpC?eWpneAAAVgglIehlIeglDfAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"This works because, in a sense, LST Stacking is Fractals stacked on top of Fractals.\"), mdx(Fumen, {\n    data: \"v115@fgQ4IeR4HeglQ4HeglCeF8hlAeH8CeH8AeG8JeAgH+?gywHewwHeywHewwQeAAAbhg0SeAAAVgQ4IeR4HeglQ4Hegl?CeF8hlAeG8DeF8CeG8CeG8JeAAA0gywHewwHeywHewwaeAA?AvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 6\n  }), mdx(\"h2\", {\n    \"id\": \"opening-from-flat-top-tki\"\n  }, \"Opening from Flat Top TKI\"), mdx(\"p\", null, \"The \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/openers/tki#flat-top-continuation\"\n  }, \"flat top TKI\"), \" opener is undoubtedly the most popular way to start the first two TSDs before transitioning to LST Stacking.\"), mdx(\"h3\", {\n    \"id\": \"first-and-second-tsd\"\n  }, \"First and Second TSD\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglCeBtR4RphlAezhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4BtDeglBeR4BtCeglCeQ4i0RphlAezhg0RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhg0RpQ4CeBtwhi0R4AeC8whilA8Q4Ae?D8glRpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@4gglGeilBtAewhQ4Cei0BtwhR4AeC8g0RpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ygwhIewhCeBtBeRpwhQ4CeBtg0RpwhR4AeC8i0glA8?Q4AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ygwhIewhCeBthlBewhQ4CeBtglh0whR4AeC8glg0Rp?A8Q4AeD8g0RpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"third-tsd\"\n  }, \"Third TSD\"), mdx(\"p\", null, \"LST starts from the third TSD and onward. After this second TSD,\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgl5gwwIewwBeQLFewhRaQLFewhBeQaGexhQaJe?Agl5gQLIeQLAewSglFeQaBtwwFeSawhGeQaAeglJeAgl\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHNhQ4FeBtAeQ4ilAewhEei0JeAgWAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"your third TSD can look like below. Note the two possible placements of \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \".\"), mdx(Fumen, {\n    data: \"v115@tgAtHeBtEeglBeAtQ4EeglCeR4A8CehlAeB8Q4F8Ae?G8JeAgHtgAPHeQpAPwhGeQpAewhIegHIegHXeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"Can you spot the hidden \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \"s?\"), mdx(Fumen, {\n    data: \"v115@tgA8HeB8EeA8BeA8g0EeA8Ceg0B8CeB8Aeh0G8AeG8?JeAgHtgAAIeAAA8IeA8reAgWAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(ReadMore, {\n    at: \"/openers/tki\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"alternate-pieces\"\n  }, \"Alternate pieces\"), mdx(Fumen, {\n    data: \"v115@VgglIehlHeQpglBeWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHVgwwIexwHeQawwBeQp0wQaCeQp0wRaAeRp1wCe?glk0xwAehlk0xwAegl1wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"The easiest way to do LST Stacking would be to repeat \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZ\"), \" like above. However, this is often not possible, and therefore, in those cases, the right part is built in alternative ways. Here are some examples.\"), mdx(\"h3\", {\n    \"id\": \"pure\"\n  }, \"Pure\"), mdx(\"p\", null, \"These alternate pieces do not mix between the overhang part (orange) and the yellow part.\"), mdx(Fumen, {\n    data: \"v115@VgglIehlHeQpglBeWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHVgg0Ieh0Hewwg0Be2wCe3wAe2wg0Cen0Aem0ww?g0Aeg01wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8BeQ4F8CeR4F8AeBtQ4E8CeBtF8AeI8?AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8BeRpE8CeRpF8AeH8CeH8AeI8AeG8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8Beg0F8Cei0E8AeH8CeH8AeI8AeG8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtDeB8BeBtE8CeAtglF8AeilE8CeH8Ae?I8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtg0CeB8BeBtg0D8CeAth0E8Aei0E8Ce?A8g0F8AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtDeB8BeBtE8CeAti0D8Aezhg0C8CeH8?AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8Deg0DeB8Ceg0DeB8Beh0E8CeR4F8AeR4F8CeH8?AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8Bei0D8CeBtg0E8AeDtD8CeBtF8AeI8?AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"mixed\"\n  }, \"Mixed\"), mdx(\"p\", null, \"These patterns are a bit more advanced as it mixes the overhang part (orange) and the yellow part.\"), mdx(Fumen, {\n    data: \"v115@ZgglHehlEeQpBeglWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHZgg0Heh0EewwBeg02wCe3wAe2wg0Cen0Aem0ww?g0Aeg01wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@ZgA8HeRpEeA8BeRpF8CeR4F8AeR4F8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8Hei0DeA8BeBtg0E8CeBtF8AeH8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8Heg0A8EeA8Bei0E8CeR4F8AeR4F8CeH8AeI8Ae?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8HeQ4A8EeA8BeR4F8CeQ4G8AeH8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"h2\", {\n    \"id\": \"common-mistakes\"\n  }, \"Common Mistakes\"), mdx(Warn, {\n    mdxType: \"Warn\"\n  }, mdx(Fumen, {\n    data: \"v115@tgg0Ieg0EeglBeh0EeglCeAtE8hlAeBtG8AeAtF8Je?AgHtgwhIewhQ4GehWQ4IeAPGeBtHeAtPeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"These are two common mistakes which would terminate LST because it is impossible to place a block on the spots marked purple to continue LST:\"), mdx(Fumen, {\n    data: \"v115@tgglIeglEeQpBeglWpCeXpAeWpB8AeG8JeAgH4gQ41?eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@tgglHewwglEeQpBeglWpCeXpAeWpB8AeG8JeAgH4gQ?41eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null)));\n}\n;\nMDXContent.isMDXComponent = true;","tableOfContents":{"items":[{"url":"#basics","title":"Basics","items":[{"url":"#basic-steps","title":"Basic Steps"},{"url":"#fractals","title":"Fractals"}]},{"url":"#opening-from-flat-top-tki","title":"Opening from Flat Top TKI","items":[{"url":"#first-and-second-tsd","title":"First and Second TSD"},{"url":"#third-tsd","title":"Third TSD"}]},{"url":"#alternate-pieces","title":"Alternate pieces","items":[{"url":"#pure","title":"Pure"},{"url":"#mixed","title":"Mixed"}]},{"url":"#common-mistakes","title":"Common Mistakes"}]},"parent":{"relativePath":"stacking/lst.mdx"}},"allDocLinksYaml":{"nodes":[{"title":"Openers","items":[{"link":"/openers/practical-openers","title":"Practical Tetris Openers","alt":null,"description":"This page shows practical setups that are widely used among players, depending on the order of pieces they get in their first starting bag","fumen":null,"image":null},{"link":"/openers/tki","title":"TKI","alt":"開幕TSD","description":"TKI is a very popular opener among tetris players where you send a TSD from the very start with your first bag","fumen":"v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H","image":null},{"link":"/methods/dt-cannon","title":"DT Cannon","alt":"DT砲","description":"DT Cannon is a very popular TSD → TST opener that is used when players have an early LS or JL","fumen":"v115@hghlDeR4CeglBtAeR4whh0AeglA8BtRpwhg0BeD8Rp?whg0CeE8whB8AeI8AeG8JeAgH","image":null},{"link":"/perfect-clears/opener","title":"Perfect Clear Opener","alt":"パフェクリテンプレ","description":"A popular opener with an 84.64% chance of doing a perfect clear if you have I on hold.","fumen":"v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH","image":null},{"link":"/openers/hachispin","title":"Hachispin","alt":"にはち砲","description":"A TSS → TST → PC opener created by hachispin","fumen":"v115@5gAtCewhDeBtCewhAei0AtDewhilg0RpAeR4whglCe?RpR4KeAgH","image":null},{"link":"/openers/mko","title":"MKO","alt":null,"description":"An opener where you stack your first bag in a way that allows you to follow up with either a perfect clear with a 33% chance or T-Spin Doubles.","fumen":"v115@9gQ4EeAtBewhR4CeBtBewhg0Q4CeAtglRpwhi0Aeil?RpwhJeAgH","image":null},{"link":"/methods/triple-double#opening-c-spin","title":"C-Spin","alt":"TKI積み","description":"A classic opener where you open with a TST → TSD.","fumen":"v115@pgh0Heg0Ieg0AeywEeglBewwQ4CeRpglAeBtR4BeRp?hlAeBtQ4zhJeAgH","image":null},{"link":"/methods/bt-cannon","title":"BT Cannon","alt":"BT砲","description":"A BT Cannon → C-Spin → Perfect Clear loop created by 26_nameless that has a high chance of completing and continuing the loop","fumen":"v115@igAtCehlwhRpBtDeglwhRpAth0R4AeglwhC8g0R4Be?A8whC8g0A8ywH8wwJ8AeB8JeAgH","image":null},{"link":"/openers/mr-tspin","title":"Mr. T-Spin's STD","alt":null,"description":"A TSS → TST → TSD opener that can be used when you have an early SZ start, devised by Mr. T-Spin","fumen":"v115@pgwhIewhDeglDewhDeglDewhAeQ4BehlBeg0RpR4Bt?ywg0RpAeQ4AeBtwwh0JeAgH","image":null},{"link":"/openers/albatross","title":"Albatross","alt":"アルバトロスSP","description":"An Air-TSD → TST → TSD \"bird\" opener.","fumen":"v115@AhBtDewhQ4CeBti0whR4AeRpilg0whAeQ4AeRpglCe?whJeAgH","image":null}]},{"title":"Methods","items":[{"link":"/methods/tspin-triple","title":"T-Spin Triple","alt":"TST","description":null,"fumen":"v115@zgD8FeC8GeC8AeI8BeH8AeF8JeAgH","image":null},{"link":"/methods/triple-double","title":"Triple Double","alt":"TD","description":"A TST → TSD setup often used mid-game","fumen":"v115@pgD8BeG8CeG8AeI8BeH8AeJ8AeE8JeAgH","image":null},{"link":"/methods/dt-cannon#mid-game-dt","title":"DT Cannon","alt":"DT砲","description":"A TSD → TST setup first outlined by TKI","fumen":"v115@hgH8CeI8AeH8BeH8CeH8AeI8AeG8JeAgH","image":null},{"link":"/methods/fractal","title":"Fractal","alt":"ダブルダガー","description":"A TSD → TSD setup that is also known as \"double dagger\" in the Japanese community.","fumen":"v115@zgC8GeB8CeH8AeH8CeH8AeF8JeAgH","image":null},{"link":"/methods/imperial-cross","title":"Imperial Cross","alt":"インペリアルクロス","description":"A TSD → TSD setup that looks like, well, an imperial cross","fumen":"v115@zgD8BeG8CeG8AeH8CeH8AeF8JeAgH","image":null},{"link":"/methods/parapet","title":"Parapet","alt":"欄干","description":"A donation TSD/TSS technique which got its name because of how the J/L covering the hole resembles a parapet","fumen":"v115@jgR4Beg0AeC8R4Ceg0G8Aeh0H8AeI8AeI8AeI8AeB8?JeAgl","image":null},{"link":"/methods/kaidan","title":"Kaidan","alt":"階段積み","description":"A TSD donation technique that can be used when you see stairs","fumen":"v115@2gzhCeF8CeAtG8AeBtH8AtAeI8KeAgH","image":null},{"link":"/methods/stmb","title":"STMB Cave","alt":"STMBケイブ","description":"STMB is an air T-Spin technique where you hang a S or a Z over a 3-wide column to create a TSD shape.","fumen":"v115@ngQ4IeR4D8BtCeQ4E8BtAeG8CeG8CeG8CeB8JeAgH","image":null},{"link":"/methods/stsd","title":"STSD","alt":null,"description":"Short for Super T-Spin Double. This setup yields 2 T-Spin Doubles.","fumen":"v115@1gH8CeI8AeH8BeH8BeG8JeAgH","image":null},{"link":"/methods/shachiku-train","title":"Shachiku Train","alt":"社畜トレイン","description":"A donation TSD → TSD method.","fumen":"v115@igAtHeBtDeD8AtCehlF8AeR4glF8R4AeglI8AeI8Ae?B8JeAgH","image":null},{"link":"/methods/polymer-tspin","title":"Polymer T-Spins","alt":null,"description":"Polymer T-Spins refer to T-Spin setups consisting of two or more of either Iso-, Neo-, or Fin-TSDs.","fumen":"v115@mgC8IeA8IeH8BeI8AeG8BeI8AeB8JeAgH","image":null},{"link":"/methods/yoshihiro","title":"Yoshihiro SD","alt":"よしひろ積み","description":"A TSM → TSD method","fumen":"v115@HhF8CewwG8AexwI8wwJeAgH","image":null},{"link":"/methods/anchor-set","title":"Anchor Set","alt":"アンカーセット","description":"A rarely used technique that is utilized in order to maintain Back-to-Back.","fumen":"v115@0gI8AeI8Aeg0H8Aeg0H8h0AeG8JeAgH","image":null}]},{"title":"Mid-game","items":[{"link":"/mid-game/finesse","title":"Finesse","alt":null,"description":"An optimization technique which helps you play faster by reducing your keypresses per piece placed","fumen":"v115@vhAH+m","image":null},{"link":"/mid-game/donation","title":"Donation","alt":"ドネイト","description":"An overview of donation, a technique of temporarily covering open columns underneath","fumen":"v115@zg0hEeB8xhCeyhE8AeA8whG8AeA8AeG8AeD8JeAgH","image":null},{"link":"/mid-game/puyo-puyo-tetris","title":"Puyo Puyo Tetris","alt":"ぷよぷよテトリス","description":"Notes on Puyo Puyo Tetris, a crossover game between Puyo Puyo and Tetris developed by Sega","fumen":null,"image":""},{"link":"/mid-game/skimming","title":"Skimming","alt":null,"description":"Skimming is a method where a player does a non-Back-to-Back line clear to make the stack more favorable.","fumen":"v115@/gAtCeE8Bti0E8AtCeg0G8AeF8JeAgH","image":null}]},{"title":"Stacking","items":[{"link":"/stacking/lst","title":"LST Stacking","alt":null,"description":"A very practical stacking method that can be used both in versus and Ultra, where you repeat L and S on the left column","fumen":"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH","image":null},{"link":"/stacking/tetris","title":"Tetris","alt":"テトリス","description":"Counting to four is an essential skill that you should learn and utilize for mid-game tetrises","fumen":"v115@WgAtHeBtHeAtIeA8RpGeA8RpAeH8wwAeG8xwAeH8Ae?G8JeAgH","image":null},{"link":"/stacking/st","title":"ST Stacking","alt":null,"description":"A popular stacking method used in Ultra where you repeat S on the left column","fumen":"v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH","image":null},{"link":"/stacking/4-wide","title":"4-Wide","alt":"4列REN","description":"The infamous combo setup","fumen":"v115@VgC8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8Je?AgH","image":null}]},{"title":"Perfect Clears","items":[{"link":"/perfect-clears/opener","title":"Perfect Clear Opener","alt":"パフェクリテンプレ","description":"A popular opener where you have an 84.64% chance of doing a perfect clear if you have I on hold.","fumen":"v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH","image":null},{"link":"/perfect-clears/grace-system","title":"Grace System","alt":"グレースシステム","description":"An opener with an 88.57% chance of doing a perfect clear if you have T on hold.","fumen":"v115@9gili0DeglAtRpQ4g0DeBtRpR4DeAtzhQ4NeAgH","image":null},{"link":"/perfect-clears/2nd","title":"2nd PC","alt":null,"description":"90%+ 2nd PC patterns from knewjade that you could use after PCO or Grace System","fumen":"v115@VgwhIewhglAewwFewhglxwRpDewhhlwwRpUeg0DeR4?wwBeg0RpAeR4ywh0RpJeAgH","image":null},{"link":"/perfect-clears/dpc","title":"DPC","alt":"3巡パフェ後テンプレ","description":"TSD → PC setups that you can use after performing an 8-height PC","fumen":"v115@2gRpEewhBeRpEewhCeR4Bthlwhg0AeR4B8Btglwhi0?B8CeglJeAgWLAz3hRASIrSAzkqBA","image":null},{"link":"/perfect-clears/7th","title":"7th PC","alt":null,"description":"100% PC patterns that you can use for your 7th consecutive PC","fumen":"v115@LgxhHexhHexhRpFexhRpAeg0CewwEei0xwEezhwwKe?RpAeR4wwDeRpR4ywLeAgH","image":null},{"link":"/perfect-clears/ILSZ","title":"ILSZ","alt":null,"description":"A 100% 1st PC pattern","fumen":"v115@9gwhilFewhglAtGewhBtR4EewhAtR4PeAgH","image":null},{"link":"/perfect-clears/4th","title":"4th PC","alt":null,"description":"4-piece patterns that you can use for your 4th PC with your 5 leftover pieces","fumen":"v115@FhhlGeR4glRpDeR4wwglRpEeywJeAgH","image":null},{"link":"/perfect-clears/3rd","title":"3rd PC","alt":null,"description":"You'll have an extra mino when starting your 3rd PC. These are some patterns that you could use for it","fumen":"v115@9gRpwhDei0RpwhEeQ4g0RpwhEeR4RpwhFeQ4JeAgH","image":null},{"link":"/perfect-clears/5th","title":"5th PC","alt":null,"description":"Some 2 + 4 piece patterns that you could use for your 5th PC","fumen":"v115@qgAtHeBtwwGeAtywLewwHeywHezhJeAgH","image":null},{"link":"/perfect-clears/6th","title":"6th PC","alt":null,"description":"Some patterns that you could use for your 6th PC","fumen":"v115@9gwhQ4ywEewhR4wwFewhg0Q4BtEewhi0BtNeAgH","image":null}]},{"title":"SRS","items":[{"link":"/srs/kicks-overview","title":"Kicks Overview","alt":null,"description":"An overview of how kicks work in SRS","fumen":"v115@wgwwB8FexwAeH8AtAeH8BeI8AeH8AeB8JeAgl","image":null},{"link":"/srs/t-spin","title":"T-Spin","alt":null,"description":"How does the game detect T-Spins?","fumen":"v115@lgQpwwHeywGeA8AeA8BeQ4IeywGeQ4wwQ4ZeAgH","image":null},{"link":"/srs/t-kicks","title":"T Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise T Kicks in SRS","fumen":"v115@mgwhBewhLeA8EeA8AtBeQpBeAtBeQpBeQ4EeQ4NeA8?AeA8NetCn","image":null},{"link":"/srs/j-kicks","title":"J Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise J Kicks in SRS","fumen":"v115@PgQpCewhQpLewhSeAtDeAtEeB8CeB8CeglNeQpUe2s?m","image":null},{"link":"/srs/l-kicks","title":"L Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise L Kicks in SRS","fumen":"v115@fgA8BeQ4BeA8CeAtGeQpDeg0Eeg0AeA8EeA8bewwMe?q4m","image":null},{"link":"/srs/s-kicks","title":"🚧 S Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise S Kicks in SRS","fumen":"v115@ggQpHeAtHeg0HeAtAewhAeAtGewhFeA8CewhCeA8Ge?A8AeA8Ne31m","image":null},{"link":"/srs/z-kicks","title":"🚧 Z Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise Z Kicks in SRS","fumen":"v115@LgA8IeglFeg0EeQpHeR4FewhFeC8AewhHeglLeQpHe?Q4QesJn","image":null},{"link":"/srs/i-kicks","title":"🚧 I Kicks","alt":null,"description":"Illustrations of counterclockwise and clockwise I Kicks in SRS","fumen":"v115@igE8UeA8CeQ4DeAtDei0JeA8CeA8AeB8PeZ9m","image":null}]},{"title":"Tetris Effect","items":[{"link":"/tetris-effect/all-clear","title":"Tetris Effect All Clear Mode Solutions","alt":null,"description":"Diagrams and solutions to some of the non-straightforward maps on Tetris Effect's All Clear Mode","fumen":"v115@zgUpEe0wDe1wCexwklBeilUpBeSpJeAgH","image":null},{"link":"/tetris-effect/boss-abilities","title":"Tetris Effect Boss Abilities","alt":null,"description":"A visual guide to boss abilities in Tetris Effect's Connected VS mode","fumen":null,"image":"https://davdav1233.gitlab.io/tetris-videos/tetris-effect/boss-abilities.gif"}]},{"title":"Misc","items":[{"link":"/openers/gamushiro","title":"Gamushiro Stacking","alt":"ガムシロ積み","description":"Gamushiro Stacking is a TST → TSD (or TSS) → PC opener created by KMGZ","fumen":"v115@VgwhGeRpwhGeRpwhh0Eehlwhg0DeR4A8glA8g0AeBt?R4B8glB8BeBtF8AeJ8AeF8JeAgWIA5Fg2A5ngHB","image":null},{"link":"/openers/new-dt-cannon","title":"New DT Cannon","alt":"新DT砲","description":"A 5-bag TSD → TST → TSD → Tetris → PC loop based on DT Cannon","fumen":"v115@hghlQ4BeAtEeglR4BtAewhh0AeglA8Q4AtRpwhg0Be?D8Rpwhg0ywE8whB8wwI8AeG8JeAgWgAlfrHBiYxwClv1RBT?rDfETIs9Blvs2AW0DfETYO6A","image":null},{"link":"/openers/sailboat","title":"Sailboat","alt":"SSTシップ","description":"Sailboat is a TSS → TSS → TST opener created by ゆう","fumen":"v115@AhhlDewhDeglRpBewhBtAeg0glRpR4whAeBti0R4Ae?whJeAgH","image":null},{"link":"/openers/sd-pc","title":"Single Double PC","alt":"SDパフェ","description":"A TSS → TSD → (TSS →) PC opener created by ゆう","fumen":"v115@0gAtHeBtGewhAtFehlwhRpAeR4i0glwhRpR4Ceg0gl?whJeAgH","image":null},{"link":"/openers/tt-pc","title":"Triple Triple PC","alt":"TTパフェ","description":"A TST → (TSS or TSD or TST →) PC opener created by ゆう","fumen":"v115@cgRpg0whFeRpg0whEeBth0whQ4EeBtA8whR4ilAeE8?Q4glA8BeI8AeF8AeF8JeAgH","image":null},{"link":"/openers/black-tea-cannon","title":"Black Tea Cannon","alt":"紅茶砲","description":"Black Tea Cannon is a TSD → TSD → 6-height or 8-height PC opener","fumen":"v115@xgRpHeRpg0Fehlwhi0R4CeglwhB8R4BtAeA8glwhC8?BeBtB8whJeAgH","image":null},{"link":"/misc/all-6-residuals","title":"4-Wide 6-Residual Patterns","alt":null,"description":"Diagrams of all possible 6-residual patterns for 4-Wide","fumen":"v115@ggA8ilAeB8RpAeA8glAeA8AeA8AeRpAeA8AeB8AeB8?AeA8JeQ4AeB8AeA8h0BeR4AeA8AeA8g0AeA8AeA8Q4B8AeA?8g0B8KeAgH","image":null},{"link":"/mid-game/situational-finesse","title":"Situational Finesse","alt":null,"description":"Input sequences to place S and I pieces vertically at specific columns with an alternate orientation","fumen":"v115@vhAfA2DAjVFDA","image":null},{"link":"/perfect-clears/sakanas-tsd-pc","title":"Sakana's TSD → PC","alt":null,"description":"100% opening TSD → 6-height PC patterns found by Sakana","fumen":"v115@ygwhCeRpCeg0whCeRpilg0whglBeBtglQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH","image":null},{"link":"/openers/viper","title":"Viper","alt":null,"description":"A TSD → PC opener that theoretically has a 99.999% chance of following up with a perfect clear after the first TSD","fumen":"v115@9gwhFeBtAewhglRpQ4CeBtwhglRpR4Aei0whhlBeQ4?Ceg0JeAgH","image":null}]}]},"allSupplementalLinksYaml":{"nodes":[{"link":"/misc/all-5-residuals","title":"4-Wide 5-Residual Patterns","alt":null,"description":"Diagrams of all possible 5-residual patterns for 4-Wide","fumen":"v115@YgQ4EeA8AeB8R4DeA8AeA8BeQ4BeRpA8AeA8BeA8Ae?A8RpA8LeB8Ceh0AeywA8AeB8g0BeA8wwAeA8AeB8g0A8KeA?gH","image":null},{"link":"/misc/all-4-residuals","title":"4-Wide 4-Residual Patterns","alt":null,"description":"Diagrams of all possible 4-residual patterns for 4-Wide. Notably used by the MisaMino bot.","fumen":"v115@ggA8i0CeRpAeA8Beg0AeB8RpAeA8BeA8BeA8AeA8Je?hlCeBtDeglAeA8AeA8BtA8AeA8glB8BeA8AeA8KeAgH","image":null},{"link":"/openers/intai-cannon","title":"Intai Cannon","alt":"いんたい砲","description":"Intai Cannon is a TSD → PC opener that you can use for all opening bags with a high PC chance","fumen":"v115@4gg0DewhDeg0RpBewhglBeh0RpQ4AewhglCewwBtR4?whhlAeywBtQ4JeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-1","title":"Sakana's First TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's first TSD → PC","fumen":"v115@pgh0R4Eewhg0R4BtDewhg0RpQ4DtAewhglRpR4BeBt?whglywQ4i0Rphlwwzhg0RpJeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-2","title":"Sakana's Second TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's second TSD → PC","fumen":"v115@ugRph0whEeRph0whDeywh0whglBeBtwwQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-3","title":"Sakana's Third TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's third TSD → PC","fumen":"v115@pgRpHeRpCeywBeBtCeQ4wwRpAeglBtBeR4RpAeglBt?ywQ4i0hlBtwwzhg0JeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-4","title":"Sakana's Fourth TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's fourth TSD → PC","fumen":"v115@pgzhR4Dei0R4EeBtg0RpQ4Ceglg0BtRpR4ili0ywQ4?glRpzhwwilRpJeAgH","image":null},{"link":"/mid-game/tsd-donation","title":"🚧 TSD Donation","alt":"TSDドネイト","description":"A collection of commonly used TSD donation patterns","fumen":"v115@RgwhIewhCeB8DewhCeA8CeBtwhilB8AeR4BtglD8R4?CeH8AeF8AeB8AeF8AeG8JeAgH","image":null},{"link":"/mid-game/tst-donation","title":"🚧 TST Donation","alt":"TSTドネイト","description":"One of the most advanced techniques that you can use during matches. This page also covers TSD donations that are done with the TST kick","fumen":"v115@LgwhGeR4whFeR4A8whBtEeB8whg0BtilAeC8i0glA8?BeE8BeB8AeE8CeH8AeI8AeE8JeAgH","image":null},{"link":"/mid-game/tss-donation","title":"🚧 TSS Donation","alt":"TSSドネイト","description":null,"fumen":"v115@5gA8CeA8DeB8i0B8AeD8Beg0H8AeI8AeA8JeP8I","image":null},{"link":"/drafts/connected","title":"🚧 Tetris Effect Connected VS","alt":null,"description":"Notes on Tetris Effect's Connected VS mode","fumen":null,"image":""},{"link":"/perfect-clears/nilgiris-1st","title":"Nilgiri's 1st PC Patterns","alt":null,"description":"32 high-chance 4-piece PC patterns that cover all opening mino sequences","fumen":"v115@9gzhFeh0AtGeg0BtR4Eeg0AtR4PeAgH","image":null}]}},"pageContext":{"id":"301a1b58-2c65-55a1-8dc7-bb0ba73103d0"}},"staticQueryHashes":["3790145691"]}
+{
+  "componentChunkName": "component---src-templates-article-layout-tsx",
+  "path": "/stacking/lst",
+  "result": {
+    "data": {
+      "site": { "siteMetadata": { "title": "FOUR", "siteUrl": "https://four.lol" } },
+      "mdx": {
+        "fields": {
+          "id": "301a1b58-2c65-55a1-8dc7-bb0ba73103d0",
+          "title": "LST Stacking",
+          "slug": "/stacking/lst"
+        },
+        "body": "var _excluded = [\"components\"];\n\nfunction _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }\n\nfunction _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }\n\nfunction _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }\n\n/* @jsxRuntime classic */\n\n/* @jsx mdx */\nvar _frontmatter = {\n  \"title\": \"LST Stacking\"\n};\n\nvar makeShortcode = function makeShortcode(name) {\n  return function MDXDefaultShortcode(props) {\n    console.warn(\"Component \" + name + \" was not imported, exported, or provided by MDXProvider as global scope\");\n    return mdx(\"div\", props);\n  };\n};\n\nvar Fumen = makeShortcode(\"Fumen\");\nvar Mino = makeShortcode(\"Mino\");\nvar layoutProps = {\n  _frontmatter: _frontmatter\n};\nvar MDXLayout = \"wrapper\";\nreturn function MDXContent(_ref) {\n  var components = _ref.components,\n      props = _objectWithoutProperties(_ref, _excluded);\n\n  return mdx(MDXLayout, _extends({}, layoutProps, props, {\n    components: components,\n    mdxType: \"MDXLayout\"\n  }), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"credit to \", mdx(\"strong\", {\n    parentName: \"em\"\n  }, \"kazu\"), \" for many of the examples used in this page\")), mdx(Youtube, {\n    id: \"uDE9E7tjQUE\",\n    mdxType: \"Youtube\"\n  }), mdx(Fumen, {\n    data: \"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"A very practical stacking method that can be used both in versus and Ultra. Called LST (\", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LST\"), \") stacking because you repeat \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" and \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on the left side while using the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \" to do a T-Spin Double.\"), mdx(Compare, {\n    mdxType: \"Compare\"\n  }, mdx(\"p\", null, \"LST Stacking (left) is different from \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/st\"\n  }, \"ST Stacking\"), \" (right) where you only use \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on the left two columns. Note how LST Stacking is a bit denser\\u2014this leads to a higher efficiency ceiling.\"), mdx(Fumen, {\n    data: \"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  })), mdx(ReadMore, {\n    at: \"/stacking/st\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"basics\"\n  }, \"Basics\"), mdx(\"p\", null, \"The basic idea is to repeat the following pattern with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZ\")), mdx(Fumen, {\n    data: \"v115@FfglIeglIehlHeQ4CeAtE8R4AeBtE8glQ4AeAtg0E8?glCeg0E8hlAeh0E8Q4CeAtE8R4AeBtE8glQ4AeAtg0E8glC?eg0E8hlAeh0E8Q4CeAtE8R4AeBtF8Q4AeAtF8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 16,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@FfQpIeQpIeRpHeglCenlAemlQpglAeglWpCeXpAeWp?glCenlAemlQpglAeglWpCeXpAeWpglCenlAemlQpglAeglV?pJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 16,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"basic-steps\"\n  }, \"Basic Steps\"), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \": Create an overhang with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" and then do a TSD.\"), mdx(Fumen, {\n    data: \"v115@pgQpIeQpIeRpHeA8CeH8AeI8AeG8JeAgHIhywHewwa?eAAAvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 2\"), \": Build the rest of yellow.\"), mdx(Fumen, {\n    data: \"v115@9gQpIeQpIeRpHeB8AeG8JeAgHBhVpDeVpCeWpTeAAA?\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 3\"), \": Create an overhang with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" and then do a TSD.\"), mdx(Fumen, {\n    data: \"v115@9gQpCeWpCeXpAeWpB8AeG8JeAgHpgglIehlIeglveA?AAIhywHewwaeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 4\"), \": Build the rest of orange. Repeat from \", mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \".\"), mdx(Fumen, {\n    data: \"v115@9gglIehlHeQpglBeVpB8AeG8JeAgHBhllCemlCeglZ?eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"span\", null), mdx(\"h3\", {\n    \"id\": \"fractals\"\n  }, \"Fractals\"), mdx(\"p\", null, \"When your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \" comes late on \", mdx(\"strong\", {\n    parentName: \"p\"\n  }, \"Step 1\"), \", you can skip the TSD and build a \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/fractal\"\n  }, \"Fractal\"), \".\"), mdx(Fumen, {\n    data: \"v115@pgQpIeQpIeRpHeA8CeH8AeI8AeG8JeAgHtgVpDeVpC?eWpneAAAVgglIehlIeglDfAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"This works because, in a sense, LST Stacking is Fractals stacked on top of Fractals.\"), mdx(Fumen, {\n    data: \"v115@fgQ4IeR4HeglQ4HeglCeF8hlAeH8CeH8AeG8JeAgH+?gywHewwHeywHewwQeAAAbhg0SeAAAVgQ4IeR4HeglQ4Hegl?CeF8hlAeG8DeF8CeG8CeG8JeAAA0gywHewwHeywHewwaeAA?AvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 6\n  }), mdx(\"h2\", {\n    \"id\": \"opening-from-flat-top-tki\"\n  }, \"Opening from Flat Top TKI\"), mdx(\"p\", null, \"The \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/openers/tki#flat-top-continuation\"\n  }, \"flat top TKI\"), \" opener is undoubtedly the most popular way to start the first two TSDs before transitioning to LST Stacking.\"), mdx(\"h3\", {\n    \"id\": \"first-and-second-tsd\"\n  }, \"First and Second TSD\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglCeBtR4RphlAezhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4BtDeglBeR4BtCeglCeQ4i0RphlAezhg0RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhg0RpQ4CeBtwhi0R4AeC8whilA8Q4Ae?D8glRpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@4gglGeilBtAewhQ4Cei0BtwhR4AeC8g0RpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ygwhIewhCeBtBeRpwhQ4CeBtg0RpwhR4AeC8i0glA8?Q4AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ygwhIewhCeBthlBewhQ4CeBtglh0whR4AeC8glg0Rp?A8Q4AeD8g0RpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"third-tsd\"\n  }, \"Third TSD\"), mdx(\"p\", null, \"LST starts from the third TSD and onward. After this second TSD,\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgl5gwwIewwBeQLFewhRaQLFewhBeQaGexhQaJe?Agl5gQLIeQLAewSglFeQaBtwwFeSawhGeQaAeglJeAgl\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHNhQ4FeBtAeQ4ilAewhEei0JeAgWAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"your third TSD can look like below. Note the two possible placements of \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \".\"), mdx(Fumen, {\n    data: \"v115@tgAtHeBtEeglBeAtQ4EeglCeR4A8CehlAeB8Q4F8Ae?G8JeAgHtgAPHeQpAPwhGeQpAewhIegHIegHXeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"Can you spot the hidden \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \"s?\"), mdx(Fumen, {\n    data: \"v115@tgA8HeB8EeA8BeA8g0EeA8Ceg0B8CeB8Aeh0G8AeG8?JeAgHtgAAIeAAA8IeA8reAgWAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(ReadMore, {\n    at: \"/openers/tki\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"alternate-pieces\"\n  }, \"Alternate pieces\"), mdx(Fumen, {\n    data: \"v115@VgglIehlHeQpglBeWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHVgwwIexwHeQawwBeQp0wQaCeQp0wRaAeRp1wCe?glk0xwAehlk0xwAegl1wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"The easiest way to do LST Stacking would be to repeat \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZ\"), \" like above. However, this is often not possible, and therefore, in those cases, the right part is built in alternative ways. Here are some examples.\"), mdx(\"h3\", {\n    \"id\": \"pure\"\n  }, \"Pure\"), mdx(\"p\", null, \"These alternate pieces do not mix between the overhang part (orange) and the yellow part.\"), mdx(Fumen, {\n    data: \"v115@VgglIehlHeQpglBeWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHVgg0Ieh0Hewwg0Be2wCe3wAe2wg0Cen0Aem0ww?g0Aeg01wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8BeQ4F8CeR4F8AeBtQ4E8CeBtF8AeI8?AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8BeRpE8CeRpF8AeH8CeH8AeI8AeG8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8Beg0F8Cei0E8AeH8CeH8AeI8AeG8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtDeB8BeBtE8CeAtglF8AeilE8CeH8Ae?I8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtg0CeB8BeBtg0D8CeAth0E8Aei0E8Ce?A8g0F8AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8CeAtDeB8BeBtE8CeAti0D8Aezhg0C8CeH8?AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8Deg0DeB8Ceg0DeB8Beh0E8CeR4F8AeR4F8CeH8?AeI8AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@VgA8IeB8HeB8Bei0D8CeBtg0E8AeDtD8CeBtF8AeI8?AeG8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"mixed\"\n  }, \"Mixed\"), mdx(\"p\", null, \"These patterns are a bit more advanced as it mixes the overhang part (orange) and the yellow part.\"), mdx(Fumen, {\n    data: \"v115@ZgglHehlEeQpBeglWpCeXpAeWpglCenlAemlQpglAe?glVpJeAgHZgg0Heh0EewwBeg02wCe3wAe2wg0Cen0Aem0ww?g0Aeg01wJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@ZgA8HeRpEeA8BeRpF8CeR4F8AeR4F8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8Hei0DeA8BeBtg0E8CeBtF8AeH8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8Heg0A8EeA8Bei0E8CeR4F8AeR4F8CeH8AeI8Ae?G8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ZgA8HeQ4A8EeA8BeR4F8CeQ4G8AeH8CeH8AeI8AeG8?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 1\n  }), mdx(\"h2\", {\n    \"id\": \"common-mistakes\"\n  }, \"Common Mistakes\"), mdx(Warn, {\n    mdxType: \"Warn\"\n  }, mdx(Fumen, {\n    data: \"v115@tgg0Ieg0EeglBeh0EeglCeAtE8hlAeBtG8AeAtF8Je?AgHtgwhIewhQ4GehWQ4IeAPGeBtHeAtPeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"These are two common mistakes which would terminate LST because it is impossible to place a block on the spots marked purple to continue LST:\"), mdx(Fumen, {\n    data: \"v115@tgglIeglEeQpBeglWpCeXpAeWpB8AeG8JeAgH4gQ41?eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@tgglHewwglEeQpBeglWpCeXpAeWpB8AeG8JeAgH4gQ?41eAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(\"br\", null)));\n}\n;\nMDXContent.isMDXComponent = true;",
+        "tableOfContents": {
+          "items": [
+            {
+              "url": "#basics",
+              "title": "Basics",
+              "items": [
+                { "url": "#basic-steps", "title": "Basic Steps" },
+                { "url": "#fractals", "title": "Fractals" }
+              ]
+            },
+            {
+              "url": "#opening-from-flat-top-tki",
+              "title": "Opening from Flat Top TKI",
+              "items": [
+                { "url": "#first-and-second-tsd", "title": "First and Second TSD" },
+                { "url": "#third-tsd", "title": "Third TSD" }
+              ]
+            },
+            {
+              "url": "#alternate-pieces",
+              "title": "Alternate pieces",
+              "items": [
+                { "url": "#pure", "title": "Pure" },
+                { "url": "#mixed", "title": "Mixed" }
+              ]
+            },
+            { "url": "#common-mistakes", "title": "Common Mistakes" }
+          ]
+        },
+        "parent": { "relativePath": "stacking/lst.mdx" }
+      },
+      "allDocLinksYaml": {
+        "nodes": [
+          {
+            "title": "Openers",
+            "items": [
+              {
+                "link": "/openers/practical-openers",
+                "title": "Practical Tetris Openers",
+                "alt": null,
+                "description": "This page shows practical setups that are widely used among players, depending on the order of pieces they get in their first starting bag",
+                "fumen": null,
+                "image": null
+              },
+              {
+                "link": "/openers/tki",
+                "title": "TKI",
+                "alt": "開幕TSD",
+                "description": "TKI is a very popular opener among tetris players where you send a TSD from the very start with your first bag",
+                "fumen": "v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H",
+                "image": null
+              },
+              {
+                "link": "/methods/dt-cannon",
+                "title": "DT Cannon",
+                "alt": "DT砲",
+                "description": "DT Cannon is a very popular TSD → TST opener that is used when players have an early LS or JL",
+                "fumen": "v115@hghlDeR4CeglBtAeR4whh0AeglA8BtRpwhg0BeD8Rp?whg0CeE8whB8AeI8AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/opener",
+                "title": "Perfect Clear Opener",
+                "alt": "パフェクリテンプレ",
+                "description": "A popular opener with an 84.64% chance of doing a perfect clear if you have I on hold.",
+                "fumen": "v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/hachispin",
+                "title": "Hachispin",
+                "alt": "にはち砲",
+                "description": "A TSS → TST → PC opener created by hachispin",
+                "fumen": "v115@5gAtCewhDeBtCewhAei0AtDewhilg0RpAeR4whglCe?RpR4KeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/mko",
+                "title": "MKO",
+                "alt": null,
+                "description": "An opener where you stack your first bag in a way that allows you to follow up with either a perfect clear with a 33% chance or T-Spin Doubles.",
+                "fumen": "v115@9gQ4EeAtBewhR4CeBtBewhg0Q4CeAtglRpwhi0Aeil?RpwhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/triple-double#opening-c-spin",
+                "title": "C-Spin",
+                "alt": "TKI積み",
+                "description": "A classic opener where you open with a TST → TSD.",
+                "fumen": "v115@pgh0Heg0Ieg0AeywEeglBewwQ4CeRpglAeBtR4BeRp?hlAeBtQ4zhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/bt-cannon",
+                "title": "BT Cannon",
+                "alt": "BT砲",
+                "description": "A BT Cannon → C-Spin → Perfect Clear loop created by 26_nameless that has a high chance of completing and continuing the loop",
+                "fumen": "v115@igAtCehlwhRpBtDeglwhRpAth0R4AeglwhC8g0R4Be?A8whC8g0A8ywH8wwJ8AeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/mr-tspin",
+                "title": "Mr. T-Spin's STD",
+                "alt": null,
+                "description": "A TSS → TST → TSD opener that can be used when you have an early SZ start, devised by Mr. T-Spin",
+                "fumen": "v115@pgwhIewhDeglDewhDeglDewhAeQ4BehlBeg0RpR4Bt?ywg0RpAeQ4AeBtwwh0JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/albatross",
+                "title": "Albatross",
+                "alt": "アルバトロスSP",
+                "description": "An Air-TSD → TST → TSD \"bird\" opener.",
+                "fumen": "v115@AhBtDewhQ4CeBti0whR4AeRpilg0whAeQ4AeRpglCe?whJeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Methods",
+            "items": [
+              {
+                "link": "/methods/tspin-triple",
+                "title": "T-Spin Triple",
+                "alt": "TST",
+                "description": null,
+                "fumen": "v115@zgD8FeC8GeC8AeI8BeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/triple-double",
+                "title": "Triple Double",
+                "alt": "TD",
+                "description": "A TST → TSD setup often used mid-game",
+                "fumen": "v115@pgD8BeG8CeG8AeI8BeH8AeJ8AeE8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/dt-cannon#mid-game-dt",
+                "title": "DT Cannon",
+                "alt": "DT砲",
+                "description": "A TSD → TST setup first outlined by TKI",
+                "fumen": "v115@hgH8CeI8AeH8BeH8CeH8AeI8AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/fractal",
+                "title": "Fractal",
+                "alt": "ダブルダガー",
+                "description": "A TSD → TSD setup that is also known as \"double dagger\" in the Japanese community.",
+                "fumen": "v115@zgC8GeB8CeH8AeH8CeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/imperial-cross",
+                "title": "Imperial Cross",
+                "alt": "インペリアルクロス",
+                "description": "A TSD → TSD setup that looks like, well, an imperial cross",
+                "fumen": "v115@zgD8BeG8CeG8AeH8CeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/parapet",
+                "title": "Parapet",
+                "alt": "欄干",
+                "description": "A donation TSD/TSS technique which got its name because of how the J/L covering the hole resembles a parapet",
+                "fumen": "v115@jgR4Beg0AeC8R4Ceg0G8Aeh0H8AeI8AeI8AeI8AeB8?JeAgl",
+                "image": null
+              },
+              {
+                "link": "/methods/kaidan",
+                "title": "Kaidan",
+                "alt": "階段積み",
+                "description": "A TSD donation technique that can be used when you see stairs",
+                "fumen": "v115@2gzhCeF8CeAtG8AeBtH8AtAeI8KeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/stmb",
+                "title": "STMB Cave",
+                "alt": "STMBケイブ",
+                "description": "STMB is an air T-Spin technique where you hang a S or a Z over a 3-wide column to create a TSD shape.",
+                "fumen": "v115@ngQ4IeR4D8BtCeQ4E8BtAeG8CeG8CeG8CeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/stsd",
+                "title": "STSD",
+                "alt": null,
+                "description": "Short for Super T-Spin Double. This setup yields 2 T-Spin Doubles.",
+                "fumen": "v115@1gH8CeI8AeH8BeH8BeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/shachiku-train",
+                "title": "Shachiku Train",
+                "alt": "社畜トレイン",
+                "description": "A donation TSD → TSD method.",
+                "fumen": "v115@igAtHeBtDeD8AtCehlF8AeR4glF8R4AeglI8AeI8Ae?B8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/polymer-tspin",
+                "title": "Polymer T-Spins",
+                "alt": null,
+                "description": "Polymer T-Spins refer to T-Spin setups consisting of two or more of either Iso-, Neo-, or Fin-TSDs.",
+                "fumen": "v115@mgC8IeA8IeH8BeI8AeG8BeI8AeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/yoshihiro",
+                "title": "Yoshihiro SD",
+                "alt": "よしひろ積み",
+                "description": "A TSM → TSD method",
+                "fumen": "v115@HhF8CewwG8AexwI8wwJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/anchor-set",
+                "title": "Anchor Set",
+                "alt": "アンカーセット",
+                "description": "A rarely used technique that is utilized in order to maintain Back-to-Back.",
+                "fumen": "v115@0gI8AeI8Aeg0H8Aeg0H8h0AeG8JeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Mid-game",
+            "items": [
+              {
+                "link": "/mid-game/finesse",
+                "title": "Finesse",
+                "alt": null,
+                "description": "An optimization technique which helps you play faster by reducing your keypresses per piece placed",
+                "fumen": "v115@vhAH+m",
+                "image": null
+              },
+              {
+                "link": "/mid-game/donation",
+                "title": "Donation",
+                "alt": "ドネイト",
+                "description": "An overview of donation, a technique of temporarily covering open columns underneath",
+                "fumen": "v115@zg0hEeB8xhCeyhE8AeA8whG8AeA8AeG8AeD8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/mid-game/puyo-puyo-tetris",
+                "title": "Puyo Puyo Tetris",
+                "alt": "ぷよぷよテトリス",
+                "description": "Notes on Puyo Puyo Tetris, a crossover game between Puyo Puyo and Tetris developed by Sega",
+                "fumen": null,
+                "image": ""
+              },
+              {
+                "link": "/mid-game/skimming",
+                "title": "Skimming",
+                "alt": null,
+                "description": "Skimming is a method where a player does a non-Back-to-Back line clear to make the stack more favorable.",
+                "fumen": "v115@/gAtCeE8Bti0E8AtCeg0G8AeF8JeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Stacking",
+            "items": [
+              {
+                "link": "/stacking/lst",
+                "title": "LST Stacking",
+                "alt": null,
+                "description": "A very practical stacking method that can be used both in versus and Ultra, where you repeat L and S on the left column",
+                "fumen": "v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/tetris",
+                "title": "Tetris",
+                "alt": "テトリス",
+                "description": "Counting to four is an essential skill that you should learn and utilize for mid-game tetrises",
+                "fumen": "v115@WgAtHeBtHeAtIeA8RpGeA8RpAeH8wwAeG8xwAeH8Ae?G8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/st",
+                "title": "ST Stacking",
+                "alt": null,
+                "description": "A popular stacking method used in Ultra where you repeat S on the left column",
+                "fumen": "v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/4-wide",
+                "title": "4-Wide",
+                "alt": "4列REN",
+                "description": "The infamous combo setup",
+                "fumen": "v115@VgC8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8Je?AgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Perfect Clears",
+            "items": [
+              {
+                "link": "/perfect-clears/opener",
+                "title": "Perfect Clear Opener",
+                "alt": "パフェクリテンプレ",
+                "description": "A popular opener where you have an 84.64% chance of doing a perfect clear if you have I on hold.",
+                "fumen": "v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/grace-system",
+                "title": "Grace System",
+                "alt": "グレースシステム",
+                "description": "An opener with an 88.57% chance of doing a perfect clear if you have T on hold.",
+                "fumen": "v115@9gili0DeglAtRpQ4g0DeBtRpR4DeAtzhQ4NeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/2nd",
+                "title": "2nd PC",
+                "alt": null,
+                "description": "90%+ 2nd PC patterns from knewjade that you could use after PCO or Grace System",
+                "fumen": "v115@VgwhIewhglAewwFewhglxwRpDewhhlwwRpUeg0DeR4?wwBeg0RpAeR4ywh0RpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/dpc",
+                "title": "DPC",
+                "alt": "3巡パフェ後テンプレ",
+                "description": "TSD → PC setups that you can use after performing an 8-height PC",
+                "fumen": "v115@2gRpEewhBeRpEewhCeR4Bthlwhg0AeR4B8Btglwhi0?B8CeglJeAgWLAz3hRASIrSAzkqBA",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/7th",
+                "title": "7th PC",
+                "alt": null,
+                "description": "100% PC patterns that you can use for your 7th consecutive PC",
+                "fumen": "v115@LgxhHexhHexhRpFexhRpAeg0CewwEei0xwEezhwwKe?RpAeR4wwDeRpR4ywLeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/ILSZ",
+                "title": "ILSZ",
+                "alt": null,
+                "description": "A 100% 1st PC pattern",
+                "fumen": "v115@9gwhilFewhglAtGewhBtR4EewhAtR4PeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/4th",
+                "title": "4th PC",
+                "alt": null,
+                "description": "4-piece patterns that you can use for your 4th PC with your 5 leftover pieces",
+                "fumen": "v115@FhhlGeR4glRpDeR4wwglRpEeywJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/3rd",
+                "title": "3rd PC",
+                "alt": null,
+                "description": "You'll have an extra mino when starting your 3rd PC. These are some patterns that you could use for it",
+                "fumen": "v115@9gRpwhDei0RpwhEeQ4g0RpwhEeR4RpwhFeQ4JeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/5th",
+                "title": "5th PC",
+                "alt": null,
+                "description": "Some 2 + 4 piece patterns that you could use for your 5th PC",
+                "fumen": "v115@qgAtHeBtwwGeAtywLewwHeywHezhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/6th",
+                "title": "6th PC",
+                "alt": null,
+                "description": "Some patterns that you could use for your 6th PC",
+                "fumen": "v115@9gwhQ4ywEewhR4wwFewhg0Q4BtEewhi0BtNeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "SRS",
+            "items": [
+              {
+                "link": "/srs/kicks-overview",
+                "title": "Kicks Overview",
+                "alt": null,
+                "description": "An overview of how kicks work in SRS",
+                "fumen": "v115@wgwwB8FexwAeH8AtAeH8BeI8AeH8AeB8JeAgl",
+                "image": null
+              },
+              {
+                "link": "/srs/t-spin",
+                "title": "T-Spin",
+                "alt": null,
+                "description": "How does the game detect T-Spins?",
+                "fumen": "v115@lgQpwwHeywGeA8AeA8BeQ4IeywGeQ4wwQ4ZeAgH",
+                "image": null
+              },
+              {
+                "link": "/srs/t-kicks",
+                "title": "T Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise T Kicks in SRS",
+                "fumen": "v115@mgwhBewhLeA8EeA8AtBeQpBeAtBeQpBeQ4EeQ4NeA8?AeA8NetCn",
+                "image": null
+              },
+              {
+                "link": "/srs/j-kicks",
+                "title": "J Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise J Kicks in SRS",
+                "fumen": "v115@PgQpCewhQpLewhSeAtDeAtEeB8CeB8CeglNeQpUe2s?m",
+                "image": null
+              },
+              {
+                "link": "/srs/l-kicks",
+                "title": "L Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise L Kicks in SRS",
+                "fumen": "v115@fgA8BeQ4BeA8CeAtGeQpDeg0Eeg0AeA8EeA8bewwMe?q4m",
+                "image": null
+              },
+              {
+                "link": "/srs/s-kicks",
+                "title": "🚧 S Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise S Kicks in SRS",
+                "fumen": "v115@ggQpHeAtHeg0HeAtAewhAeAtGewhFeA8CewhCeA8Ge?A8AeA8Ne31m",
+                "image": null
+              },
+              {
+                "link": "/srs/z-kicks",
+                "title": "🚧 Z Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise Z Kicks in SRS",
+                "fumen": "v115@LgA8IeglFeg0EeQpHeR4FewhFeC8AewhHeglLeQpHe?Q4QesJn",
+                "image": null
+              },
+              {
+                "link": "/srs/i-kicks",
+                "title": "🚧 I Kicks",
+                "alt": null,
+                "description": "Illustrations of counterclockwise and clockwise I Kicks in SRS",
+                "fumen": "v115@igE8UeA8CeQ4DeAtDei0JeA8CeA8AeB8PeZ9m",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Tetris Effect",
+            "items": [
+              {
+                "link": "/tetris-effect/all-clear",
+                "title": "Tetris Effect All Clear Mode Solutions",
+                "alt": null,
+                "description": "Diagrams and solutions to some of the non-straightforward maps on Tetris Effect's All Clear Mode",
+                "fumen": "v115@zgUpEe0wDe1wCexwklBeilUpBeSpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/tetris-effect/boss-abilities",
+                "title": "Tetris Effect Boss Abilities",
+                "alt": null,
+                "description": "A visual guide to boss abilities in Tetris Effect's Connected VS mode",
+                "fumen": null,
+                "image": "https://davdav1233.gitlab.io/tetris-videos/tetris-effect/boss-abilities.gif"
+              }
+            ]
+          },
+          {
+            "title": "Misc",
+            "items": [
+              {
+                "link": "/openers/gamushiro",
+                "title": "Gamushiro Stacking",
+                "alt": "ガムシロ積み",
+                "description": "Gamushiro Stacking is a TST → TSD (or TSS) → PC opener created by KMGZ",
+                "fumen": "v115@VgwhGeRpwhGeRpwhh0Eehlwhg0DeR4A8glA8g0AeBt?R4B8glB8BeBtF8AeJ8AeF8JeAgWIA5Fg2A5ngHB",
+                "image": null
+              },
+              {
+                "link": "/openers/new-dt-cannon",
+                "title": "New DT Cannon",
+                "alt": "新DT砲",
+                "description": "A 5-bag TSD → TST → TSD → Tetris → PC loop based on DT Cannon",
+                "fumen": "v115@hghlQ4BeAtEeglR4BtAewhh0AeglA8Q4AtRpwhg0Be?D8Rpwhg0ywE8whB8wwI8AeG8JeAgWgAlfrHBiYxwClv1RBT?rDfETIs9Blvs2AW0DfETYO6A",
+                "image": null
+              },
+              {
+                "link": "/openers/sailboat",
+                "title": "Sailboat",
+                "alt": "SSTシップ",
+                "description": "Sailboat is a TSS → TSS → TST opener created by ゆう",
+                "fumen": "v115@AhhlDewhDeglRpBewhBtAeg0glRpR4whAeBti0R4Ae?whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/sd-pc",
+                "title": "Single Double PC",
+                "alt": "SDパフェ",
+                "description": "A TSS → TSD → (TSS →) PC opener created by ゆう",
+                "fumen": "v115@0gAtHeBtGewhAtFehlwhRpAeR4i0glwhRpR4Ceg0gl?whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/tt-pc",
+                "title": "Triple Triple PC",
+                "alt": "TTパフェ",
+                "description": "A TST → (TSS or TSD or TST →) PC opener created by ゆう",
+                "fumen": "v115@cgRpg0whFeRpg0whEeBth0whQ4EeBtA8whR4ilAeE8?Q4glA8BeI8AeF8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/black-tea-cannon",
+                "title": "Black Tea Cannon",
+                "alt": "紅茶砲",
+                "description": "Black Tea Cannon is a TSD → TSD → 6-height or 8-height PC opener",
+                "fumen": "v115@xgRpHeRpg0Fehlwhi0R4CeglwhB8R4BtAeA8glwhC8?BeBtB8whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/misc/all-6-residuals",
+                "title": "4-Wide 6-Residual Patterns",
+                "alt": null,
+                "description": "Diagrams of all possible 6-residual patterns for 4-Wide",
+                "fumen": "v115@ggA8ilAeB8RpAeA8glAeA8AeA8AeRpAeA8AeB8AeB8?AeA8JeQ4AeB8AeA8h0BeR4AeA8AeA8g0AeA8AeA8Q4B8AeA?8g0B8KeAgH",
+                "image": null
+              },
+              {
+                "link": "/mid-game/situational-finesse",
+                "title": "Situational Finesse",
+                "alt": null,
+                "description": "Input sequences to place S and I pieces vertically at specific columns with an alternate orientation",
+                "fumen": "v115@vhAfA2DAjVFDA",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/sakanas-tsd-pc",
+                "title": "Sakana's TSD → PC",
+                "alt": null,
+                "description": "100% opening TSD → 6-height PC patterns found by Sakana",
+                "fumen": "v115@ygwhCeRpCeg0whCeRpilg0whglBeBtglQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/viper",
+                "title": "Viper",
+                "alt": null,
+                "description": "A TSD → PC opener that theoretically has a 99.999% chance of following up with a perfect clear after the first TSD",
+                "fumen": "v115@9gwhFeBtAewhglRpQ4CeBtwhglRpR4Aei0whhlBeQ4?Ceg0JeAgH",
+                "image": null
+              }
+            ]
+          }
+        ]
+      },
+      "allSupplementalLinksYaml": {
+        "nodes": [
+          {
+            "link": "/misc/all-5-residuals",
+            "title": "4-Wide 5-Residual Patterns",
+            "alt": null,
+            "description": "Diagrams of all possible 5-residual patterns for 4-Wide",
+            "fumen": "v115@YgQ4EeA8AeB8R4DeA8AeA8BeQ4BeRpA8AeA8BeA8Ae?A8RpA8LeB8Ceh0AeywA8AeB8g0BeA8wwAeA8AeB8g0A8KeA?gH",
+            "image": null
+          },
+          {
+            "link": "/misc/all-4-residuals",
+            "title": "4-Wide 4-Residual Patterns",
+            "alt": null,
+            "description": "Diagrams of all possible 4-residual patterns for 4-Wide. Notably used by the MisaMino bot.",
+            "fumen": "v115@ggA8i0CeRpAeA8Beg0AeB8RpAeA8BeA8BeA8AeA8Je?hlCeBtDeglAeA8AeA8BtA8AeA8glB8BeA8AeA8KeAgH",
+            "image": null
+          },
+          {
+            "link": "/openers/intai-cannon",
+            "title": "Intai Cannon",
+            "alt": "いんたい砲",
+            "description": "Intai Cannon is a TSD → PC opener that you can use for all opening bags with a high PC chance",
+            "fumen": "v115@4gg0DewhDeg0RpBewhglBeh0RpQ4AewhglCewwBtR4?whhlAeywBtQ4JeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-1",
+            "title": "Sakana's First TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's first TSD → PC",
+            "fumen": "v115@pgh0R4Eewhg0R4BtDewhg0RpQ4DtAewhglRpR4BeBt?whglywQ4i0Rphlwwzhg0RpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-2",
+            "title": "Sakana's Second TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's second TSD → PC",
+            "fumen": "v115@ugRph0whEeRph0whDeywh0whglBeBtwwQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-3",
+            "title": "Sakana's Third TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's third TSD → PC",
+            "fumen": "v115@pgRpHeRpCeywBeBtCeQ4wwRpAeglBtBeR4RpAeglBt?ywQ4i0hlBtwwzhg0JeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-4",
+            "title": "Sakana's Fourth TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's fourth TSD → PC",
+            "fumen": "v115@pgzhR4Dei0R4EeBtg0RpQ4Ceglg0BtRpR4ili0ywQ4?glRpzhwwilRpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tsd-donation",
+            "title": "🚧 TSD Donation",
+            "alt": "TSDドネイト",
+            "description": "A collection of commonly used TSD donation patterns",
+            "fumen": "v115@RgwhIewhCeB8DewhCeA8CeBtwhilB8AeR4BtglD8R4?CeH8AeF8AeB8AeF8AeG8JeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tst-donation",
+            "title": "🚧 TST Donation",
+            "alt": "TSTドネイト",
+            "description": "One of the most advanced techniques that you can use during matches. This page also covers TSD donations that are done with the TST kick",
+            "fumen": "v115@LgwhGeR4whFeR4A8whBtEeB8whg0BtilAeC8i0glA8?BeE8BeB8AeE8CeH8AeI8AeE8JeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tss-donation",
+            "title": "🚧 TSS Donation",
+            "alt": "TSSドネイト",
+            "description": null,
+            "fumen": "v115@5gA8CeA8DeB8i0B8AeD8Beg0H8AeI8AeA8JeP8I",
+            "image": null
+          },
+          {
+            "link": "/drafts/connected",
+            "title": "🚧 Tetris Effect Connected VS",
+            "alt": null,
+            "description": "Notes on Tetris Effect's Connected VS mode",
+            "fumen": null,
+            "image": ""
+          },
+          {
+            "link": "/perfect-clears/nilgiris-1st",
+            "title": "Nilgiri's 1st PC Patterns",
+            "alt": null,
+            "description": "32 high-chance 4-piece PC patterns that cover all opening mino sequences",
+            "fumen": "v115@9gzhFeh0AtGeg0BtR4Eeg0AtR4PeAgH",
+            "image": null
+          }
+        ]
+      }
+    },
+    "pageContext": { "id": "301a1b58-2c65-55a1-8dc7-bb0ba73103d0" }
+  },
+  "staticQueryHashes": ["3790145691"]
+}

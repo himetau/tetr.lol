@@ -7,16 +7,32 @@
 // Purely decorative, gated on settings.effects, painted under the opaque panels
 // so it shows through the gaps, the top margin, and the vanish zone.
 
-import { settings } from './settings';
+import { settings } from "./settings";
 
 interface Dust {
-  x: number;        // css px
+  x: number; // css px
   y: number;
-  z: number;        // depth 0..1 (near = faster, bigger, brighter - parallax)
-  drift: number;    // horizontal sway amplitude
-  phase: number;    // sway phase
-  freq: number;     // sway speed
+  z: number; // depth 0..1 (near = faster, bigger, brighter - parallax)
+  zBucket: number; // depth bucket for batched drawing
+  drift: number; // horizontal sway amplitude
+  phase: number; // sway phase
+  freq: number; // sway speed
   size: number;
+}
+
+// Dust is drawn in depth buckets - one path and one fill per bucket instead of
+// a fillStyle change and fill call per particle, which is what kills canvas
+// performance (especially on Firefox) with a few hundred particles.
+const Z_BUCKETS = 8;
+const Z_MIN = 0.3;
+const Z_SPAN = 0.7;
+
+function zBucketOf(z: number): number {
+  return Math.min(Z_BUCKETS - 1, Math.floor(((z - Z_MIN) / Z_SPAN) * Z_BUCKETS));
+}
+
+function zOfBucket(bucket: number): number {
+  return Z_MIN + ((bucket + 0.5) / Z_BUCKETS) * Z_SPAN;
 }
 
 // a boundary line sweeping down the shaft (floor crossed, all-clear, KO)
@@ -30,10 +46,10 @@ interface Sweep {
 
 // deliberately gentle: the shaft should read as calm drift, speeding up only a
 // little with play and giving a brief nudge (not a lurch) on clears/surges
-const BASE_FALL = 13;       // px/s ambient drift with no energy
-const ENERGY_FALL = 70;     // px/s added at full energy
-const BOOST_FALL = 130;     // px/s added at full whoosh boost
-const STREAK_FALL = 240;    // only streak once the shaft is really moving (rare)
+const BASE_FALL = 13; // px/s ambient drift with no energy
+const ENERGY_FALL = 70; // px/s added at full energy
+const BOOST_FALL = 130; // px/s added at full whoosh boost
+const STREAK_FALL = 240; // only streak once the shaft is really moving (rare)
 
 export class SceneBackground {
   readonly el: HTMLCanvasElement;
@@ -43,24 +59,24 @@ export class SceneBackground {
   private dpr = 1;
 
   private dust: Dust[] = [];
-  private maxDust = 0;         // hard cap so pulse() gusts can't grow unbounded
+  private maxDust = 0; // hard cap so pulse() gusts can't grow unbounded
   private sweeps: Sweep[] = [];
-  private energy = 0;          // eased 0..1 (drives ambient fall speed)
+  private energy = 0; // eased 0..1 (drives ambient fall speed)
   private energyTarget = 0;
-  private hue: number;         // eased current hue
+  private hue: number; // eased current hue
   private hueTarget: number;
-  private push = 0;            // extra px/s (climb rank / streak), eased
+  private push = 0; // extra px/s (climb rank / streak), eased
   private pushTarget = 0;
-  private boost = 0;           // surge/clear whoosh, decays
-  private flash = 0;           // full-canvas hot tint, decays
+  private boost = 0; // surge/clear whoosh, decays
+  private flash = 0; // full-canvas hot tint, decays
   private ro: ResizeObserver;
 
   constructor(host: HTMLElement, baseHue: number) {
     this.hue = baseHue;
     this.hueTarget = baseHue;
-    this.el = document.createElement('canvas');
-    this.el.className = 'scene-bg';
-    this.ctx = this.el.getContext('2d')!;
+    this.el = document.createElement("canvas");
+    this.el.className = "scene-bg";
+    this.ctx = this.el.getContext("2d")!;
     this.ro = new ResizeObserver(() => this.resize(host.clientWidth, host.clientHeight));
     this.ro.observe(host);
     this.resize(host.clientWidth, host.clientHeight);
@@ -71,7 +87,9 @@ export class SceneBackground {
   }
 
   private resize(w: number, h: number): void {
-    if (w === 0 || h === 0) return;
+    if (w === 0 || h === 0) {
+      return;
+    }
     this.w = w;
     this.h = h;
     this.dpr = window.devicePixelRatio || 1;
@@ -88,16 +106,19 @@ export class SceneBackground {
     const target = Math.min(230, Math.round((this.w * this.h) / 5400));
     this.maxDust = target + 120; // headroom for transient pulse gusts
     const next: Dust[] = [];
-    for (let i = 0; i < target; i++) next.push(this.spawn(Math.random() * this.h));
+    for (let i = 0; i < target; i++) {
+      next.push(this.spawn(Math.random() * this.h));
+    }
     this.dust = next;
   }
 
   private spawn(y: number): Dust {
-    const z = 0.3 + Math.random() * 0.7;
+    const z = Z_MIN + Math.random() * Z_SPAN;
     return {
       x: Math.random() * this.w,
       y,
       z,
+      zBucket: zBucketOf(z),
       drift: 4 + Math.random() * 14,
       phase: Math.random() * Math.PI * 2,
       freq: 0.3 + Math.random() * 0.9,
@@ -133,17 +154,27 @@ export class SceneBackground {
   pulse(strength: number, hueShift = 0): void {
     this.boost = Math.min(1.3, this.boost + Math.min(0.8, 0.16 + strength * 0.1));
     this.flash = Math.max(this.flash, Math.min(0.6, 0.22 + strength * 0.06));
-    if (hueShift) this.hue = this.hueTarget - hueShift;
-    if (!settings.effects || this.h === 0) return;
+    if (hueShift) {
+      this.hue = this.hueTarget - hueShift;
+    }
+    if (!settings.effects || this.h === 0) {
+      return;
+    }
     const n = Math.min(26, Math.round(5 + strength * 3));
-    for (let i = 0; i < n; i++) this.dust.push(this.spawn(-Math.random() * this.h * 0.4));
+    for (let i = 0; i < n; i++) {
+      this.dust.push(this.spawn(-Math.random() * this.h * 0.4));
+    }
     // trim oldest so repeated clears can't grow the array without bound
-    if (this.dust.length > this.maxDust) this.dust.splice(0, this.dust.length - this.maxDust);
+    if (this.dust.length > this.maxDust) {
+      this.dust.splice(0, this.dust.length - this.maxDust);
+    }
   }
 
   /** A boundary was crossed: drop a bright line that sweeps down the shaft. */
   sweep(hueShift = 0): void {
-    if (!settings.effects || this.h === 0) return;
+    if (!settings.effects || this.h === 0) {
+      return;
+    }
     this.sweeps.push({
       y: -12,
       vy: 360,
@@ -157,8 +188,12 @@ export class SceneBackground {
   frame(dtMs: number): void {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.w, this.h);
-    if (this.w === 0 || this.h === 0) return;
-    if (!settings.effects) return;
+    if (this.w === 0 || this.h === 0) {
+      return;
+    }
+    if (!settings.effects) {
+      return;
+    }
     const dt = Math.min(dtMs, 100) / 1000;
 
     this.energy += (this.energyTarget - this.energy) * Math.min(1, dt * 2);
@@ -171,9 +206,11 @@ export class SceneBackground {
     const streaky = fall > STREAK_FALL; // draw motion streaks only when really moving
 
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = "lighter";
+
+    const dotPaths: (Path2D | null)[] = new Array(Z_BUCKETS).fill(null);
     for (const p of this.dust) {
-      const v = fall * (0.35 + p.z);       // near dust falls faster
+      const v = fall * (0.35 + p.z); // near dust falls faster
       p.y += v * dt;
       p.phase += p.freq * dt;
       const x = p.x + Math.sin(p.phase) * p.drift * (1.1 - p.z);
@@ -183,20 +220,31 @@ export class SceneBackground {
         p.x = Math.random() * this.w;
         continue;
       }
-      const light = 56 + p.z * 20;
-      const alpha = (0.14 + p.z * 0.34) * (streaky ? 0.85 : 1);
-      ctx.strokeStyle = ctx.fillStyle = `hsla(${this.hue}, 85%, ${light}%, ${alpha})`;
       if (len > 1) {
+        // streaks vary in line width per particle, so they draw individually
+        // (streaky mode is rare - only when the shaft is really moving)
+        const light = 56 + p.z * 20;
+        const alpha = (0.14 + p.z * 0.34) * 0.85;
+        ctx.strokeStyle = `hsla(${this.hue}, 85%, ${light}%, ${alpha})`;
         ctx.lineWidth = p.size;
         ctx.beginPath();
         ctx.moveTo(x, p.y);
         ctx.lineTo(x, p.y - len);
         ctx.stroke();
       } else {
-        ctx.beginPath();
-        ctx.arc(x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        const path = (dotPaths[p.zBucket] ??= new Path2D());
+        path.moveTo(x + p.size, p.y);
+        path.arc(x, p.y, p.size, 0, Math.PI * 2);
       }
+    }
+    for (let b = 0; b < Z_BUCKETS; b++) {
+      const path = dotPaths[b];
+      if (!path) {
+        continue;
+      }
+      const z = zOfBucket(b);
+      ctx.fillStyle = `hsla(${this.hue}, 85%, ${56 + z * 20}%, ${0.14 + z * 0.34})`;
+      ctx.fill(path);
     }
 
     // boundary sweeps: a bright band racing down the shaft
@@ -204,7 +252,9 @@ export class SceneBackground {
     for (const s of this.sweeps) {
       s.age += dtMs;
       s.y += s.vy * dt;
-      if (s.age >= s.ttl || s.y > this.h + 30) continue;
+      if (s.age >= s.ttl || s.y > this.h + 30) {
+        continue;
+      }
       const life = 1 - s.age / s.ttl;
       const band = 26;
       const g = ctx.createLinearGradient(0, s.y - band, 0, s.y + band);
@@ -228,7 +278,7 @@ export class SceneBackground {
     if (this.flash > 0.01) {
       const g = ctx.createLinearGradient(0, 0, 0, this.h);
       g.addColorStop(0, `hsla(${Math.max(6, this.hue - 20)}, 90%, 60%, ${0.08 * this.flash})`);
-      g.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+      g.addColorStop(1, "hsla(0, 0%, 0%, 0)");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, this.w, this.h);
     }
@@ -237,12 +287,12 @@ export class SceneBackground {
 
 /** Per-mode base hue for the shaft, matching the stats series colours. */
 export const MODE_HUE: Record<string, number> = {
-  lst: 26,        // --series-lst  #fab387 orange
-  fourwide: 116,  // --series-fourwide #a6e3a1 green
-  free: 217,      // --series-free #89b4fa blue
-  allspin: 267,   // --series-allspin #cba6f7 purple
-  quick: 205,     // retinted by altitude at runtime
-  versus: 170,    // --series-versus #94e2d5 teal
+  lst: 26, // --series-lst  #fab387 orange
+  fourwide: 116, // --series-fourwide #a6e3a1 green
+  free: 217, // --series-free #89b4fa blue
+  allspin: 267, // --series-allspin #cba6f7 purple
+  quick: 205, // retinted by altitude at runtime
+  versus: 170, // --series-versus #94e2d5 teal
 };
 
 /** Altitude → hue for quick play (cool blue low, burning red near the top). */

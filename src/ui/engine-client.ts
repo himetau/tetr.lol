@@ -1,7 +1,7 @@
 // Main-thread client for the analysis worker.
 
-import type { LockEvent } from '../core/game';
-import type { GradeRequest, GradeResult } from '../engine/grade';
+import type { LockEvent } from "../core/game";
+import type { GradeRequest, GradeResult } from "../engine/grade";
 
 export class EngineClient {
   private worker: Worker;
@@ -10,15 +10,31 @@ export class EngineClient {
   onResult: ((r: GradeResult) => void) | null = null;
 
   constructor() {
-    this.worker = new Worker(new URL('../engine/worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (e: MessageEvent<{ kind: string; id: number; result: GradeResult }>) => {
-      if (e.data.kind !== 'grade') return;
-      if (e.data.id !== this.latestWanted) return; // superseded (e.g. after undo)
+    this.worker = new Worker(new URL("../engine/worker.ts", import.meta.url), { type: "module" });
+    this.worker.onmessage = (
+      e: MessageEvent<{ kind: string; id: number; result: GradeResult }>,
+    ) => {
+      if (e.data.kind !== "grade") {
+        return;
+      }
+      // superseded (e.g. after undo)
+      if (e.data.id !== this.latestWanted) {
+        return;
+      }
       this.onResult?.(e.data.result);
     };
   }
 
-  gradeLock(ev: LockEvent, opts: { lstBias?: boolean; neural?: boolean; fourwide?: boolean; depth?: number; beamWidth?: number } = {}): void {
+  gradeLock(
+    ev: LockEvent,
+    opts: {
+      lstBias?: boolean;
+      neural?: boolean;
+      fourwide?: boolean;
+      depth?: number;
+      beamWidth?: number;
+    } = {},
+  ): void {
     const { lstBias = false, neural = true, fourwide = false, depth = 4, beamWidth = 14 } = opts;
     const req: GradeRequest = {
       lstBias,
@@ -39,7 +55,7 @@ export class EngineClient {
     };
     const id = this.nextId++;
     this.latestWanted = id;
-    this.worker.postMessage({ kind: 'grade', id, req, depth, beamWidth });
+    this.worker.postMessage({ kind: "grade", id, req, depth, beamWidth });
   }
 
   /** Drop any in-flight result (after undo/reset). */

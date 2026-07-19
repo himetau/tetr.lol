@@ -1,13 +1,20 @@
-import { PIECE_TYPES, type PieceType } from './pieces';
+import { PIECE_TYPES, type PieceType } from "./pieces";
+
+/** One mulberry32 step: advances the 32-bit state and yields a float in [0, 1). */
+function mulberry32Step(state: number): { state: number; value: number } {
+  const a = (state + 0x6d2b79f5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return { state: a, value: ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
+}
 
 /** mulberry32 - small seedable PRNG, good enough for bag shuffling. */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    const step = mulberry32Step(a);
+    a = step.state;
+    return step.value;
   };
 }
 
@@ -26,10 +33,9 @@ export class SevenBag {
   }
 
   private rand(): number {
-    this.a = (this.a + 0x6d2b79f5) | 0;
-    let t = Math.imul(this.a ^ (this.a >>> 15), 1 | this.a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    const step = mulberry32Step(this.a);
+    this.a = step.state;
+    return step.value;
   }
 
   private refill(): void {
@@ -42,12 +48,16 @@ export class SevenBag {
   }
 
   next(): PieceType {
-    if (this.queue.length === 0) this.refill();
+    if (this.queue.length === 0) {
+      this.refill();
+    }
     return this.queue.shift()!;
   }
 
   peek(n: number): PieceType[] {
-    while (this.queue.length < n) this.refill();
+    while (this.queue.length < n) {
+      this.refill();
+    }
     return this.queue.slice(0, n);
   }
 

@@ -17,8 +17,8 @@ const N = Number(process.argv[2] ?? 200);
 const FLOOR_COUNT = 10;
 
 async function fetchPage(after) {
-  const url = `https://ch.tetr.io/api/records/zenith_global?limit=100${after ? `&after=${after}` : ''}`;
-  const res = await fetch(url, { headers: { 'user-agent': 'tetr-lol-calibration' } });
+  const url = `https://ch.tetr.io/api/records/zenith_global?limit=100${after ? `&after=${after}` : ""}`;
+  const res = await fetch(url, { headers: { "user-agent": "tetr-lol-calibration" } });
   const j = await res.json();
   if (!j.success) throw new Error(JSON.stringify(j.error));
   return j.data.entries;
@@ -98,16 +98,21 @@ function expectedAttackSize(max) {
 }
 
 const attackMax = [2, 2, 3, 4, 5, 5, 6, 6, 7, 8]; // keep in sync with FLOORS
-console.log(`\n${runs.length} runs (alt ${Math.min(...runs.map((r) => r.altitude)).toFixed(0)}–${Math.max(...runs.map((r) => r.altitude)).toFixed(0)}m)`);
-console.log('floor  lines/min  E[attack]  attackEveryMs');
+console.log(
+  `\n${runs.length} runs (alt ${Math.min(...runs.map((r) => r.altitude)).toFixed(0)}–${Math.max(...runs.map((r) => r.altitude)).toFixed(0)}m)`,
+);
+console.log("floor  lines/min  E[attack]  attackEveryMs");
 for (let f = 0; f < FLOOR_COUNT; f++) {
   const ea = expectedAttackSize(attackMax[f]);
   const gap = rate[f] > 0.05 ? Math.round((ea / rate[f]) * 60000) : Infinity;
-  console.log(`F${String(f + 1).padEnd(4)} ${rate[f].toFixed(1).padStart(8)} ${ea.toFixed(2).padStart(10)} ${String(gap).padStart(13)}`);
+  console.log(
+    `F${String(f + 1).padEnd(4)} ${rate[f].toFixed(1).padStart(8)} ${ea.toFixed(2).padStart(10)} ${String(gap).padStart(13)}`,
+  );
 }
 
 // sanity: total residual
-let sse = 0, sst = 0;
+let sse = 0,
+  sst = 0;
 const mean = y.reduce((a, b) => a + b, 0) / y.length;
 for (let i = 0; i < X.length; i++) {
   let pred = 0;

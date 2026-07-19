@@ -3,10 +3,10 @@
 // rank the user's placement against alternatives ("what could this position
 // have become") and to produce principal-variation lines for the paths viewer.
 
-import { Board } from '../core/board';
-import type { PieceType } from '../core/pieces';
-import { enumerateFast, type Placement } from './enumerate';
-import { evaluateBoard, clearReward, findLstSite } from './eval';
+import { Board } from "../core/board";
+import type { PieceType } from "../core/pieces";
+import { enumerateFast, type Placement } from "./enumerate";
+import { evaluateBoard, clearReward, findLstSite } from "./eval";
 
 // Passing through a loop-dead state costs the line permanently, even if a
 // later burn "revives" the loop - otherwise death gets laundered through
@@ -30,27 +30,27 @@ export const I_USE_TOLL = -140;
 
 /** A clear that would break back-to-back: lines without a spin, not a quad. */
 export function breaksB2b(linesCleared: number, spin: string): boolean {
-  return linesCleared > 0 && linesCleared < 4 && spin === 'none';
+  return linesCleared > 0 && linesCleared < 4 && spin === "none";
 }
 
 export interface SearchLine {
-  score: number;              // accumulated rewards + final board eval
-  placements: Placement[];    // principal variation
+  score: number; // accumulated rewards + final board eval
+  placements: Placement[]; // principal variation
 }
 
 interface BeamNode {
   board: Board;
   hold: PieceType | null;
   canHold: boolean;
-  qi: number;                 // index into queue
-  reward: number;             // accumulated clear rewards
+  qi: number; // index into queue
+  reward: number; // accumulated clear rewards
   line: Placement[];
 }
 
 export interface SearchOptions {
-  depth: number;      // how many pieces deep to look
+  depth: number; // how many pieces deep to look
   beamWidth: number;
-  lstBias?: boolean;  // bias evaluation toward the canonical LST structure
+  lstBias?: boolean; // bias evaluation toward the canonical LST structure
 }
 
 export const DEFAULT_SEARCH: SearchOptions = { depth: 4, beamWidth: 14 };
@@ -74,24 +74,45 @@ export function searchBestLine(
   for (let d = 0; d < opts.depth; d++) {
     const next: BeamNode[] = [];
     for (const node of beam) {
-      if (node.qi >= queue.length) continue;
-      const options: { piece: PieceType; usesHold: boolean; nextHold: PieceType | null; nextQi: number }[] = [];
+      if (node.qi >= queue.length) {
+        continue;
+      }
+      const options: {
+        piece: PieceType;
+        usesHold: boolean;
+        nextHold: PieceType | null;
+        nextQi: number;
+      }[] = [];
       const cur = queue[node.qi];
       options.push({ piece: cur, usesHold: false, nextHold: node.hold, nextQi: node.qi + 1 });
       if (node.canHold) {
         if (node.hold) {
           options.push({ piece: node.hold, usesHold: true, nextHold: cur, nextQi: node.qi + 1 });
         } else if (node.qi + 1 < queue.length) {
-          options.push({ piece: queue[node.qi + 1], usesHold: true, nextHold: cur, nextQi: node.qi + 2 });
+          options.push({
+            piece: queue[node.qi + 1],
+            usesHold: true,
+            nextHold: cur,
+            nextQi: node.qi + 2,
+          });
         }
       }
       for (const opt of options) {
         for (const p of enumerateFast(node.board, opt.piece)) {
-          let reward = node.reward + clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type, bias);
-          if (bias && !findLstSite(p.after)) reward += LOOP_DEATH_TOLL;
-          if (bias && p.type === 'T' && p.spin !== 'full') reward += WASTED_T_TOLL;
-          if (bias && p.type === 'I') reward += I_USE_TOLL;
-          if (bias && breaksB2b(p.linesCleared, p.spin)) reward += B2B_BREAK_TOLL;
+          let reward =
+            node.reward + clearReward({ linesCleared: p.linesCleared, spin: p.spin }, p.type, bias);
+          if (bias && !findLstSite(p.after)) {
+            reward += LOOP_DEATH_TOLL;
+          }
+          if (bias && p.type === "T" && p.spin !== "full") {
+            reward += WASTED_T_TOLL;
+          }
+          if (bias && p.type === "I") {
+            reward += I_USE_TOLL;
+          }
+          if (bias && breaksB2b(p.linesCleared, p.spin)) {
+            reward += B2B_BREAK_TOLL;
+          }
           next.push({
             board: p.after,
             hold: opt.nextHold,
@@ -103,7 +124,9 @@ export function searchBestLine(
         }
       }
     }
-    if (next.length === 0) break;
+    if (next.length === 0) {
+      break;
+    }
     // score & prune
     const scored = next
       .map((n) => ({ n, s: n.reward + evaluateBoard(n.board, bias).score }))

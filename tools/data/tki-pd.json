@@ -1,1 +1,705 @@
-{"componentChunkName":"component---src-templates-article-layout-tsx","path":"/openers/tki","result":{"data":{"site":{"siteMetadata":{"title":"FOUR","siteUrl":"https://four.lol"}},"mdx":{"fields":{"id":"1267c730-ac00-56c1-9f75-00561ab9c6aa","title":"TKI (開幕TSD)","slug":"/openers/tki"},"body":"var _excluded = [\"components\"];\n\nfunction _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }\n\nfunction _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }\n\nfunction _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }\n\n/* @jsxRuntime classic */\n\n/* @jsx mdx */\nvar _frontmatter = {\n  \"title\": \"TKI (開幕TSD)\"\n};\n\nvar makeShortcode = function makeShortcode(name) {\n  return function MDXDefaultShortcode(props) {\n    console.warn(\"Component \" + name + \" was not imported, exported, or provided by MDXProvider as global scope\");\n    return mdx(\"div\", props);\n  };\n};\n\nvar Fumen = makeShortcode(\"Fumen\");\nvar Mino = makeShortcode(\"Mino\");\nvar layoutProps = {\n  _frontmatter: _frontmatter\n};\nvar MDXLayout = \"wrapper\";\nreturn function MDXContent(_ref) {\n  var components = _ref.components,\n      props = _objectWithoutProperties(_ref, _excluded);\n\n  return mdx(MDXLayout, _extends({}, layoutProps, props, {\n    components: components,\n    mdxType: \"MDXLayout\"\n  }), mdx(\"p\", null, \"TKI is a very popular opener among Tetris players, where you send a TSD from the very start with your first bag\\u2014originally devised by player \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"http://bugloderunner.my.land.to/tetDS/tetDStop.html\"\n  }, \"TKI\"), \".\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"This opener is very fast to execute as it only needs 5 to 6 pieces from the first bag to complete the first T-Spin Double, and the only requirement of this opener is an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \". Another advantage of TKI is that it leaves a low and clean field after the first TSD, making it easy to follow up with subsequent TSDs or downstacking.\"), mdx(\"p\", null, \"Note: TKI refers to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/triple-double#c-spin\"\n  }, \"C-Spin\"), \" in the Japanese community\"), mdx(\"h2\", {\n    \"id\": \"basic-shape\"\n  }, \"Basic Shape\"), mdx(\"p\", null, \"The opener itself is very simple. You make this basic shape and do a TSD.\"), mdx(Fumen, {\n    data: \"v115@HhglBeBtAeQ4CeglCeBtR4RphlAezhQ4RpJeAgHShy?wHewwQeAAAvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 3,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"You can just hard drop \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \" and \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" without any rotations or movements from their spawn positions.\"), mdx(AnimatedFumen, {\n    disableMirror: true,\n    fps: 2,\n    data: \"v115@vhERymRwBUNfUmBAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 8,\n    __pageLength: 5\n  }), mdx(\"h2\", {\n    \"id\": \"using-tki\"\n  }, \"Using TKI\"), mdx(\"p\", null, \"TKI can be harder for beginners to use because there isn't exactly a set follow-up that you use after you do the initial TSD, which means that you will have to improvise in many cases. Although many follow-ups to TKI are done freestyle, there are certain variations and certain follow-ups that are used by players when the upcoming pieces allow you to do that specific follow-up.\"), mdx(\"p\", null, \"Here's an example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZIOLTSJ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"JTIOLSZ\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SILTJOZ\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#flat-top-continuation\"\n  }, \"flat top\"), \" variation. Most players prefer to do LST Stacking when they use the flat top variation, and here, the players second and third bag allows the player to continue with LST Stacking, and therefore he chooses to do so.\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?HUhilDeg0BeBtglwhMeAAA5gwhFeBtAewhilQ4ywBtwhglR?pR4wwCewhg0RpAeQ4Eei0JeAAANhQ4FeBtAeQ4i0AewhEei?lJeAAAkgwhIewhAeAtGewhBtRpglCeQ4whAtg0RpglCeR4A?ei0hlCeQ4XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"Here's another example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SLIOTJZ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZITO\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"OTJZLIS\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#fonzie-continuation\"\n  }, \"fonzie\"), \" variation. Stacking the second bag in a way that gives the player a chance to PC is preferred, and the second bag allows the player to do this. The player luckily gets an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" on the third bag and does a perfect clear.\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAe9gzhAtBeRpg0Q4hlBtBeRpg?0R4glAtywAeh0AeQ4glBewwNeAAARhT4AtBexwglwhh0BtB?exwglJeAAeWhRpHeRpMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"Last example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"TSIZOLJ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ITZOLJS\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"STZOLIJ\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#fonzie-continuation\"\n  }, \"fonzie\"), \" variation. Although it would have been nice to stack in a way that gives the player a chance to PC, the second bag doesn't allow the player to do so. Therefore \", mdx(\"em\", {\n    parentName: \"p\"\n  }, \"the player improvises\"), \" on his second and third bag.\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAewgwhAeg0glFewhAeg0glFew?hh0hlAeR4BewhRpBtR4ywAeRpAeBtBewwNeAAAEhQ4Aeglg?0FeQ4Aeglg0FeQ4hlh0AexhBeQ4xwJeAAefgRpHeRpHeQ4D?eg0whhlAeR4Ceg0whAeglBeQ4Beh0whAeglBeywBtwhEeww?BeBtMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"The last example is representative of many cases where you will have to improvise on your second bag and onwards, but as shown in the first two examples, given the right pieces, there are certain follow-ups that you can follow. The rest of this page shows widely used follow-ups to TKI, including the ones shown in the first two examples.\"), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"examples on this section are from kazu's plays\")), mdx(\"h2\", {\n    \"id\": \"follow-up-variations\"\n  }, \"Follow-up Variations\"), mdx(\"p\", null, \"Most variations are divided by where you put your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \"(\", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \"). The pictures below show the fonzie, flat top, and castle top variation, respectively.\"), mdx(Fumen, {\n    height: 5,\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@8gg0Ieg0glBeBtAeQ4Aeh0glywBtR4RphlwwzhQ4Rp?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"Below are other variations that are less commonly used depending on the player's preference.\"), mdx(Fumen, {\n    data: \"v115@9gQ4IeR4BeBtAeilg0Q4ywBtglRpi0wwzhRpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4FeglBeR4RpBtAeglywQ4Rpg0Bthlwwzhi0JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ChQ4DeglBeBtR4AeRpglywBtQ4g0Rphlwwzhi0JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ChQ4DeglDeR4CeglBtywQ4i0hlBtwwzhg0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"The first variation above is unique in a sense because it's a variation that you can use even when you have a somewhat late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \". Here are some example first bags for when you would use this variation: \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LZSOITJ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LTZIOSJ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"OSJLITZ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"IOLTZJS\")), mdx(\"h2\", {\n    \"id\": \"fonzie-continuation\"\n  }, \"Fonzie continuation\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"The fonzie variation is usually possible when you have late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \".\"), mdx(\"h3\", {\n    \"id\": \"6-height-pc\"\n  }, \"6-height PC\"), mdx(Fumen, {\n    data: \"v115@9gg0zhBeili0R4BeglRpBtR4CeA8RpA8BtB8AeD8Je?AgH9gQLCeQpBexhAtwhBPxSBewhAeSpQLwSDeRpAeQpgWQe?AAAEhxSgHGewSAewSHexSTeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"People usually try to make these shapes when continuing with this variation because it gives you a chance to make a perfect clear.\\n\", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://harddrop.com/w/index.php?title=Opener&oldid=29057#TKI_3_.28Fonzie_variation.29\"\n  }, \"Here\"), \" are some other ways to get a perfect clear.\"), mdx(Fumen, {\n    data: \"v115@9gE8RpH8RpG8ywH8wwD8JeAglChRaHeglQaIewSWeA?AeChAtQayDEewhAtgWHeQpWeAAe\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"If a perfect clear is not possible, players often make an \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/stsd\"\n  }, \"STSD\"), \",\"), mdx(Fumen, {\n    data: \"v115@7gAtg0AeR4DeBtg0R4zhAeAth0E8BeH8BeC8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@zgglCeR4DeglAeg0R4Eehli0AezhE8BeH8BeC8JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"or recognize that a perfect clear is not possible early and stack differently, like:\"), mdx(Fumen, {\n    data: \"v115@9gg0zhEei0R4CeRpBtR4ywA8RpA8BtB8wwD8JeAgHv?hAAAAFhQ4FeglBeR4EeglCeQ4EehlMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gg0Feili0R4BeglRpBtR4ywA8RpA8BtB8wwD8JeAg?HvhAAAApgwhIewhIewhFeBtAewhCeQ4CeBtDeR4IeQ4NeAA?A\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"lst\"\n  }, \"LST\"), mdx(\"p\", null, \"Another way to continue is to create a field like below with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ILS\"), \" (first picture) or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SZL\"), \" (second picture).\"), mdx(Fumen, {\n    data: \"v115@zgwhIewhIewhglAeR4CeRpwhglR4CeA8RpA8hlB8Ae?D8JeAgHzgwhIewhHeg0whGewSRpglBeywAeRpAehlBewwNe?AAAHhg0Ieg0HegHh0AexhCeA8glJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"The resulting field after doing the TSD is compatible with transitioning into LST.\"), mdx(Fumen, {\n    data: \"v115@3g1hCe2hA8Be2hA8Ce1hB8AeB8yhB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Here are a couple of examples of how you would do that.\"), mdx(Fumen, {\n    data: \"v115@7gAtwhCeRpg0AeBtwhA8BeRph0BtwhA8Cei0BtwhB8?AeB8h0AtB8JeAgH7gAPQaCeRpBewSAPQaCexhBewSQaglDe?hWAewSQaglGewSLeAAAzgQ4IeR4AehHgWAeQaglBeQ4AeAP?AegWAPwhQawSEeQawSglAewwEexSglQLKeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(ReadMore, {\n    at: \"/stacking/lst\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"flat-top-continuation\"\n  }, \"Flat top continuation\"), mdx(\"p\", null, \"99 out of a 100 opponents will attempt to continue with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/lst\"\n  }, \"LST Stacking\"), \" if they open with this variation.\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4BtDeglBeR4BtCeglywQ4i0Rphlwwzhg0RpJeAg?HUhwhBtDeg0BexhBtMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"h3\", {\n    \"id\": \"2nd-tsd\"\n  }, \"2nd TSD\"), mdx(\"p\", null, \"Below are some ways to build 2nd TSD.\"), mdx(Fumen, {\n    height: 6,\n    data: \"v115@5gg0FeBtAei0whQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@ygwhIewhCeBtBeRpwhQ4CeBtg0RpwhR4AeC8i0glA8?Q4AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@ygwhIewhCeBthlBewhQ4CeBtglh0whR4AeC8glg0Rp?A8Q4AeD8g0RpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@4gglGeilBtAewhQ4Cei0BtwhR4AeC8g0RpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"If you have a late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \", you can use donation techniques like below.\"), mdx(Fumen, {\n    height: 5,\n    data: \"v115@5gwhFeBtAewhg0BeQ4CeBtwhi0R4AeC8whilA8Q4Ae?D8glLeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@5gwhFeBtAewhBeglQ4CeBtwhilR4AeC8whi0A8Q4Ae?D8Beg0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@AhBtCeglwhQ4CeBtilwhR4AeC8i0whA8Q4AeD8Aeg0?whJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"lst-1\"\n  }, \"LST\"), mdx(\"p\", null, \"After the 2nd TSD, many people will continue with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/lst\"\n  }, \"LST Stacking\"), \" which is a very practical stacking method.\"), mdx(AnimatedFumen, {\n    fps: 1,\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAAwgAtEeQ4AewhBtRpglBeR4whAtg0Rp?glywQ4whAei0hlwwBewhXeAAAvhAAAAegwhDeg0DewhDeg0?RpBewhCeh0RpBtwhQ4ywilAeBtR4wwAeglFeQ4beAAAvhAA?AAagwhDeQ4DewhDeR4Cewhi0AeglQ4CewhBtg0AeglywCeB?tAehlwwkeAAAvhAAAA2fwhIewhGehlwhCeRpBeAtglwhglB?eRpAeBtglwhglywR4AtRpwhhlwwR4Aeg0RpwhAeywAtAei0?whBewwBtHeAtjeAAAvhAAAAsfwhIewhIewhGeg0AewhDeg0?Rpi0Deg0TpDeh0R4RpAeQ4ywR4AtCeR4wwBeBtDeQ4CeAtr?eAAAvhAAAA+fRpFeglAeRpAeQ4Degli0AeR4CehlAeg0Aeg?lQ4HeglywFehlww4eAAAvhAAAAjgAtHeBtHeAtHewhIewhI?ewhIewhQeAAAvhAAAAZgAtHeDtAeRpglBeAtg0Q4BtRpglC?eg0R4CehlAeh0AeQ4qeAAAvhAAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 13,\n    __pageLength: 18\n  }), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"example taken from one of FireStorm58's plays\"), mdx(ReadMore, {\n    at: \"/stacking/lst\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h3\", {\n    \"id\": \"imperial-cross\"\n  }, \"Imperial Cross\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, mdx(\"p\", null, \"credit to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://twitter.com/Tamihodo/status/1066996259913818112\"\n  }, \"Tamihodo\"))), mdx(\"p\", null, \"You can also make \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/imperial-cross\"\n  }, \"Imperial Cross\"), \" from flat top continuation. You will need an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" then an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \".\"), mdx(Fumen, {\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtg0glRpC8Ceg0A8RpD8Ae?h0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@wgRpHeRpAtHeBtQ4hlzhAeAtg0R4glC8Ceg0A8Q4gl?D8Aeh0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"p\", null, \"The first picture above is the preferred way to build it because you'll have an opportunity to make a perfect clear. \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://youtu.be/D53lYihJbZs?t=352\"\n  }, \"Here\"), \" is an example (screen on right).\"), mdx(Fumen, {\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtg0glRpC8Ceg0A8RpD8Ae?h0JeAgHOhwwIexwHewwLeAAAFhxhGexhAtHeBtg0xwDeRpg?lJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"The first image below is the easiest solution to recognize and memorize. The second image below has the second most commonly used solutions where you do a TSS. With these solutions, you have an 80.54% chance of PC. The other remaining solutions can be seen \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@9gh0BtzhB8g0RpBtglwwC8g0RpilxwH8wwC8JeAg0G?A0yaFDK+AAA9ghWxSBeh0BeAPTawwglCeAPzhQpXeAAtGAv?+TWCa+AAA9ghlQphlwhRLBeAthlBeQLgWCeAtAewShWAPXe?AAtGAUuaFDqCBAA9gAPwhAewhgWSaBeAPTpAtDeAPgWg0Rp?wwXeAAtGA0/rtCa+AAA9gAtQaglAeQpyhBewhAPQaxhAPDe?xhAeQpAegWXeAAtGAU3TWCqXBAA9gCPRaSpBeQaAtwhBPgl?QaCeBthHxSRaVeAAtGAaubgCsOBAA9gxhAtxhySBewhAPQa?RpgWwhCehHBeRpxhVeAAtGAUuaPCsXBAA9gRpAexSRaglDe?SawwglCehlwwAtRpRaHeQaMeAAtGATHmFDK+AAA+gxhhlBt?whBeRpwhhWxSCeBtQLAPhHJewhMeAAtGAauaPCzOBAA\"\n  }, \"here\"), \". The total chance will go up to 89.68% with those.\"), mdx(Solution, {\n    data: \"v115@9gBtzhR4B8g0BtRpR4C8i0RpywH8wwC8JeAgHFfgli?0FeglBtg0FehlBtPeilg0FeglR4g0FeR4h0PeBthlFeg0Bt?glFei0glPeh0R4zhB8g0R4glRpwwC8g0ilRpxwH8wwC8JeA?Ae\",\n    mdxType: \"Solution\"\n  }), mdx(\"h3\", {\n    \"id\": \"double-tst\"\n  }, \"Double TST\"), mdx(\"p\", null, \"This \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/tspin-triple#double-tst\"\n  }, \"Double TST\"), \" follow-up is used when LST Stacking is not feasible based on your queue, which is common when the third bag starts with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZJ\"), \". This will be a very risky option if your opponent is faster than you.\"), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAANhQ4FeBtAeQ4ilAewhEei0JeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@pgh0Heg0Ieg0AtHeBtDeA8CeAtBeB8AeF8AeG8JeAg?HXgH8CeG8CeG8CeG8CeG8CeC8AeC8EeA8XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"h3\", {\n    \"id\": \"donation\"\n  }, \"Donation\"), mdx(\"p\", null, \"This follow-up is also used when LST Stacking is not feasible based on your queue, most commonly when you're given a third bag starting with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZJ\"), \". You briefly do ST Stacking before making a donation like the last picture below. The overhang for that TSD is variable.\"), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAANhQ4FeBtAeQ4ilAewhEei0JeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@ygwhCeBtAeilwhQ4ywBtglRpwhR4wwi0A8RpwhAeQ4?AeB8g0F8AeG8JeAgHGhQ4CeBtAei0Q4AewhCeglXeAAA9gh?0R4Feg0R4Geg0ceAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"8-height-pc\"\n  }, \"8-height PC\"), mdx(\"p\", null, \"There are 2 good perfect clear opportunities if you build the second T-Spin in specific ways.\"), mdx(\"h4\", {\n    \"id\": \"with-s\"\n  }, \"With S\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, mdx(\"p\", null, \"credit to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://twitter.com/Tamihodo/status/1066996259913818112\"\n  }, \"Tamihodo\"))), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgH5gg0FeBtAei0whQ4ywBtwhhlwhR4wwBtA8wh?xSQLGexhQaJeAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@NhA8FeB8AeF8AeG8JeAgHBhQ4IeR4IeQ4XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on your third bag and place it like above, you will have a 77.78% chance to do a perfect clear with 3 solutions.\"), mdx(Fumen, {\n    highlight: false,\n    data: \"v115@LgywAtFeg0wwBtFei0IeAtQei0AtA8zhglRpBtC8il?RpAtI8g0G8JeAgWYAS4f2AFbcRAyv78Aw3CwBFbMfCs33LC?zgSLAPFeAPwSgWAeA8i0RpAPQagWAtC8g0RpxwwhI8AtG8J?eAAPYAR+nABFbcRAyv78Aw3CwBFbEwCan/VC\",\n    mdxType: \"Fumen\",\n    __maxHeight: 9,\n    __pageLength: 2\n  }), mdx(\"h4\", {\n    \"id\": \"with-z\"\n  }, \"With Z\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@4gg0GeBti0AewhQ4ywBtilwhR4wwC8glRpwhA8Q4Ae?D8RpwhJeAgH4gglGeilBtAewhQ4ywg0Aeg0BtwhR4wwBtgl?AewSQpUeAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@MhA8GeE8AeC8AeG8JeAgHGhAtHeBtHeAtUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" after this TSD, you will have an 88.33% chance with 5 solutions.\"), mdx(Fumen, {\n    data: \"v115@Zfg0ywFezhFei0IewwQezhFeg0ywFei0IewwQezhil?R4A8Rph0glA8R4B8Rpg0I8g0G8JeAg0FAvvTWCpAAAAZfgH?SLFeTaFeiHIeQLQeywQaFewSgWxSglEexSAPIewhQeCtAeS?aCeQpglBPFeRpJeAPQeAAtFAqyLMC0AAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 14,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"h4\", {\n    \"id\": \"tip\"\n  }, \"Tip\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@4gg0GeBti0AewhQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgl4ggHg0HegHBeg0oeAgl\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Note how you can adjust your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" position here, depending on whether you have an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" or an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" coming up.\"), mdx(ReadMore, {\n    at: \"/perfect-clears/dpc\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"unnamed-continuation\"\n  }, \"Unnamed continuation\"), mdx(Fumen, {\n    data: \"v115@AhQ4FeglBeR4RpBtAeglywQ4Rpg0Bthlwwzhi0JeAg?HUhwhFeg0BexhxwBtKeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"This is an uncommon variation that is most notably used by player \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://www.youtube.com/channel/UC4ldIp7QXgOObJ7QcvfIJpg\"\n  }, \"kazu\"), \". Just like the flat top continuation, people will attempt to continue with LST Stacking if they open with this variation.\"), mdx(\"p\", null, \"This variation is harder to continue with LST Stacking compared to the flat top variation. Still, its advantage is that you can avoid doing any soft drops for certain queues (e.g., \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"JZLISOT\"), \") that would require a soft drop if you continued with the flat top variation instead:\"), mdx(Fumen, {\n    data: \"v115@HhglFeBtAeglFeg0BthlAezhi0JeAgHHhgWBeAtCeB?Pg0gWAeBtCegHAPglhWAtTagHLeRSfvhARwf\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"2nd-tsd-1\"\n  }, \"2nd TSD\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"credit to kazu for the examples\"), mdx(\"p\", null, \"The second TSD is mainly built in two different ways, depending on whether you able to place the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" on top of the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or not. If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \", you are guaranteed to be able to continue onto LST.\"), mdx(Fumen, {\n    data: \"v115@AhBtIeBtglFeA8ilCeA8BeF8KeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4CeBtglRpwhR4AeA8ilRpwhA8Q4?AeF8whJeAgHygwhFegHBewhFegHxSReRpwwIewwJeAAAEhR?pHeQpAeglHexSIeQLJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you are unable to do this, your stack becomes more complicated because you will need to make a donation involving \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \". The middle picture below is preferred.\"), mdx(Fumen, {\n    data: \"v115@PhRpCeA8DeRpA8BeF8KeAgH5gglFeBtAeglCeQ4CeB?thlBeR4BezhCeQ4ReAAe5ggWg0HegWg0HeBtfeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"These are some other ways to follow:\"), mdx(Fumen, {\n    data: \"v115@tgg0Ieg0CeglDeh0BtAeglAeQ4CeRpBthlR4AeA8Rp?zhA8Q4AeF8KeAgHtggHIegHglBegWDeBPgWAPBtwhHeAtQa?FeQpxwJewhJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@4gwhGehlwhAeAtRpQ4CeglwhBtRpR4AeA8glwhAti0?A8Q4AeF8g0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"6-height-pc-1\"\n  }, \"6-height PC\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"credit to kazu and flare (\\u3075\\u308C\\u3042)\"), mdx(\"p\", null, \"Building these shapes will give you a PC chance of 90.48% and 100%, respectively. The one on the left is more important.\"), mdx(Fumen, {\n    data: \"v115@DhilwhEewwglRpwhCeA8ywRpwhA8BeF8whJeAgl9gR?ph0BeiWAeRpg0BeQLgWxSAeBtg0AeSLxSBeBtQeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gRph0R4D8Rpg0R4E8Btg0H8BtG8JeAgl9ghWRLFeR?pleAAe9gwwCtReQaaeAAe9ggWQahlGehWGehlwhHeRpQeAA?e9ghWRaGegWglReQLQaQeAAe\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 5\n  }), mdx(\"br\", null), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gD8R4BtglD8R4wwilE8ywBtK8JeAg0EA0yjFDBhgW?AeRpwwDehWAexwFehlwShWUeAg0EAMN+tCChRaHewhHegWQ?aXeAg0EAMNmPCBhglwhAPRLDehlQaQLAPwhFeQaQpxhUeAg?0EAU9KWCBhhWQpxwDehWAewwAtQaGewSRaUeAg0EAMNWxCC?hBPhHFewSRLGewSXeAg0EAsO8LC\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 6\n  }), mdx(\"p\", null, \"As a side note, you will have a 100% chance of doing a perfect clear if you have either an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" or an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" that you can place on the left. Look \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@RhBtAeA8FeA8BtF8KeAgWBA6AAAAXgwwhlGexwglGe?wwAeglOeRph0wwh0R4whRpg0xwg0R4glwhBeg0Aewwg0ilw?hIewhJeAAtAAXgQLgWQpR4EeQLAeQpwwFeQLAewwQ4SeRaH?eQaIeQaXeAAeZgQLxDFeSLHexDRehlwSRLDehlAeQLAPwhG?eQpxhUeAAeBhxSwwFehWAewwAtQaFeRaAtQaUeAAe/gRLxS?QaBtCeAPxSglAegWAtCeAPAeglQpwhgWQpUeAAe9gxSTaiH?QaxSiWxDQLgHQaAPQawhAexDSLQaAeRaFeQaJeAAtBAvAAA?AjgBtywFeBtwwLeh0R4ywR4whg0R4BtwwR4glwhg0CeBtil?whIewhJeAAtAAjgBPSLFeBPQLSeRLGeBPHexhVeAAeChRaF?exhAexhFexShWVeAAeagBthlFejlFeglBtglPegWglBtFew?SBeAtEeAtxhQpglUeAAeagBPhWFejWFegWBPgWMehWAeQpw?hBPBehWAeQaglRpAPFehlQpgWUeAAe\"\n  }, \"here\"), \" for a summary.\"), mdx(\"h3\", {\n    \"id\": \"8-height-pc-1\"\n  }, \"8-height PC\"), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4ywBtglRpwhR4wwA8ilRpwhA8Q4?AeF8whJeAgH4gg0GeBti0AewhQ4ywBtAPRpwhR4wwAtgWgl?APxSUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@BhQ4IeR4A8FeB8Q4F8AeG8JeAgHBhwDDeAtDewDwhA?AAeBtEewhBeAPUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Doing the second TSD these ways will allow you to make the same shape as the 8-height PC field for the flat top continuation \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#8-height-pc\"\n  }, \"shown above\"), \".\"), mdx(\"h2\", {\n    \"id\": \"castle-top-continuation\"\n  }, \"Castle top continuation\"), mdx(Fumen, {\n    data: \"v115@8gg0Ieg0glBeBtAeQ4Aeh0glywBtR4RphlwwzhQ4Rp?JeAgHvhAAAAQhglIeglg0BeBtAewhAehlJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"The only requirement for castle top is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" coming before \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \".\"), mdx(\"h3\", {\n    \"id\": \"6-height-pc-2\"\n  }, \"6-height PC\"), mdx(Fumen, {\n    data: \"v115@9gRpilBewhh0RpglR4Bewhg0A8BtR4Cewhg0B8BtB8?AeA8whB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"People usually try to make this shape because it gives you a chance to do a perfect clear with an \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or an \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" in your 3rd bag.\"), mdx(Fumen, {\n    data: \"v115@9gE8RpH8RpG8ywH8wwD8JeAglChRaHeglQaIewSWeA?Ae\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"If you have early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \", you could stack like below, which gives you a 100% chance of doing a perfect clear. Solutions can be found \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@9gBtR4AtE8ilBtE8glR4AtG8BtG8JeAg0EA6yjFD9g?QpwhhWFexwIeRLHeQpwhQeAAtEAsHUxC9gAPgWxSgWEeBPA?eRpEehlwwQpGewSQaQeAAtEAa9KWC9ghWRaglEeAtQaAexS?EeRpQLwSGeQpgWQeAAtEAzibMC9gwhi0FeQLxwGeRLwwIew?wQeAAtEA6y7tC+gQLRaGeRLIeQaHeQLQaQeAAtEA6i/VC\"\n  }, \"here\"), \".\"), mdx(Fumen, {\n    data: \"v115@ChRpwhh0EeRpwhg0A8Deywwhg0B8BeB8wwA8whB8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"imperial-cross-1\"\n  }, \"Imperial Cross\"), mdx(\"p\", null, \"If you have an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \", you can follow up with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/imperial-cross\"\n  }, \"Imperial Cross\"), \". If you can build it like the 3rd picture shown below, you will have a high chance to get a perfect clear (89%). The solutions are same as the Imperial Cross PC done with the flat top variation, shown \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#imperial-cross\"\n  }, \"above\"), \".\"), mdx(Fumen, {\n    height: 6,\n    data: \"v115@wgRpHeRpAtHeBtQ4hlzhAeAtA8R4gli0CeB8Q4glB8?g0A8AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@wgRpHeRpAtHeBtQ4zhh0AeAtA8R4ilg0CeB8Q4glB8?g0A8AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtA8glRpi0CeB8RpB8g0A8?AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@xgR4GeR4AtHeBtilzhwwAtA8glRpi0AexwB8RpB8g0?A8wwB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@FhR4GeR4AtHeBtglRpi0AexwA8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"h2\", {\n    \"id\": \"see-also--references\"\n  }, \"See Also / References\"), mdx(ReadMore, {\n    at: \"/openers/practical-openers\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"ul\", null, mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u30C6\\u30F3\\u30D7\\u30EC\\u96C6\\uFF20\\u30C6\\u30C8\\u8B5C on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://w.atwiki.jp/tetrismaps/pages/30.html\"\n  }, \"DD\\u30D1\\u30D5\\u30A7\")), mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u958B\\u5E55\\u30C6\\u30F3\\u30D7\\u30ECWiki on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://tetrisopener.wicurio.com/index.php?%E9%96%8B%E5%B9%95TSD\"\n  }, \"\\u958B\\u5E55TSD\")), mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u307F\\u3074's Google Sheet on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://docs.google.com/spreadsheets/d/1imoxpwNe2sxlwwRPc4cNIPFExpYvO_O9OR5JgrWfV9Q/\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u958B\\u5E55\\u30C6\\u30F3\\u30D7\\u30EC\"))), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"thanks to popte for the tip on LST continuation for Fonzie\")));\n}\n;\nMDXContent.isMDXComponent = true;","tableOfContents":{"items":[{"url":"#basic-shape","title":"Basic Shape"},{"url":"#using-tki","title":"Using TKI"},{"url":"#follow-up-variations","title":"Follow-up Variations"},{"url":"#fonzie-continuation","title":"Fonzie continuation","items":[{"url":"#6-height-pc","title":"6-height PC"},{"url":"#lst","title":"LST"}]},{"url":"#flat-top-continuation","title":"Flat top continuation","items":[{"url":"#2nd-tsd","title":"2nd TSD"},{"url":"#lst-1","title":"LST"},{"url":"#imperial-cross","title":"Imperial Cross"},{"url":"#double-tst","title":"Double TST"},{"url":"#donation","title":"Donation"},{"url":"#8-height-pc","title":"8-height PC","items":[{"url":"#with-s","title":"With S"},{"url":"#with-z","title":"With Z"},{"url":"#tip","title":"Tip"}]}]},{"url":"#unnamed-continuation","title":"Unnamed continuation","items":[{"url":"#2nd-tsd-1","title":"2nd TSD"},{"url":"#6-height-pc-1","title":"6-height PC"},{"url":"#8-height-pc-1","title":"8-height PC"}]},{"url":"#castle-top-continuation","title":"Castle top continuation","items":[{"url":"#6-height-pc-2","title":"6-height PC"},{"url":"#imperial-cross-1","title":"Imperial Cross"}]},{"url":"#see-also--references","title":"See Also / References"}]},"parent":{"relativePath":"openers/tki.mdx"}},"allDocLinksYaml":{"nodes":[{"title":"Openers","items":[{"link":"/openers/practical-openers","title":"Practical Tetris Openers","alt":null,"description":"This page shows practical setups that are widely used among players, depending on the order of pieces they get in their first starting bag","fumen":null,"image":null},{"link":"/openers/tki","title":"TKI","alt":"開幕TSD","description":"TKI is a very popular opener among tetris players where you send a TSD from the very start with your first bag","fumen":"v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H","image":null},{"link":"/methods/dt-cannon","title":"DT Cannon","alt":"DT砲","description":"DT Cannon is a very popular TSD → TST opener that is used when players have an early LS or JL","fumen":"v115@hghlDeR4CeglBtAeR4whh0AeglA8BtRpwhg0BeD8Rp?whg0CeE8whB8AeI8AeG8JeAgH","image":null},{"link":"/perfect-clears/opener","title":"Perfect Clear Opener","alt":"パフェクリテンプレ","description":"A popular opener with an 84.64% chance of doing a perfect clear if you have I on hold.","fumen":"v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH","image":null},{"link":"/openers/hachispin","title":"Hachispin","alt":"にはち砲","description":"A TSS → TST → PC opener created by hachispin","fumen":"v115@5gAtCewhDeBtCewhAei0AtDewhilg0RpAeR4whglCe?RpR4KeAgH","image":null},{"link":"/openers/mko","title":"MKO","alt":null,"description":"An opener where you stack your first bag in a way that allows you to follow up with either a perfect clear with a 33% chance or T-Spin Doubles.","fumen":"v115@9gQ4EeAtBewhR4CeBtBewhg0Q4CeAtglRpwhi0Aeil?RpwhJeAgH","image":null},{"link":"/methods/triple-double#opening-c-spin","title":"C-Spin","alt":"TKI積み","description":"A classic opener where you open with a TST → TSD.","fumen":"v115@pgh0Heg0Ieg0AeywEeglBewwQ4CeRpglAeBtR4BeRp?hlAeBtQ4zhJeAgH","image":null},{"link":"/methods/bt-cannon","title":"BT Cannon","alt":"BT砲","description":"A BT Cannon → C-Spin → Perfect Clear loop created by 26_nameless that has a high chance of completing and continuing the loop","fumen":"v115@igAtCehlwhRpBtDeglwhRpAth0R4AeglwhC8g0R4Be?A8whC8g0A8ywH8wwJ8AeB8JeAgH","image":null},{"link":"/openers/mr-tspin","title":"Mr. T-Spin's STD","alt":null,"description":"A TSS → TST → TSD opener that can be used when you have an early SZ start, devised by Mr. T-Spin","fumen":"v115@pgwhIewhDeglDewhDeglDewhAeQ4BehlBeg0RpR4Bt?ywg0RpAeQ4AeBtwwh0JeAgH","image":null},{"link":"/openers/albatross","title":"Albatross","alt":"アルバトロスSP","description":"An Air-TSD → TST → TSD \"bird\" opener.","fumen":"v115@AhBtDewhQ4CeBti0whR4AeRpilg0whAeQ4AeRpglCe?whJeAgH","image":null}]},{"title":"Methods","items":[{"link":"/methods/tspin-triple","title":"T-Spin Triple","alt":"TST","description":null,"fumen":"v115@zgD8FeC8GeC8AeI8BeH8AeF8JeAgH","image":null},{"link":"/methods/triple-double","title":"Triple Double","alt":"TD","description":"A TST → TSD setup often used mid-game","fumen":"v115@pgD8BeG8CeG8AeI8BeH8AeJ8AeE8JeAgH","image":null},{"link":"/methods/dt-cannon#mid-game-dt","title":"DT Cannon","alt":"DT砲","description":"A TSD → TST setup first outlined by TKI","fumen":"v115@hgH8CeI8AeH8BeH8CeH8AeI8AeG8JeAgH","image":null},{"link":"/methods/fractal","title":"Fractal","alt":"ダブルダガー","description":"A TSD → TSD setup that is also known as \"double dagger\" in the Japanese community.","fumen":"v115@zgC8GeB8CeH8AeH8CeH8AeF8JeAgH","image":null},{"link":"/methods/imperial-cross","title":"Imperial Cross","alt":"インペリアルクロス","description":"A TSD → TSD setup that looks like, well, an imperial cross","fumen":"v115@zgD8BeG8CeG8AeH8CeH8AeF8JeAgH","image":null},{"link":"/methods/parapet","title":"Parapet","alt":"欄干","description":"A donation TSD/TSS technique which got its name because of how the J/L covering the hole resembles a parapet","fumen":"v115@jgR4Beg0AeC8R4Ceg0G8Aeh0H8AeI8AeI8AeI8AeB8?JeAgl","image":null},{"link":"/methods/kaidan","title":"Kaidan","alt":"階段積み","description":"A TSD donation technique that can be used when you see stairs","fumen":"v115@2gzhCeF8CeAtG8AeBtH8AtAeI8KeAgH","image":null},{"link":"/methods/stmb","title":"STMB Cave","alt":"STMBケイブ","description":"STMB is an air T-Spin technique where you hang a S or a Z over a 3-wide column to create a TSD shape.","fumen":"v115@ngQ4IeR4D8BtCeQ4E8BtAeG8CeG8CeG8CeB8JeAgH","image":null},{"link":"/methods/stsd","title":"STSD","alt":null,"description":"Short for Super T-Spin Double. This setup yields 2 T-Spin Doubles.","fumen":"v115@1gH8CeI8AeH8BeH8BeG8JeAgH","image":null},{"link":"/methods/shachiku-train","title":"Shachiku Train","alt":"社畜トレイン","description":"A donation TSD → TSD method.","fumen":"v115@igAtHeBtDeD8AtCehlF8AeR4glF8R4AeglI8AeI8Ae?B8JeAgH","image":null},{"link":"/methods/polymer-tspin","title":"Polymer T-Spins","alt":null,"description":"Polymer T-Spins refer to T-Spin setups consisting of two or more of either Iso-, Neo-, or Fin-TSDs.","fumen":"v115@mgC8IeA8IeH8BeI8AeG8BeI8AeB8JeAgH","image":null},{"link":"/methods/yoshihiro","title":"Yoshihiro SD","alt":"よしひろ積み","description":"A TSM → TSD method","fumen":"v115@HhF8CewwG8AexwI8wwJeAgH","image":null},{"link":"/methods/anchor-set","title":"Anchor Set","alt":"アンカーセット","description":"A rarely used technique that is utilized in order to maintain Back-to-Back.","fumen":"v115@0gI8AeI8Aeg0H8Aeg0H8h0AeG8JeAgH","image":null}]},{"title":"Mid-game","items":[{"link":"/mid-game/finesse","title":"Finesse","alt":null,"description":"An optimization technique which helps you play faster by reducing your keypresses per piece placed","fumen":"v115@vhAH+m","image":null},{"link":"/mid-game/donation","title":"Donation","alt":"ドネイト","description":"An overview of donation, a technique of temporarily covering open columns underneath","fumen":"v115@zg0hEeB8xhCeyhE8AeA8whG8AeA8AeG8AeD8JeAgH","image":null},{"link":"/mid-game/puyo-puyo-tetris","title":"Puyo Puyo Tetris","alt":"ぷよぷよテトリス","description":"Notes on Puyo Puyo Tetris, a crossover game between Puyo Puyo and Tetris developed by Sega","fumen":null,"image":""},{"link":"/mid-game/skimming","title":"Skimming","alt":null,"description":"Skimming is a method where a player does a non-Back-to-Back line clear to make the stack more favorable.","fumen":"v115@/gAtCeE8Bti0E8AtCeg0G8AeF8JeAgH","image":null}]},{"title":"Stacking","items":[{"link":"/stacking/lst","title":"LST Stacking","alt":null,"description":"A very practical stacking method that can be used both in versus and Ultra, where you repeat L and S on the left column","fumen":"v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH","image":null},{"link":"/stacking/tetris","title":"Tetris","alt":"テトリス","description":"Counting to four is an essential skill that you should learn and utilize for mid-game tetrises","fumen":"v115@WgAtHeBtHeAtIeA8RpGeA8RpAeH8wwAeG8xwAeH8Ae?G8JeAgH","image":null},{"link":"/stacking/st","title":"ST Stacking","alt":null,"description":"A popular stacking method used in Ultra where you repeat S on the left column","fumen":"v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH","image":null},{"link":"/stacking/4-wide","title":"4-Wide","alt":"4列REN","description":"The infamous combo setup","fumen":"v115@VgC8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8Je?AgH","image":null}]},{"title":"Perfect Clears","items":[{"link":"/perfect-clears/opener","title":"Perfect Clear Opener","alt":"パフェクリテンプレ","description":"A popular opener where you have an 84.64% chance of doing a perfect clear if you have I on hold.","fumen":"v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH","image":null},{"link":"/perfect-clears/grace-system","title":"Grace System","alt":"グレースシステム","description":"An opener with an 88.57% chance of doing a perfect clear if you have T on hold.","fumen":"v115@9gili0DeglAtRpQ4g0DeBtRpR4DeAtzhQ4NeAgH","image":null},{"link":"/perfect-clears/2nd","title":"2nd PC","alt":null,"description":"90%+ 2nd PC patterns from knewjade that you could use after PCO or Grace System","fumen":"v115@VgwhIewhglAewwFewhglxwRpDewhhlwwRpUeg0DeR4?wwBeg0RpAeR4ywh0RpJeAgH","image":null},{"link":"/perfect-clears/dpc","title":"DPC","alt":"3巡パフェ後テンプレ","description":"TSD → PC setups that you can use after performing an 8-height PC","fumen":"v115@2gRpEewhBeRpEewhCeR4Bthlwhg0AeR4B8Btglwhi0?B8CeglJeAgWLAz3hRASIrSAzkqBA","image":null},{"link":"/perfect-clears/7th","title":"7th PC","alt":null,"description":"100% PC patterns that you can use for your 7th consecutive PC","fumen":"v115@LgxhHexhHexhRpFexhRpAeg0CewwEei0xwEezhwwKe?RpAeR4wwDeRpR4ywLeAgH","image":null},{"link":"/perfect-clears/ILSZ","title":"ILSZ","alt":null,"description":"A 100% 1st PC pattern","fumen":"v115@9gwhilFewhglAtGewhBtR4EewhAtR4PeAgH","image":null},{"link":"/perfect-clears/4th","title":"4th PC","alt":null,"description":"4-piece patterns that you can use for your 4th PC with your 5 leftover pieces","fumen":"v115@FhhlGeR4glRpDeR4wwglRpEeywJeAgH","image":null},{"link":"/perfect-clears/3rd","title":"3rd PC","alt":null,"description":"You'll have an extra mino when starting your 3rd PC. These are some patterns that you could use for it","fumen":"v115@9gRpwhDei0RpwhEeQ4g0RpwhEeR4RpwhFeQ4JeAgH","image":null},{"link":"/perfect-clears/5th","title":"5th PC","alt":null,"description":"Some 2 + 4 piece patterns that you could use for your 5th PC","fumen":"v115@qgAtHeBtwwGeAtywLewwHeywHezhJeAgH","image":null},{"link":"/perfect-clears/6th","title":"6th PC","alt":null,"description":"Some patterns that you could use for your 6th PC","fumen":"v115@9gwhQ4ywEewhR4wwFewhg0Q4BtEewhi0BtNeAgH","image":null}]},{"title":"SRS","items":[{"link":"/srs/kicks-overview","title":"Kicks Overview","alt":null,"description":"An overview of how kicks work in SRS","fumen":"v115@wgwwB8FexwAeH8AtAeH8BeI8AeH8AeB8JeAgl","image":null},{"link":"/srs/t-spin","title":"T-Spin","alt":null,"description":"How does the game detect T-Spins?","fumen":"v115@lgQpwwHeywGeA8AeA8BeQ4IeywGeQ4wwQ4ZeAgH","image":null},{"link":"/srs/t-kicks","title":"T Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise T Kicks in SRS","fumen":"v115@mgwhBewhLeA8EeA8AtBeQpBeAtBeQpBeQ4EeQ4NeA8?AeA8NetCn","image":null},{"link":"/srs/j-kicks","title":"J Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise J Kicks in SRS","fumen":"v115@PgQpCewhQpLewhSeAtDeAtEeB8CeB8CeglNeQpUe2s?m","image":null},{"link":"/srs/l-kicks","title":"L Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise L Kicks in SRS","fumen":"v115@fgA8BeQ4BeA8CeAtGeQpDeg0Eeg0AeA8EeA8bewwMe?q4m","image":null},{"link":"/srs/s-kicks","title":"🚧 S Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise S Kicks in SRS","fumen":"v115@ggQpHeAtHeg0HeAtAewhAeAtGewhFeA8CewhCeA8Ge?A8AeA8Ne31m","image":null},{"link":"/srs/z-kicks","title":"🚧 Z Kicks","alt":null,"description":"Illustrations and demonstrations of counterclockwise Z Kicks in SRS","fumen":"v115@LgA8IeglFeg0EeQpHeR4FewhFeC8AewhHeglLeQpHe?Q4QesJn","image":null},{"link":"/srs/i-kicks","title":"🚧 I Kicks","alt":null,"description":"Illustrations of counterclockwise and clockwise I Kicks in SRS","fumen":"v115@igE8UeA8CeQ4DeAtDei0JeA8CeA8AeB8PeZ9m","image":null}]},{"title":"Tetris Effect","items":[{"link":"/tetris-effect/all-clear","title":"Tetris Effect All Clear Mode Solutions","alt":null,"description":"Diagrams and solutions to some of the non-straightforward maps on Tetris Effect's All Clear Mode","fumen":"v115@zgUpEe0wDe1wCexwklBeilUpBeSpJeAgH","image":null},{"link":"/tetris-effect/boss-abilities","title":"Tetris Effect Boss Abilities","alt":null,"description":"A visual guide to boss abilities in Tetris Effect's Connected VS mode","fumen":null,"image":"https://davdav1233.gitlab.io/tetris-videos/tetris-effect/boss-abilities.gif"}]},{"title":"Misc","items":[{"link":"/openers/gamushiro","title":"Gamushiro Stacking","alt":"ガムシロ積み","description":"Gamushiro Stacking is a TST → TSD (or TSS) → PC opener created by KMGZ","fumen":"v115@VgwhGeRpwhGeRpwhh0Eehlwhg0DeR4A8glA8g0AeBt?R4B8glB8BeBtF8AeJ8AeF8JeAgWIA5Fg2A5ngHB","image":null},{"link":"/openers/new-dt-cannon","title":"New DT Cannon","alt":"新DT砲","description":"A 5-bag TSD → TST → TSD → Tetris → PC loop based on DT Cannon","fumen":"v115@hghlQ4BeAtEeglR4BtAewhh0AeglA8Q4AtRpwhg0Be?D8Rpwhg0ywE8whB8wwI8AeG8JeAgWgAlfrHBiYxwClv1RBT?rDfETIs9Blvs2AW0DfETYO6A","image":null},{"link":"/openers/sailboat","title":"Sailboat","alt":"SSTシップ","description":"Sailboat is a TSS → TSS → TST opener created by ゆう","fumen":"v115@AhhlDewhDeglRpBewhBtAeg0glRpR4whAeBti0R4Ae?whJeAgH","image":null},{"link":"/openers/sd-pc","title":"Single Double PC","alt":"SDパフェ","description":"A TSS → TSD → (TSS →) PC opener created by ゆう","fumen":"v115@0gAtHeBtGewhAtFehlwhRpAeR4i0glwhRpR4Ceg0gl?whJeAgH","image":null},{"link":"/openers/tt-pc","title":"Triple Triple PC","alt":"TTパフェ","description":"A TST → (TSS or TSD or TST →) PC opener created by ゆう","fumen":"v115@cgRpg0whFeRpg0whEeBth0whQ4EeBtA8whR4ilAeE8?Q4glA8BeI8AeF8AeF8JeAgH","image":null},{"link":"/openers/black-tea-cannon","title":"Black Tea Cannon","alt":"紅茶砲","description":"Black Tea Cannon is a TSD → TSD → 6-height or 8-height PC opener","fumen":"v115@xgRpHeRpg0Fehlwhi0R4CeglwhB8R4BtAeA8glwhC8?BeBtB8whJeAgH","image":null},{"link":"/misc/all-6-residuals","title":"4-Wide 6-Residual Patterns","alt":null,"description":"Diagrams of all possible 6-residual patterns for 4-Wide","fumen":"v115@ggA8ilAeB8RpAeA8glAeA8AeA8AeRpAeA8AeB8AeB8?AeA8JeQ4AeB8AeA8h0BeR4AeA8AeA8g0AeA8AeA8Q4B8AeA?8g0B8KeAgH","image":null},{"link":"/mid-game/situational-finesse","title":"Situational Finesse","alt":null,"description":"Input sequences to place S and I pieces vertically at specific columns with an alternate orientation","fumen":"v115@vhAfA2DAjVFDA","image":null},{"link":"/perfect-clears/sakanas-tsd-pc","title":"Sakana's TSD → PC","alt":null,"description":"100% opening TSD → 6-height PC patterns found by Sakana","fumen":"v115@ygwhCeRpCeg0whCeRpilg0whglBeBtglQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH","image":null},{"link":"/openers/viper","title":"Viper","alt":null,"description":"A TSD → PC opener that theoretically has a 99.999% chance of following up with a perfect clear after the first TSD","fumen":"v115@9gwhFeBtAewhglRpQ4CeBtwhglRpR4Aei0whhlBeQ4?Ceg0JeAgH","image":null}]}]},"allSupplementalLinksYaml":{"nodes":[{"link":"/misc/all-5-residuals","title":"4-Wide 5-Residual Patterns","alt":null,"description":"Diagrams of all possible 5-residual patterns for 4-Wide","fumen":"v115@YgQ4EeA8AeB8R4DeA8AeA8BeQ4BeRpA8AeA8BeA8Ae?A8RpA8LeB8Ceh0AeywA8AeB8g0BeA8wwAeA8AeB8g0A8KeA?gH","image":null},{"link":"/misc/all-4-residuals","title":"4-Wide 4-Residual Patterns","alt":null,"description":"Diagrams of all possible 4-residual patterns for 4-Wide. Notably used by the MisaMino bot.","fumen":"v115@ggA8i0CeRpAeA8Beg0AeB8RpAeA8BeA8BeA8AeA8Je?hlCeBtDeglAeA8AeA8BtA8AeA8glB8BeA8AeA8KeAgH","image":null},{"link":"/openers/intai-cannon","title":"Intai Cannon","alt":"いんたい砲","description":"Intai Cannon is a TSD → PC opener that you can use for all opening bags with a high PC chance","fumen":"v115@4gg0DewhDeg0RpBewhglBeh0RpQ4AewhglCewwBtR4?whhlAeywBtQ4JeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-1","title":"Sakana's First TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's first TSD → PC","fumen":"v115@pgh0R4Eewhg0R4BtDewhg0RpQ4DtAewhglRpR4BeBt?whglywQ4i0Rphlwwzhg0RpJeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-2","title":"Sakana's Second TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's second TSD → PC","fumen":"v115@ugRph0whEeRph0whDeywh0whglBeBtwwQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-3","title":"Sakana's Third TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's third TSD → PC","fumen":"v115@pgRpHeRpCeywBeBtCeQ4wwRpAeglBtBeR4RpAeglBt?ywQ4i0hlBtwwzhg0JeAgH","image":null},{"link":"/perfect-clears/sakanas-tsd-pc-4","title":"Sakana's Fourth TSD → PC","alt":null,"description":"Diagrams and solutions to Sakana's fourth TSD → PC","fumen":"v115@pgzhR4Dei0R4EeBtg0RpQ4Ceglg0BtRpR4ili0ywQ4?glRpzhwwilRpJeAgH","image":null},{"link":"/mid-game/tsd-donation","title":"🚧 TSD Donation","alt":"TSDドネイト","description":"A collection of commonly used TSD donation patterns","fumen":"v115@RgwhIewhCeB8DewhCeA8CeBtwhilB8AeR4BtglD8R4?CeH8AeF8AeB8AeF8AeG8JeAgH","image":null},{"link":"/mid-game/tst-donation","title":"🚧 TST Donation","alt":"TSTドネイト","description":"One of the most advanced techniques that you can use during matches. This page also covers TSD donations that are done with the TST kick","fumen":"v115@LgwhGeR4whFeR4A8whBtEeB8whg0BtilAeC8i0glA8?BeE8BeB8AeE8CeH8AeI8AeE8JeAgH","image":null},{"link":"/mid-game/tss-donation","title":"🚧 TSS Donation","alt":"TSSドネイト","description":null,"fumen":"v115@5gA8CeA8DeB8i0B8AeD8Beg0H8AeI8AeA8JeP8I","image":null},{"link":"/drafts/connected","title":"🚧 Tetris Effect Connected VS","alt":null,"description":"Notes on Tetris Effect's Connected VS mode","fumen":null,"image":""},{"link":"/perfect-clears/nilgiris-1st","title":"Nilgiri's 1st PC Patterns","alt":null,"description":"32 high-chance 4-piece PC patterns that cover all opening mino sequences","fumen":"v115@9gzhFeh0AtGeg0BtR4Eeg0AtR4PeAgH","image":null}]}},"pageContext":{"id":"1267c730-ac00-56c1-9f75-00561ab9c6aa"}},"staticQueryHashes":["3790145691"]}
+{
+  "componentChunkName": "component---src-templates-article-layout-tsx",
+  "path": "/openers/tki",
+  "result": {
+    "data": {
+      "site": { "siteMetadata": { "title": "FOUR", "siteUrl": "https://four.lol" } },
+      "mdx": {
+        "fields": {
+          "id": "1267c730-ac00-56c1-9f75-00561ab9c6aa",
+          "title": "TKI (開幕TSD)",
+          "slug": "/openers/tki"
+        },
+        "body": "var _excluded = [\"components\"];\n\nfunction _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }\n\nfunction _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }\n\nfunction _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }\n\n/* @jsxRuntime classic */\n\n/* @jsx mdx */\nvar _frontmatter = {\n  \"title\": \"TKI (開幕TSD)\"\n};\n\nvar makeShortcode = function makeShortcode(name) {\n  return function MDXDefaultShortcode(props) {\n    console.warn(\"Component \" + name + \" was not imported, exported, or provided by MDXProvider as global scope\");\n    return mdx(\"div\", props);\n  };\n};\n\nvar Fumen = makeShortcode(\"Fumen\");\nvar Mino = makeShortcode(\"Mino\");\nvar layoutProps = {\n  _frontmatter: _frontmatter\n};\nvar MDXLayout = \"wrapper\";\nreturn function MDXContent(_ref) {\n  var components = _ref.components,\n      props = _objectWithoutProperties(_ref, _excluded);\n\n  return mdx(MDXLayout, _extends({}, layoutProps, props, {\n    components: components,\n    mdxType: \"MDXLayout\"\n  }), mdx(\"p\", null, \"TKI is a very popular opener among Tetris players, where you send a TSD from the very start with your first bag\\u2014originally devised by player \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"http://bugloderunner.my.land.to/tetDS/tetDStop.html\"\n  }, \"TKI\"), \".\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"This opener is very fast to execute as it only needs 5 to 6 pieces from the first bag to complete the first T-Spin Double, and the only requirement of this opener is an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \". Another advantage of TKI is that it leaves a low and clean field after the first TSD, making it easy to follow up with subsequent TSDs or downstacking.\"), mdx(\"p\", null, \"Note: TKI refers to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/triple-double#c-spin\"\n  }, \"C-Spin\"), \" in the Japanese community\"), mdx(\"h2\", {\n    \"id\": \"basic-shape\"\n  }, \"Basic Shape\"), mdx(\"p\", null, \"The opener itself is very simple. You make this basic shape and do a TSD.\"), mdx(Fumen, {\n    data: \"v115@HhglBeBtAeQ4CeglCeBtR4RphlAezhQ4RpJeAgHShy?wHewwQeAAAvhAAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 3,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"You can just hard drop \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \" and \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" without any rotations or movements from their spawn positions.\"), mdx(AnimatedFumen, {\n    disableMirror: true,\n    fps: 2,\n    data: \"v115@vhERymRwBUNfUmBAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 8,\n    __pageLength: 5\n  }), mdx(\"h2\", {\n    \"id\": \"using-tki\"\n  }, \"Using TKI\"), mdx(\"p\", null, \"TKI can be harder for beginners to use because there isn't exactly a set follow-up that you use after you do the initial TSD, which means that you will have to improvise in many cases. Although many follow-ups to TKI are done freestyle, there are certain variations and certain follow-ups that are used by players when the upcoming pieces allow you to do that specific follow-up.\"), mdx(\"p\", null, \"Here's an example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZIOLTSJ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"JTIOLSZ\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SILTJOZ\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#flat-top-continuation\"\n  }, \"flat top\"), \" variation. Most players prefer to do LST Stacking when they use the flat top variation, and here, the players second and third bag allows the player to continue with LST Stacking, and therefore he chooses to do so.\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?HUhilDeg0BeBtglwhMeAAA5gwhFeBtAewhilQ4ywBtwhglR?pR4wwCewhg0RpAeQ4Eei0JeAAANhQ4FeBtAeQ4i0AewhEei?lJeAAAkgwhIewhAeAtGewhBtRpglCeQ4whAtg0RpglCeR4A?ei0hlCeQ4XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"Here's another example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SLIOTJZ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LSJZITO\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"OTJZLIS\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#fonzie-continuation\"\n  }, \"fonzie\"), \" variation. Stacking the second bag in a way that gives the player a chance to PC is preferred, and the second bag allows the player to do this. The player luckily gets an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" on the third bag and does a perfect clear.\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAe9gzhAtBeRpg0Q4hlBtBeRpg?0R4glAtywAeh0AeQ4glBewwNeAAARhT4AtBexwglwhh0BtB?exwglJeAAeWhRpHeRpMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"Last example: Bag 1 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"TSIZOLJ\"), \", Bag 2 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ITZOLJS\"), \", and Bag 3 is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"STZOLIJ\"), \". The player chooses to use TKI with his first bag and decides to do the \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#fonzie-continuation\"\n  }, \"fonzie\"), \" variation. Although it would have been nice to stack in a way that gives the player a chance to PC, the second bag doesn't allow the player to do so. Therefore \", mdx(\"em\", {\n    parentName: \"p\"\n  }, \"the player improvises\"), \" on his second and third bag.\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAewgwhAeg0glFewhAeg0glFew?hh0hlAeR4BewhRpBtR4ywAeRpAeBtBewwNeAAAEhQ4Aeglg?0FeQ4Aeglg0FeQ4hlh0AexhBeQ4xwJeAAefgRpHeRpHeQ4D?eg0whhlAeR4Ceg0whAeglBeQ4Beh0whAeglBeywBtwhEeww?BeBtMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 5\n  }), mdx(\"p\", null, \"The last example is representative of many cases where you will have to improvise on your second bag and onwards, but as shown in the first two examples, given the right pieces, there are certain follow-ups that you can follow. The rest of this page shows widely used follow-ups to TKI, including the ones shown in the first two examples.\"), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"examples on this section are from kazu's plays\")), mdx(\"h2\", {\n    \"id\": \"follow-up-variations\"\n  }, \"Follow-up Variations\"), mdx(\"p\", null, \"Most variations are divided by where you put your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \"(\", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \"). The pictures below show the fonzie, flat top, and castle top variation, respectively.\"), mdx(Fumen, {\n    height: 5,\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@8gg0Ieg0glBeBtAeQ4Aeh0glywBtR4RphlwwzhQ4Rp?JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"Below are other variations that are less commonly used depending on the player's preference.\"), mdx(Fumen, {\n    data: \"v115@9gQ4IeR4BeBtAeilg0Q4ywBtglRpi0wwzhRpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4FeglBeR4RpBtAeglywQ4Rpg0Bthlwwzhi0JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ChQ4DeglBeBtR4AeRpglywBtQ4g0Rphlwwzhi0JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@ChQ4DeglDeR4CeglBtywQ4i0hlBtwwzhg0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"The first variation above is unique in a sense because it's a variation that you can use even when you have a somewhat late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"I\"), \". Here are some example first bags for when you would use this variation: \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LZSOITJ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"LTZIOSJ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"OSJLITZ\"), \", \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"IOLTZJS\")), mdx(\"h2\", {\n    \"id\": \"fonzie-continuation\"\n  }, \"Fonzie continuation\"), mdx(Fumen, {\n    data: \"v115@Ehg0BeglBeBtAeQ4i0glywBtR4RphlwwzhQ4RpJeAg?HYhglBeg0BeBtAewhilJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"The fonzie variation is usually possible when you have late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \".\"), mdx(\"h3\", {\n    \"id\": \"6-height-pc\"\n  }, \"6-height PC\"), mdx(Fumen, {\n    data: \"v115@9gg0zhBeili0R4BeglRpBtR4CeA8RpA8BtB8AeD8Je?AgH9gQLCeQpBexhAtwhBPxSBewhAeSpQLwSDeRpAeQpgWQe?AAAEhxSgHGewSAewSHexSTeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"People usually try to make these shapes when continuing with this variation because it gives you a chance to make a perfect clear.\\n\", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://harddrop.com/w/index.php?title=Opener&oldid=29057#TKI_3_.28Fonzie_variation.29\"\n  }, \"Here\"), \" are some other ways to get a perfect clear.\"), mdx(Fumen, {\n    data: \"v115@9gE8RpH8RpG8ywH8wwD8JeAglChRaHeglQaIewSWeA?AeChAtQayDEewhAtgWHeQpWeAAe\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"If a perfect clear is not possible, players often make an \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/stsd\"\n  }, \"STSD\"), \",\"), mdx(Fumen, {\n    data: \"v115@7gAtg0AeR4DeBtg0R4zhAeAth0E8BeH8BeC8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@zgglCeR4DeglAeg0R4Eehli0AezhE8BeH8BeC8JeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"or recognize that a perfect clear is not possible early and stack differently, like:\"), mdx(Fumen, {\n    data: \"v115@9gg0zhEei0R4CeRpBtR4ywA8RpA8BtB8wwD8JeAgHv?hAAAAFhQ4FeglBeR4EeglCeQ4EehlMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gg0Feili0R4BeglRpBtR4ywA8RpA8BtB8wwD8JeAg?HvhAAAApgwhIewhIewhFeBtAewhCeQ4CeBtDeR4IeQ4NeAA?A\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"lst\"\n  }, \"LST\"), mdx(\"p\", null, \"Another way to continue is to create a field like below with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ILS\"), \" (first picture) or \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"SZL\"), \" (second picture).\"), mdx(Fumen, {\n    data: \"v115@zgwhIewhIewhglAeR4CeRpwhglR4CeA8RpA8hlB8Ae?D8JeAgHzgwhIewhHeg0whGewSRpglBeywAeRpAehlBewwNe?AAAHhg0Ieg0HegHh0AexhCeA8glJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"The resulting field after doing the TSD is compatible with transitioning into LST.\"), mdx(Fumen, {\n    data: \"v115@3g1hCe2hA8Be2hA8Ce1hB8AeB8yhB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Here are a couple of examples of how you would do that.\"), mdx(Fumen, {\n    data: \"v115@7gAtwhCeRpg0AeBtwhA8BeRph0BtwhA8Cei0BtwhB8?AeB8h0AtB8JeAgH7gAPQaCeRpBewSAPQaCexhBewSQaglDe?hWAewSQaglGewSLeAAAzgQ4IeR4AehHgWAeQaglBeQ4AeAP?AegWAPwhQawSEeQawSglAewwEexSglQLKeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(ReadMore, {\n    at: \"/stacking/lst\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"flat-top-continuation\"\n  }, \"Flat top continuation\"), mdx(\"p\", null, \"99 out of a 100 opponents will attempt to continue with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/lst\"\n  }, \"LST Stacking\"), \" if they open with this variation.\"), mdx(Fumen, {\n    data: \"v115@Ahi0DeglBeBtg0Q4CeglywBtR4RphlwwzhQ4RpJeAg?H\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@AhQ4BtDeglBeR4BtCeglywQ4i0Rphlwwzhg0RpJeAg?HUhwhBtDeg0BexhBtMeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"h3\", {\n    \"id\": \"2nd-tsd\"\n  }, \"2nd TSD\"), mdx(\"p\", null, \"Below are some ways to build 2nd TSD.\"), mdx(Fumen, {\n    height: 6,\n    data: \"v115@5gg0FeBtAei0whQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@5gwhFeBtAewhi0Q4CeBtwhRpg0R4AeC8whRpglA8Q4?AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@ygwhIewhCeBtBeRpwhQ4CeBtg0RpwhR4AeC8i0glA8?Q4AeD8ilJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@ygwhIewhCeBthlBewhQ4CeBtglh0whR4AeC8glg0Rp?A8Q4AeD8g0RpJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@4gglGeilBtAewhQ4Cei0BtwhR4AeC8g0RpwhA8Q4Ae?D8RpwhJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"If you have a late \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \", you can use donation techniques like below.\"), mdx(Fumen, {\n    height: 5,\n    data: \"v115@5gwhFeBtAewhg0BeQ4CeBtwhi0R4AeC8whilA8Q4Ae?D8glLeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@5gwhFeBtAewhBeglQ4CeBtwhilR4AeC8whi0A8Q4Ae?D8Beg0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@AhBtCeglwhQ4CeBtilwhR4AeC8i0whA8Q4AeD8Aeg0?whJeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"lst-1\"\n  }, \"LST\"), mdx(\"p\", null, \"After the 2nd TSD, many people will continue with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/stacking/lst\"\n  }, \"LST Stacking\"), \" which is a very practical stacking method.\"), mdx(AnimatedFumen, {\n    fps: 1,\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAAwgAtEeQ4AewhBtRpglBeR4whAtg0Rp?glywQ4whAei0hlwwBewhXeAAAvhAAAAegwhDeg0DewhDeg0?RpBewhCeh0RpBtwhQ4ywilAeBtR4wwAeglFeQ4beAAAvhAA?AAagwhDeQ4DewhDeR4Cewhi0AeglQ4CewhBtg0AeglywCeB?tAehlwwkeAAAvhAAAA2fwhIewhGehlwhCeRpBeAtglwhglB?eRpAeBtglwhglywR4AtRpwhhlwwR4Aeg0RpwhAeywAtAei0?whBewwBtHeAtjeAAAvhAAAAsfwhIewhIewhGeg0AewhDeg0?Rpi0Deg0TpDeh0R4RpAeQ4ywR4AtCeR4wwBeBtDeQ4CeAtr?eAAAvhAAAA+fRpFeglAeRpAeQ4Degli0AeR4CehlAeg0Aeg?lQ4HeglywFehlww4eAAAvhAAAAjgAtHeBtHeAtHewhIewhI?ewhIewhQeAAAvhAAAAZgAtHeDtAeRpglBeAtg0Q4BtRpglC?eg0R4CehlAeh0AeQ4qeAAAvhAAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 13,\n    __pageLength: 18\n  }), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"example taken from one of FireStorm58's plays\"), mdx(ReadMore, {\n    at: \"/stacking/lst\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h3\", {\n    \"id\": \"imperial-cross\"\n  }, \"Imperial Cross\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, mdx(\"p\", null, \"credit to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://twitter.com/Tamihodo/status/1066996259913818112\"\n  }, \"Tamihodo\"))), mdx(\"p\", null, \"You can also make \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/imperial-cross\"\n  }, \"Imperial Cross\"), \" from flat top continuation. You will need an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" then an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \".\"), mdx(Fumen, {\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtg0glRpC8Ceg0A8RpD8Ae?h0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    data: \"v115@wgRpHeRpAtHeBtQ4hlzhAeAtg0R4glC8Ceg0A8Q4gl?D8Aeh0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"p\", null, \"The first picture above is the preferred way to build it because you'll have an opportunity to make a perfect clear. \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://youtu.be/D53lYihJbZs?t=352\"\n  }, \"Here\"), \" is an example (screen on right).\"), mdx(Fumen, {\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtg0glRpC8Ceg0A8RpD8Ae?h0JeAgHOhwwIexwHewwLeAAAFhxhGexhAtHeBtg0xwDeRpg?lJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"The first image below is the easiest solution to recognize and memorize. The second image below has the second most commonly used solutions where you do a TSS. With these solutions, you have an 80.54% chance of PC. The other remaining solutions can be seen \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@9gh0BtzhB8g0RpBtglwwC8g0RpilxwH8wwC8JeAg0G?A0yaFDK+AAA9ghWxSBeh0BeAPTawwglCeAPzhQpXeAAtGAv?+TWCa+AAA9ghlQphlwhRLBeAthlBeQLgWCeAtAewShWAPXe?AAtGAUuaFDqCBAA9gAPwhAewhgWSaBeAPTpAtDeAPgWg0Rp?wwXeAAtGA0/rtCa+AAA9gAtQaglAeQpyhBewhAPQaxhAPDe?xhAeQpAegWXeAAtGAU3TWCqXBAA9gCPRaSpBeQaAtwhBPgl?QaCeBthHxSRaVeAAtGAaubgCsOBAA9gxhAtxhySBewhAPQa?RpgWwhCehHBeRpxhVeAAtGAUuaPCsXBAA9gRpAexSRaglDe?SawwglCehlwwAtRpRaHeQaMeAAtGATHmFDK+AAA+gxhhlBt?whBeRpwhhWxSCeBtQLAPhHJewhMeAAtGAauaPCzOBAA\"\n  }, \"here\"), \". The total chance will go up to 89.68% with those.\"), mdx(Solution, {\n    data: \"v115@9gBtzhR4B8g0BtRpR4C8i0RpywH8wwC8JeAgHFfgli?0FeglBtg0FehlBtPeilg0FeglR4g0FeR4h0PeBthlFeg0Bt?glFei0glPeh0R4zhB8g0R4glRpwwC8g0ilRpxwH8wwC8JeA?Ae\",\n    mdxType: \"Solution\"\n  }), mdx(\"h3\", {\n    \"id\": \"double-tst\"\n  }, \"Double TST\"), mdx(\"p\", null, \"This \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/tspin-triple#double-tst\"\n  }, \"Double TST\"), \" follow-up is used when LST Stacking is not feasible based on your queue, which is common when the third bag starts with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZJ\"), \". This will be a very risky option if your opponent is faster than you.\"), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAANhQ4FeBtAeQ4ilAewhEei0JeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@pgh0Heg0Ieg0AtHeBtDeA8CeAtBeB8AeF8AeG8JeAg?HXgH8CeG8CeG8CeG8CeG8CeC8AeC8EeA8XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 8,\n    __pageLength: 2\n  }), mdx(\"h3\", {\n    \"id\": \"donation\"\n  }, \"Donation\"), mdx(\"p\", null, \"This follow-up is also used when LST Stacking is not feasible based on your queue, most commonly when you're given a third bag starting with \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"ZJ\"), \". You briefly do ST Stacking before making a donation like the last picture below. The overhang for that TSD is variable.\"), mdx(Fumen, {\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgHvhAAAANhQ4FeBtAeQ4ilAewhEei0JeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@ygwhCeBtAeilwhQ4ywBtglRpwhR4wwi0A8RpwhAeQ4?AeB8g0F8AeG8JeAgHGhQ4CeBtAei0Q4AewhCeglXeAAA9gh?0R4Feg0R4Geg0ceAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"8-height-pc\"\n  }, \"8-height PC\"), mdx(\"p\", null, \"There are 2 good perfect clear opportunities if you build the second T-Spin in specific ways.\"), mdx(\"h4\", {\n    \"id\": \"with-s\"\n  }, \"With S\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, mdx(\"p\", null, \"credit to \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://twitter.com/Tamihodo/status/1066996259913818112\"\n  }, \"Tamihodo\"))), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@5gwhFeBtAewhi0Q4ywBtwhRpg0R4wwC8whRpglA8Q4?AeD8ilJeAgH5gg0FeBtAei0whQ4ywBtwhhlwhR4wwBtA8wh?xSQLGexhQaJeAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@NhA8FeB8AeF8AeG8JeAgHBhQ4IeR4IeQ4XeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" on your third bag and place it like above, you will have a 77.78% chance to do a perfect clear with 3 solutions.\"), mdx(Fumen, {\n    highlight: false,\n    data: \"v115@LgywAtFeg0wwBtFei0IeAtQei0AtA8zhglRpBtC8il?RpAtI8g0G8JeAgWYAS4f2AFbcRAyv78Aw3CwBFbMfCs33LC?zgSLAPFeAPwSgWAeA8i0RpAPQagWAtC8g0RpxwwhI8AtG8J?eAAPYAR+nABFbcRAyv78Aw3CwBFbEwCan/VC\",\n    mdxType: \"Fumen\",\n    __maxHeight: 9,\n    __pageLength: 2\n  }), mdx(\"h4\", {\n    \"id\": \"with-z\"\n  }, \"With Z\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@4gg0GeBti0AewhQ4ywBtilwhR4wwC8glRpwhA8Q4Ae?D8RpwhJeAgH4gglGeilBtAewhQ4ywg0Aeg0BtwhR4wwBtgl?AewSQpUeAAA\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 5,\n    data: \"v115@MhA8GeE8AeC8AeG8JeAgHGhAtHeBtHeAtUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" after this TSD, you will have an 88.33% chance with 5 solutions.\"), mdx(Fumen, {\n    data: \"v115@Zfg0ywFezhFei0IewwQezhFeg0ywFei0IewwQezhil?R4A8Rph0glA8R4B8Rpg0I8g0G8JeAg0FAvvTWCpAAAAZfgH?SLFeTaFeiHIeQLQeywQaFewSgWxSglEexSAPIewhQeCtAeS?aCeQpglBPFeRpJeAPQeAAtFAqyLMC0AAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 14,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"h4\", {\n    \"id\": \"tip\"\n  }, \"Tip\"), mdx(AnimatedFumen, {\n    fps: 0.5,\n    data: \"v115@4gg0GeBti0AewhQ4CeBtilwhR4AeC8glRpwhA8Q4Ae?D8RpwhJeAgl4ggHg0HegHBeg0oeAgl\",\n    mdxType: \"AnimatedFumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Note how you can adjust your \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \" position here, depending on whether you have an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"S\"), \" or an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" coming up.\"), mdx(ReadMore, {\n    at: \"/perfect-clears/dpc\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"h2\", {\n    \"id\": \"unnamed-continuation\"\n  }, \"Unnamed continuation\"), mdx(Fumen, {\n    data: \"v115@AhQ4FeglBeR4RpBtAeglywQ4Rpg0Bthlwwzhi0JeAg?HUhwhFeg0BexhxwBtKeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"This is an uncommon variation that is most notably used by player \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://www.youtube.com/channel/UC4ldIp7QXgOObJ7QcvfIJpg\"\n  }, \"kazu\"), \". Just like the flat top continuation, people will attempt to continue with LST Stacking if they open with this variation.\"), mdx(\"p\", null, \"This variation is harder to continue with LST Stacking compared to the flat top variation. Still, its advantage is that you can avoid doing any soft drops for certain queues (e.g., \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"JZLISOT\"), \") that would require a soft drop if you continued with the flat top variation instead:\"), mdx(Fumen, {\n    data: \"v115@HhglFeBtAeglFeg0BthlAezhi0JeAgHHhgWBeAtCeB?Pg0gWAeBtCegHAPglhWAtTagHLeRSfvhARwf\",\n    mdxType: \"Fumen\",\n    __maxHeight: 7,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"2nd-tsd-1\"\n  }, \"2nd TSD\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"credit to kazu for the examples\"), mdx(\"p\", null, \"The second TSD is mainly built in two different ways, depending on whether you able to place the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" on top of the \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or not. If you get an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \", you are guaranteed to be able to continue onto LST.\"), mdx(Fumen, {\n    data: \"v115@AhBtIeBtglFeA8ilCeA8BeF8KeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4CeBtglRpwhR4AeA8ilRpwhA8Q4?AeF8whJeAgHygwhFegHBewhFegHxSReRpwwIewwJeAAAEhR?pHeQpAeglHexSIeQLJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"If you are unable to do this, your stack becomes more complicated because you will need to make a donation involving \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \". The middle picture below is preferred.\"), mdx(Fumen, {\n    data: \"v115@PhRpCeA8DeRpA8BeF8KeAgH5gglFeBtAeglCeQ4CeB?thlBeR4BezhCeQ4ReAAe5ggWg0HegWg0HeBtfeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"br\", null), mdx(\"p\", null, \"These are some other ways to follow:\"), mdx(Fumen, {\n    data: \"v115@tgg0Ieg0CeglDeh0BtAeglAeQ4CeRpBthlR4AeA8Rp?zhA8Q4AeF8KeAgHtggHIegHglBegWDeBPgWAPBtwhHeAtQa?FeQpxwJewhJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 2\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@4gwhGehlwhAeAtRpQ4CeglwhBtRpR4AeA8glwhAti0?A8Q4AeF8g0JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 1\n  }), mdx(\"br\", null), mdx(\"h3\", {\n    \"id\": \"6-height-pc-1\"\n  }, \"6-height PC\"), mdx(Credit, {\n    mdxType: \"Credit\"\n  }, \"credit to kazu and flare (\\u3075\\u308C\\u3042)\"), mdx(\"p\", null, \"Building these shapes will give you a PC chance of 90.48% and 100%, respectively. The one on the left is more important.\"), mdx(Fumen, {\n    data: \"v115@DhilwhEewwglRpwhCeA8ywRpwhA8BeF8whJeAgl9gR?ph0BeiWAeRpg0BeQLgWxSAeBtg0AeSLxSBeBtQeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gRph0R4D8Rpg0R4E8Btg0H8BtG8JeAgl9ghWRLFeR?pleAAe9gwwCtReQaaeAAe9ggWQahlGehWGehlwhHeRpQeAA?e9ghWRaGegWglReQLQaQeAAe\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 5\n  }), mdx(\"br\", null), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@9gD8R4BtglD8R4wwilE8ywBtK8JeAg0EA0yjFDBhgW?AeRpwwDehWAexwFehlwShWUeAg0EAMN+tCChRaHewhHegWQ?aXeAg0EAMNmPCBhglwhAPRLDehlQaQLAPwhFeQaQpxhUeAg?0EAU9KWCBhhWQpxwDehWAewwAtQaGewSRaUeAg0EAMNWxCC?hBPhHFewSRLGewSXeAg0EAsO8LC\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 6\n  }), mdx(\"p\", null, \"As a side note, you will have a 100% chance of doing a perfect clear if you have either an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \" or an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" that you can place on the left. Look \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@RhBtAeA8FeA8BtF8KeAgWBA6AAAAXgwwhlGexwglGe?wwAeglOeRph0wwh0R4whRpg0xwg0R4glwhBeg0Aewwg0ilw?hIewhJeAAtAAXgQLgWQpR4EeQLAeQpwwFeQLAewwQ4SeRaH?eQaIeQaXeAAeZgQLxDFeSLHexDRehlwSRLDehlAeQLAPwhG?eQpxhUeAAeBhxSwwFehWAewwAtQaFeRaAtQaUeAAe/gRLxS?QaBtCeAPxSglAegWAtCeAPAeglQpwhgWQpUeAAe9gxSTaiH?QaxSiWxDQLgHQaAPQawhAexDSLQaAeRaFeQaJeAAtBAvAAA?AjgBtywFeBtwwLeh0R4ywR4whg0R4BtwwR4glwhg0CeBtil?whIewhJeAAtAAjgBPSLFeBPQLSeRLGeBPHexhVeAAeChRaF?exhAexhFexShWVeAAeagBthlFejlFeglBtglPegWglBtFew?SBeAtEeAtxhQpglUeAAeagBPhWFejWFegWBPgWMehWAeQpw?hBPBehWAeQaglRpAPFehlQpgWUeAAe\"\n  }, \"here\"), \" for a summary.\"), mdx(\"h3\", {\n    \"id\": \"8-height-pc-1\"\n  }, \"8-height PC\"), mdx(Fumen, {\n    data: \"v115@5gg0FeBtAei0whQ4ywBtglRpwhR4wwA8ilRpwhA8Q4?AeF8whJeAgH4gg0GeBti0AewhQ4ywBtAPRpwhR4wwAtgWgl?APxSUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(Fumen, {\n    data: \"v115@BhQ4IeR4A8FeB8Q4F8AeG8JeAgHBhwDDeAtDewDwhA?AAeBtEewhBeAPUeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"br\", null), mdx(\"p\", null, \"Doing the second TSD these ways will allow you to make the same shape as the 8-height PC field for the flat top continuation \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#8-height-pc\"\n  }, \"shown above\"), \".\"), mdx(\"h2\", {\n    \"id\": \"castle-top-continuation\"\n  }, \"Castle top continuation\"), mdx(Fumen, {\n    data: \"v115@8gg0Ieg0glBeBtAeQ4Aeh0glywBtR4RphlwwzhQ4Rp?JeAgHvhAAAAQhglIeglg0BeBtAewhAehlJeAAA\",\n    mdxType: \"Fumen\",\n    __maxHeight: 5,\n    __pageLength: 3\n  }), mdx(\"p\", null, \"The only requirement for castle top is \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" coming before \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"J\"), \".\"), mdx(\"h3\", {\n    \"id\": \"6-height-pc-2\"\n  }, \"6-height PC\"), mdx(Fumen, {\n    data: \"v115@9gRpilBewhh0RpglR4Bewhg0A8BtR4Cewhg0B8BtB8?AeA8whB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"p\", null, \"People usually try to make this shape because it gives you a chance to do a perfect clear with an \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"L\"), \" or an \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"O\"), \" in your 3rd bag.\"), mdx(Fumen, {\n    data: \"v115@9gE8RpH8RpG8ywH8wwD8JeAglChRaHeglQaIewSWeA?Ae\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 2\n  }), mdx(\"p\", null, \"If you have early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"T\"), \", you could stack like below, which gives you a 100% chance of doing a perfect clear. Solutions can be found \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"https://fumen.zui.jp/?d115@9gBtR4AtE8ilBtE8glR4AtG8BtG8JeAg0EA6yjFD9g?QpwhhWFexwIeRLHeQpwhQeAAtEAsHUxC9gAPgWxSgWEeBPA?eRpEehlwwQpGewSQaQeAAtEAa9KWC9ghWRaglEeAtQaAexS?EeRpQLwSGeQpgWQeAAtEAzibMC9gwhi0FeQLxwGeRLwwIew?wQeAAtEA6y7tC+gQLRaGeRLIeQaHeQLQaQeAAtEA6i/VC\"\n  }, \"here\"), \".\"), mdx(Fumen, {\n    data: \"v115@ChRpwhh0EeRpwhg0A8Deywwhg0B8BeB8wwA8whB8Je?AgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"h3\", {\n    \"id\": \"imperial-cross-1\"\n  }, \"Imperial Cross\"), mdx(\"p\", null, \"If you have an early \", mdx(Mino, {\n    mdxType: \"Mino\"\n  }, \"Z\"), \", you can follow up with \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"/methods/imperial-cross\"\n  }, \"Imperial Cross\"), \". If you can build it like the 3rd picture shown below, you will have a high chance to get a perfect clear (89%). The solutions are same as the Imperial Cross PC done with the flat top variation, shown \", mdx(\"a\", {\n    parentName: \"p\",\n    \"href\": \"#imperial-cross\"\n  }, \"above\"), \".\"), mdx(Fumen, {\n    height: 6,\n    data: \"v115@wgRpHeRpAtHeBtQ4hlzhAeAtA8R4gli0CeB8Q4glB8?g0A8AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@wgRpHeRpAtHeBtQ4zhh0AeAtA8R4ilg0CeB8Q4glB8?g0A8AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@xgR4GeR4AtHeBtilzhAeAtA8glRpi0CeB8RpB8g0A8?AeB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@xgR4GeR4AtHeBtilzhwwAtA8glRpi0AexwB8RpB8g0?A8wwB8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 6,\n    __pageLength: 1\n  }), mdx(Fumen, {\n    height: 6,\n    data: \"v115@FhR4GeR4AtHeBtglRpi0AexwA8JeAgH\",\n    mdxType: \"Fumen\",\n    __maxHeight: 4,\n    __pageLength: 1\n  }), mdx(\"h2\", {\n    \"id\": \"see-also--references\"\n  }, \"See Also / References\"), mdx(ReadMore, {\n    at: \"/openers/practical-openers\",\n    mdxType: \"ReadMore\"\n  }), mdx(\"ul\", null, mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u30C6\\u30F3\\u30D7\\u30EC\\u96C6\\uFF20\\u30C6\\u30C8\\u8B5C on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://w.atwiki.jp/tetrismaps/pages/30.html\"\n  }, \"DD\\u30D1\\u30D5\\u30A7\")), mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u958B\\u5E55\\u30C6\\u30F3\\u30D7\\u30ECWiki on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://tetrisopener.wicurio.com/index.php?%E9%96%8B%E5%B9%95TSD\"\n  }, \"\\u958B\\u5E55TSD\")), mdx(\"li\", {\n    parentName: \"ul\"\n  }, \"\\u307F\\u3074's Google Sheet on \", mdx(\"a\", {\n    parentName: \"li\",\n    \"href\": \"https://docs.google.com/spreadsheets/d/1imoxpwNe2sxlwwRPc4cNIPFExpYvO_O9OR5JgrWfV9Q/\"\n  }, \"\\u30C6\\u30C8\\u30EA\\u30B9\\u958B\\u5E55\\u30C6\\u30F3\\u30D7\\u30EC\"))), mdx(\"p\", null, mdx(\"em\", {\n    parentName: \"p\"\n  }, \"thanks to popte for the tip on LST continuation for Fonzie\")));\n}\n;\nMDXContent.isMDXComponent = true;",
+        "tableOfContents": {
+          "items": [
+            { "url": "#basic-shape", "title": "Basic Shape" },
+            { "url": "#using-tki", "title": "Using TKI" },
+            { "url": "#follow-up-variations", "title": "Follow-up Variations" },
+            {
+              "url": "#fonzie-continuation",
+              "title": "Fonzie continuation",
+              "items": [
+                { "url": "#6-height-pc", "title": "6-height PC" },
+                { "url": "#lst", "title": "LST" }
+              ]
+            },
+            {
+              "url": "#flat-top-continuation",
+              "title": "Flat top continuation",
+              "items": [
+                { "url": "#2nd-tsd", "title": "2nd TSD" },
+                { "url": "#lst-1", "title": "LST" },
+                { "url": "#imperial-cross", "title": "Imperial Cross" },
+                { "url": "#double-tst", "title": "Double TST" },
+                { "url": "#donation", "title": "Donation" },
+                {
+                  "url": "#8-height-pc",
+                  "title": "8-height PC",
+                  "items": [
+                    { "url": "#with-s", "title": "With S" },
+                    { "url": "#with-z", "title": "With Z" },
+                    { "url": "#tip", "title": "Tip" }
+                  ]
+                }
+              ]
+            },
+            {
+              "url": "#unnamed-continuation",
+              "title": "Unnamed continuation",
+              "items": [
+                { "url": "#2nd-tsd-1", "title": "2nd TSD" },
+                { "url": "#6-height-pc-1", "title": "6-height PC" },
+                { "url": "#8-height-pc-1", "title": "8-height PC" }
+              ]
+            },
+            {
+              "url": "#castle-top-continuation",
+              "title": "Castle top continuation",
+              "items": [
+                { "url": "#6-height-pc-2", "title": "6-height PC" },
+                { "url": "#imperial-cross-1", "title": "Imperial Cross" }
+              ]
+            },
+            { "url": "#see-also--references", "title": "See Also / References" }
+          ]
+        },
+        "parent": { "relativePath": "openers/tki.mdx" }
+      },
+      "allDocLinksYaml": {
+        "nodes": [
+          {
+            "title": "Openers",
+            "items": [
+              {
+                "link": "/openers/practical-openers",
+                "title": "Practical Tetris Openers",
+                "alt": null,
+                "description": "This page shows practical setups that are widely used among players, depending on the order of pieces they get in their first starting bag",
+                "fumen": null,
+                "image": null
+              },
+              {
+                "link": "/openers/tki",
+                "title": "TKI",
+                "alt": "開幕TSD",
+                "description": "TKI is a very popular opener among tetris players where you send a TSD from the very start with your first bag",
+                "fumen": "v115@Ehg0BeglBeBtAeQ4i0glCeBtR4RphlAezhQ4RpJeAg?H",
+                "image": null
+              },
+              {
+                "link": "/methods/dt-cannon",
+                "title": "DT Cannon",
+                "alt": "DT砲",
+                "description": "DT Cannon is a very popular TSD → TST opener that is used when players have an early LS or JL",
+                "fumen": "v115@hghlDeR4CeglBtAeR4whh0AeglA8BtRpwhg0BeD8Rp?whg0CeE8whB8AeI8AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/opener",
+                "title": "Perfect Clear Opener",
+                "alt": "パフェクリテンプレ",
+                "description": "A popular opener with an 84.64% chance of doing a perfect clear if you have I on hold.",
+                "fumen": "v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/hachispin",
+                "title": "Hachispin",
+                "alt": "にはち砲",
+                "description": "A TSS → TST → PC opener created by hachispin",
+                "fumen": "v115@5gAtCewhDeBtCewhAei0AtDewhilg0RpAeR4whglCe?RpR4KeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/mko",
+                "title": "MKO",
+                "alt": null,
+                "description": "An opener where you stack your first bag in a way that allows you to follow up with either a perfect clear with a 33% chance or T-Spin Doubles.",
+                "fumen": "v115@9gQ4EeAtBewhR4CeBtBewhg0Q4CeAtglRpwhi0Aeil?RpwhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/triple-double#opening-c-spin",
+                "title": "C-Spin",
+                "alt": "TKI積み",
+                "description": "A classic opener where you open with a TST → TSD.",
+                "fumen": "v115@pgh0Heg0Ieg0AeywEeglBewwQ4CeRpglAeBtR4BeRp?hlAeBtQ4zhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/bt-cannon",
+                "title": "BT Cannon",
+                "alt": "BT砲",
+                "description": "A BT Cannon → C-Spin → Perfect Clear loop created by 26_nameless that has a high chance of completing and continuing the loop",
+                "fumen": "v115@igAtCehlwhRpBtDeglwhRpAth0R4AeglwhC8g0R4Be?A8whC8g0A8ywH8wwJ8AeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/mr-tspin",
+                "title": "Mr. T-Spin's STD",
+                "alt": null,
+                "description": "A TSS → TST → TSD opener that can be used when you have an early SZ start, devised by Mr. T-Spin",
+                "fumen": "v115@pgwhIewhDeglDewhDeglDewhAeQ4BehlBeg0RpR4Bt?ywg0RpAeQ4AeBtwwh0JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/albatross",
+                "title": "Albatross",
+                "alt": "アルバトロスSP",
+                "description": "An Air-TSD → TST → TSD \"bird\" opener.",
+                "fumen": "v115@AhBtDewhQ4CeBti0whR4AeRpilg0whAeQ4AeRpglCe?whJeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Methods",
+            "items": [
+              {
+                "link": "/methods/tspin-triple",
+                "title": "T-Spin Triple",
+                "alt": "TST",
+                "description": null,
+                "fumen": "v115@zgD8FeC8GeC8AeI8BeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/triple-double",
+                "title": "Triple Double",
+                "alt": "TD",
+                "description": "A TST → TSD setup often used mid-game",
+                "fumen": "v115@pgD8BeG8CeG8AeI8BeH8AeJ8AeE8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/dt-cannon#mid-game-dt",
+                "title": "DT Cannon",
+                "alt": "DT砲",
+                "description": "A TSD → TST setup first outlined by TKI",
+                "fumen": "v115@hgH8CeI8AeH8BeH8CeH8AeI8AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/fractal",
+                "title": "Fractal",
+                "alt": "ダブルダガー",
+                "description": "A TSD → TSD setup that is also known as \"double dagger\" in the Japanese community.",
+                "fumen": "v115@zgC8GeB8CeH8AeH8CeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/imperial-cross",
+                "title": "Imperial Cross",
+                "alt": "インペリアルクロス",
+                "description": "A TSD → TSD setup that looks like, well, an imperial cross",
+                "fumen": "v115@zgD8BeG8CeG8AeH8CeH8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/parapet",
+                "title": "Parapet",
+                "alt": "欄干",
+                "description": "A donation TSD/TSS technique which got its name because of how the J/L covering the hole resembles a parapet",
+                "fumen": "v115@jgR4Beg0AeC8R4Ceg0G8Aeh0H8AeI8AeI8AeI8AeB8?JeAgl",
+                "image": null
+              },
+              {
+                "link": "/methods/kaidan",
+                "title": "Kaidan",
+                "alt": "階段積み",
+                "description": "A TSD donation technique that can be used when you see stairs",
+                "fumen": "v115@2gzhCeF8CeAtG8AeBtH8AtAeI8KeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/stmb",
+                "title": "STMB Cave",
+                "alt": "STMBケイブ",
+                "description": "STMB is an air T-Spin technique where you hang a S or a Z over a 3-wide column to create a TSD shape.",
+                "fumen": "v115@ngQ4IeR4D8BtCeQ4E8BtAeG8CeG8CeG8CeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/stsd",
+                "title": "STSD",
+                "alt": null,
+                "description": "Short for Super T-Spin Double. This setup yields 2 T-Spin Doubles.",
+                "fumen": "v115@1gH8CeI8AeH8BeH8BeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/shachiku-train",
+                "title": "Shachiku Train",
+                "alt": "社畜トレイン",
+                "description": "A donation TSD → TSD method.",
+                "fumen": "v115@igAtHeBtDeD8AtCehlF8AeR4glF8R4AeglI8AeI8Ae?B8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/polymer-tspin",
+                "title": "Polymer T-Spins",
+                "alt": null,
+                "description": "Polymer T-Spins refer to T-Spin setups consisting of two or more of either Iso-, Neo-, or Fin-TSDs.",
+                "fumen": "v115@mgC8IeA8IeH8BeI8AeG8BeI8AeB8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/yoshihiro",
+                "title": "Yoshihiro SD",
+                "alt": "よしひろ積み",
+                "description": "A TSM → TSD method",
+                "fumen": "v115@HhF8CewwG8AexwI8wwJeAgH",
+                "image": null
+              },
+              {
+                "link": "/methods/anchor-set",
+                "title": "Anchor Set",
+                "alt": "アンカーセット",
+                "description": "A rarely used technique that is utilized in order to maintain Back-to-Back.",
+                "fumen": "v115@0gI8AeI8Aeg0H8Aeg0H8h0AeG8JeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Mid-game",
+            "items": [
+              {
+                "link": "/mid-game/finesse",
+                "title": "Finesse",
+                "alt": null,
+                "description": "An optimization technique which helps you play faster by reducing your keypresses per piece placed",
+                "fumen": "v115@vhAH+m",
+                "image": null
+              },
+              {
+                "link": "/mid-game/donation",
+                "title": "Donation",
+                "alt": "ドネイト",
+                "description": "An overview of donation, a technique of temporarily covering open columns underneath",
+                "fumen": "v115@zg0hEeB8xhCeyhE8AeA8whG8AeA8AeG8AeD8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/mid-game/puyo-puyo-tetris",
+                "title": "Puyo Puyo Tetris",
+                "alt": "ぷよぷよテトリス",
+                "description": "Notes on Puyo Puyo Tetris, a crossover game between Puyo Puyo and Tetris developed by Sega",
+                "fumen": null,
+                "image": ""
+              },
+              {
+                "link": "/mid-game/skimming",
+                "title": "Skimming",
+                "alt": null,
+                "description": "Skimming is a method where a player does a non-Back-to-Back line clear to make the stack more favorable.",
+                "fumen": "v115@/gAtCeE8Bti0E8AtCeg0G8AeF8JeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Stacking",
+            "items": [
+              {
+                "link": "/stacking/lst",
+                "title": "LST Stacking",
+                "alt": null,
+                "description": "A very practical stacking method that can be used both in versus and Ultra, where you repeat L and S on the left column",
+                "fumen": "v115@ZgF8DeF8CeG8Q4ywF8R4wwG8glQ4AeG8glywF8hlww?G8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/tetris",
+                "title": "Tetris",
+                "alt": "テトリス",
+                "description": "Counting to four is an essential skill that you should learn and utilize for mid-game tetrises",
+                "fumen": "v115@WgAtHeBtHeAtIeA8RpGeA8RpAeH8wwAeG8xwAeH8Ae?G8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/st",
+                "title": "ST Stacking",
+                "alt": null,
+                "description": "A popular stacking method used in Ultra where you repeat S on the left column",
+                "fumen": "v115@YgG8CeG8Q4ywF8R4wwG8AeQ4AeG8Q4ywF8R4wwG8Ae?Q4AeG8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/stacking/4-wide",
+                "title": "4-Wide",
+                "alt": "4列REN",
+                "description": "The infamous combo setup",
+                "fumen": "v115@VgC8DeF8DeF8DeF8DeF8DeF8DeF8xhBeF8whCeC8Je?AgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Perfect Clears",
+            "items": [
+              {
+                "link": "/perfect-clears/opener",
+                "title": "Perfect Clear Opener",
+                "alt": "パフェクリテンプレ",
+                "description": "A popular opener where you have an 84.64% chance of doing a perfect clear if you have I on hold.",
+                "fumen": "v115@9gilwhBtDeglRpwhwwBtCeg0RpwhxwR4Bei0whwwR4?MeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/grace-system",
+                "title": "Grace System",
+                "alt": "グレースシステム",
+                "description": "An opener with an 88.57% chance of doing a perfect clear if you have T on hold.",
+                "fumen": "v115@9gili0DeglAtRpQ4g0DeBtRpR4DeAtzhQ4NeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/2nd",
+                "title": "2nd PC",
+                "alt": null,
+                "description": "90%+ 2nd PC patterns from knewjade that you could use after PCO or Grace System",
+                "fumen": "v115@VgwhIewhglAewwFewhglxwRpDewhhlwwRpUeg0DeR4?wwBeg0RpAeR4ywh0RpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/dpc",
+                "title": "DPC",
+                "alt": "3巡パフェ後テンプレ",
+                "description": "TSD → PC setups that you can use after performing an 8-height PC",
+                "fumen": "v115@2gRpEewhBeRpEewhCeR4Bthlwhg0AeR4B8Btglwhi0?B8CeglJeAgWLAz3hRASIrSAzkqBA",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/7th",
+                "title": "7th PC",
+                "alt": null,
+                "description": "100% PC patterns that you can use for your 7th consecutive PC",
+                "fumen": "v115@LgxhHexhHexhRpFexhRpAeg0CewwEei0xwEezhwwKe?RpAeR4wwDeRpR4ywLeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/ILSZ",
+                "title": "ILSZ",
+                "alt": null,
+                "description": "A 100% 1st PC pattern",
+                "fumen": "v115@9gwhilFewhglAtGewhBtR4EewhAtR4PeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/4th",
+                "title": "4th PC",
+                "alt": null,
+                "description": "4-piece patterns that you can use for your 4th PC with your 5 leftover pieces",
+                "fumen": "v115@FhhlGeR4glRpDeR4wwglRpEeywJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/3rd",
+                "title": "3rd PC",
+                "alt": null,
+                "description": "You'll have an extra mino when starting your 3rd PC. These are some patterns that you could use for it",
+                "fumen": "v115@9gRpwhDei0RpwhEeQ4g0RpwhEeR4RpwhFeQ4JeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/5th",
+                "title": "5th PC",
+                "alt": null,
+                "description": "Some 2 + 4 piece patterns that you could use for your 5th PC",
+                "fumen": "v115@qgAtHeBtwwGeAtywLewwHeywHezhJeAgH",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/6th",
+                "title": "6th PC",
+                "alt": null,
+                "description": "Some patterns that you could use for your 6th PC",
+                "fumen": "v115@9gwhQ4ywEewhR4wwFewhg0Q4BtEewhi0BtNeAgH",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "SRS",
+            "items": [
+              {
+                "link": "/srs/kicks-overview",
+                "title": "Kicks Overview",
+                "alt": null,
+                "description": "An overview of how kicks work in SRS",
+                "fumen": "v115@wgwwB8FexwAeH8AtAeH8BeI8AeH8AeB8JeAgl",
+                "image": null
+              },
+              {
+                "link": "/srs/t-spin",
+                "title": "T-Spin",
+                "alt": null,
+                "description": "How does the game detect T-Spins?",
+                "fumen": "v115@lgQpwwHeywGeA8AeA8BeQ4IeywGeQ4wwQ4ZeAgH",
+                "image": null
+              },
+              {
+                "link": "/srs/t-kicks",
+                "title": "T Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise T Kicks in SRS",
+                "fumen": "v115@mgwhBewhLeA8EeA8AtBeQpBeAtBeQpBeQ4EeQ4NeA8?AeA8NetCn",
+                "image": null
+              },
+              {
+                "link": "/srs/j-kicks",
+                "title": "J Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise J Kicks in SRS",
+                "fumen": "v115@PgQpCewhQpLewhSeAtDeAtEeB8CeB8CeglNeQpUe2s?m",
+                "image": null
+              },
+              {
+                "link": "/srs/l-kicks",
+                "title": "L Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise L Kicks in SRS",
+                "fumen": "v115@fgA8BeQ4BeA8CeAtGeQpDeg0Eeg0AeA8EeA8bewwMe?q4m",
+                "image": null
+              },
+              {
+                "link": "/srs/s-kicks",
+                "title": "🚧 S Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise S Kicks in SRS",
+                "fumen": "v115@ggQpHeAtHeg0HeAtAewhAeAtGewhFeA8CewhCeA8Ge?A8AeA8Ne31m",
+                "image": null
+              },
+              {
+                "link": "/srs/z-kicks",
+                "title": "🚧 Z Kicks",
+                "alt": null,
+                "description": "Illustrations and demonstrations of counterclockwise Z Kicks in SRS",
+                "fumen": "v115@LgA8IeglFeg0EeQpHeR4FewhFeC8AewhHeglLeQpHe?Q4QesJn",
+                "image": null
+              },
+              {
+                "link": "/srs/i-kicks",
+                "title": "🚧 I Kicks",
+                "alt": null,
+                "description": "Illustrations of counterclockwise and clockwise I Kicks in SRS",
+                "fumen": "v115@igE8UeA8CeQ4DeAtDei0JeA8CeA8AeB8PeZ9m",
+                "image": null
+              }
+            ]
+          },
+          {
+            "title": "Tetris Effect",
+            "items": [
+              {
+                "link": "/tetris-effect/all-clear",
+                "title": "Tetris Effect All Clear Mode Solutions",
+                "alt": null,
+                "description": "Diagrams and solutions to some of the non-straightforward maps on Tetris Effect's All Clear Mode",
+                "fumen": "v115@zgUpEe0wDe1wCexwklBeilUpBeSpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/tetris-effect/boss-abilities",
+                "title": "Tetris Effect Boss Abilities",
+                "alt": null,
+                "description": "A visual guide to boss abilities in Tetris Effect's Connected VS mode",
+                "fumen": null,
+                "image": "https://davdav1233.gitlab.io/tetris-videos/tetris-effect/boss-abilities.gif"
+              }
+            ]
+          },
+          {
+            "title": "Misc",
+            "items": [
+              {
+                "link": "/openers/gamushiro",
+                "title": "Gamushiro Stacking",
+                "alt": "ガムシロ積み",
+                "description": "Gamushiro Stacking is a TST → TSD (or TSS) → PC opener created by KMGZ",
+                "fumen": "v115@VgwhGeRpwhGeRpwhh0Eehlwhg0DeR4A8glA8g0AeBt?R4B8glB8BeBtF8AeJ8AeF8JeAgWIA5Fg2A5ngHB",
+                "image": null
+              },
+              {
+                "link": "/openers/new-dt-cannon",
+                "title": "New DT Cannon",
+                "alt": "新DT砲",
+                "description": "A 5-bag TSD → TST → TSD → Tetris → PC loop based on DT Cannon",
+                "fumen": "v115@hghlQ4BeAtEeglR4BtAewhh0AeglA8Q4AtRpwhg0Be?D8Rpwhg0ywE8whB8wwI8AeG8JeAgWgAlfrHBiYxwClv1RBT?rDfETIs9Blvs2AW0DfETYO6A",
+                "image": null
+              },
+              {
+                "link": "/openers/sailboat",
+                "title": "Sailboat",
+                "alt": "SSTシップ",
+                "description": "Sailboat is a TSS → TSS → TST opener created by ゆう",
+                "fumen": "v115@AhhlDewhDeglRpBewhBtAeg0glRpR4whAeBti0R4Ae?whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/sd-pc",
+                "title": "Single Double PC",
+                "alt": "SDパフェ",
+                "description": "A TSS → TSD → (TSS →) PC opener created by ゆう",
+                "fumen": "v115@0gAtHeBtGewhAtFehlwhRpAeR4i0glwhRpR4Ceg0gl?whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/tt-pc",
+                "title": "Triple Triple PC",
+                "alt": "TTパフェ",
+                "description": "A TST → (TSS or TSD or TST →) PC opener created by ゆう",
+                "fumen": "v115@cgRpg0whFeRpg0whEeBth0whQ4EeBtA8whR4ilAeE8?Q4glA8BeI8AeF8AeF8JeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/black-tea-cannon",
+                "title": "Black Tea Cannon",
+                "alt": "紅茶砲",
+                "description": "Black Tea Cannon is a TSD → TSD → 6-height or 8-height PC opener",
+                "fumen": "v115@xgRpHeRpg0Fehlwhi0R4CeglwhB8R4BtAeA8glwhC8?BeBtB8whJeAgH",
+                "image": null
+              },
+              {
+                "link": "/misc/all-6-residuals",
+                "title": "4-Wide 6-Residual Patterns",
+                "alt": null,
+                "description": "Diagrams of all possible 6-residual patterns for 4-Wide",
+                "fumen": "v115@ggA8ilAeB8RpAeA8glAeA8AeA8AeRpAeA8AeB8AeB8?AeA8JeQ4AeB8AeA8h0BeR4AeA8AeA8g0AeA8AeA8Q4B8AeA?8g0B8KeAgH",
+                "image": null
+              },
+              {
+                "link": "/mid-game/situational-finesse",
+                "title": "Situational Finesse",
+                "alt": null,
+                "description": "Input sequences to place S and I pieces vertically at specific columns with an alternate orientation",
+                "fumen": "v115@vhAfA2DAjVFDA",
+                "image": null
+              },
+              {
+                "link": "/perfect-clears/sakanas-tsd-pc",
+                "title": "Sakana's TSD → PC",
+                "alt": null,
+                "description": "100% opening TSD → 6-height PC patterns found by Sakana",
+                "fumen": "v115@ygwhCeRpCeg0whCeRpilg0whglBeBtglQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH",
+                "image": null
+              },
+              {
+                "link": "/openers/viper",
+                "title": "Viper",
+                "alt": null,
+                "description": "A TSD → PC opener that theoretically has a 99.999% chance of following up with a perfect clear after the first TSD",
+                "fumen": "v115@9gwhFeBtAewhglRpQ4CeBtwhglRpR4Aei0whhlBeQ4?Ceg0JeAgH",
+                "image": null
+              }
+            ]
+          }
+        ]
+      },
+      "allSupplementalLinksYaml": {
+        "nodes": [
+          {
+            "link": "/misc/all-5-residuals",
+            "title": "4-Wide 5-Residual Patterns",
+            "alt": null,
+            "description": "Diagrams of all possible 5-residual patterns for 4-Wide",
+            "fumen": "v115@YgQ4EeA8AeB8R4DeA8AeA8BeQ4BeRpA8AeA8BeA8Ae?A8RpA8LeB8Ceh0AeywA8AeB8g0BeA8wwAeA8AeB8g0A8KeA?gH",
+            "image": null
+          },
+          {
+            "link": "/misc/all-4-residuals",
+            "title": "4-Wide 4-Residual Patterns",
+            "alt": null,
+            "description": "Diagrams of all possible 4-residual patterns for 4-Wide. Notably used by the MisaMino bot.",
+            "fumen": "v115@ggA8i0CeRpAeA8Beg0AeB8RpAeA8BeA8BeA8AeA8Je?hlCeBtDeglAeA8AeA8BtA8AeA8glB8BeA8AeA8KeAgH",
+            "image": null
+          },
+          {
+            "link": "/openers/intai-cannon",
+            "title": "Intai Cannon",
+            "alt": "いんたい砲",
+            "description": "Intai Cannon is a TSD → PC opener that you can use for all opening bags with a high PC chance",
+            "fumen": "v115@4gg0DewhDeg0RpBewhglBeh0RpQ4AewhglCewwBtR4?whhlAeywBtQ4JeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-1",
+            "title": "Sakana's First TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's first TSD → PC",
+            "fumen": "v115@pgh0R4Eewhg0R4BtDewhg0RpQ4DtAewhglRpR4BeBt?whglywQ4i0Rphlwwzhg0RpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-2",
+            "title": "Sakana's Second TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's second TSD → PC",
+            "fumen": "v115@ugRph0whEeRph0whDeywh0whglBeBtwwQ4h0whglyw?BtR4RphlwwzhQ4RpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-3",
+            "title": "Sakana's Third TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's third TSD → PC",
+            "fumen": "v115@pgRpHeRpCeywBeBtCeQ4wwRpAeglBtBeR4RpAeglBt?ywQ4i0hlBtwwzhg0JeAgH",
+            "image": null
+          },
+          {
+            "link": "/perfect-clears/sakanas-tsd-pc-4",
+            "title": "Sakana's Fourth TSD → PC",
+            "alt": null,
+            "description": "Diagrams and solutions to Sakana's fourth TSD → PC",
+            "fumen": "v115@pgzhR4Dei0R4EeBtg0RpQ4Ceglg0BtRpR4ili0ywQ4?glRpzhwwilRpJeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tsd-donation",
+            "title": "🚧 TSD Donation",
+            "alt": "TSDドネイト",
+            "description": "A collection of commonly used TSD donation patterns",
+            "fumen": "v115@RgwhIewhCeB8DewhCeA8CeBtwhilB8AeR4BtglD8R4?CeH8AeF8AeB8AeF8AeG8JeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tst-donation",
+            "title": "🚧 TST Donation",
+            "alt": "TSTドネイト",
+            "description": "One of the most advanced techniques that you can use during matches. This page also covers TSD donations that are done with the TST kick",
+            "fumen": "v115@LgwhGeR4whFeR4A8whBtEeB8whg0BtilAeC8i0glA8?BeE8BeB8AeE8CeH8AeI8AeE8JeAgH",
+            "image": null
+          },
+          {
+            "link": "/mid-game/tss-donation",
+            "title": "🚧 TSS Donation",
+            "alt": "TSSドネイト",
+            "description": null,
+            "fumen": "v115@5gA8CeA8DeB8i0B8AeD8Beg0H8AeI8AeA8JeP8I",
+            "image": null
+          },
+          {
+            "link": "/drafts/connected",
+            "title": "🚧 Tetris Effect Connected VS",
+            "alt": null,
+            "description": "Notes on Tetris Effect's Connected VS mode",
+            "fumen": null,
+            "image": ""
+          },
+          {
+            "link": "/perfect-clears/nilgiris-1st",
+            "title": "Nilgiri's 1st PC Patterns",
+            "alt": null,
+            "description": "32 high-chance 4-piece PC patterns that cover all opening mino sequences",
+            "fumen": "v115@9gzhFeh0AtGeg0BtR4Eeg0AtR4PeAgH",
+            "image": null
+          }
+        ]
+      }
+    },
+    "pageContext": { "id": "1267c730-ac00-56c1-9f75-00561ab9c6aa" }
+  },
+  "staticQueryHashes": ["3790145691"]
+}

@@ -1,8 +1,19 @@
 /* tslint:disable */
-/* eslint-disable */
+
 export const memory: WebAssembly.Memory;
 export const __wbg_coldclear_free: (a: number, b: number) => void;
-export const coldclear_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
+export const coldclear_new: (
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number,
+  f: number,
+  g: number,
+  h: number,
+  i: number,
+  j: number,
+) => [number, number, number];
 export const coldclear_suggest: (a: number) => [number, number];
 export const coldclear_work: (a: number, b: number) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;

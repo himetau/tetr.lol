@@ -727,16 +727,7 @@ details.card:not([open]) .card-head .chevron {
   width: 16px;
   height: 16px;
   /* chamfered knob; static clip-path because the polyfill can't reach pseudo-elements */
-  clip-path: polygon(
-    4px 0,
-    12px 0,
-    16px 4px,
-    16px 12px,
-    12px 16px,
-    4px 16px,
-    0 12px,
-    0 4px
-  );
+  clip-path: polygon(4px 0, 12px 0, 16px 4px, 16px 12px, 12px 16px, 4px 16px, 0 12px, 0 4px);
   background: var(--text-dim);
   transition:
     transform 0.18s cubic-bezier(0.3, 1.4, 0.6, 1),
@@ -995,13 +986,11 @@ details.card:not([open]) .card-head .chevron {
 @keyframes at-pop {
   0% {
     opacity: 0;
-    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg))
-      translateY(14px) scale(0.55);
+    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg)) translateY(14px) scale(0.55);
   }
   12% {
     opacity: 1;
-    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg))
-      translateY(0) scale(1.08);
+    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg)) translateY(0) scale(1.08);
   }
   22% {
     transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg)) scale(1);
@@ -1011,8 +1000,7 @@ details.card:not([open]) .card-head .chevron {
   }
   100% {
     opacity: 0;
-    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg))
-      translateY(-34px) scale(0.98);
+    transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg)) translateY(-34px) scale(0.98);
   }
 }
 /* big "+N" attack number - punches in, rattles harder for bigger spikes
@@ -1031,8 +1019,7 @@ details.card:not([open]) .card-head .chevron {
   text-shadow:
     0 0 12px color-mix(in srgb, var(--warn) 70%, transparent),
     0 3px 6px rgba(0, 0, 0, 0.6);
-  animation: sent-pop var(--sp-dur, 0.6s) cubic-bezier(0.2, 0.8, 0.3, 1)
-    forwards;
+  animation: sent-pop var(--sp-dur, 0.6s) cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
 }
 @keyframes sent-pop {
   0% {
@@ -1041,19 +1028,16 @@ details.card:not([open]) .card-head .chevron {
   }
   16% {
     opacity: 1;
-    transform: scale(var(--sp-scale, 1))
-      translateX(calc(var(--sp-shake, 4px) * -1));
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -1));
   }
   26% {
     transform: scale(var(--sp-scale, 1)) translateX(var(--sp-shake, 4px));
   }
   36% {
-    transform: scale(var(--sp-scale, 1))
-      translateX(calc(var(--sp-shake, 4px) * -0.6));
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * -0.6));
   }
   46% {
-    transform: scale(var(--sp-scale, 1))
-      translateX(calc(var(--sp-shake, 4px) * 0.4));
+    transform: scale(var(--sp-scale, 1)) translateX(calc(var(--sp-shake, 4px) * 0.4));
   }
   60% {
     transform: scale(var(--sp-scale, 1)) translateX(0);
@@ -1593,11 +1577,7 @@ details.card:not([open]) .card-head .chevron {
   font-size: 14px;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
-  background: color-mix(
-    in srgb,
-    var(--b2b-col, var(--warn)) 30%,
-    rgba(12, 12, 20, 0.62)
-  );
+  background: color-mix(in srgb, var(--b2b-col, var(--warn)) 30%, rgba(12, 12, 20, 0.62));
   border: 2px solid var(--b2b-col, var(--warn));
   transform: scale(0.4);
   transition:
@@ -1609,8 +1589,7 @@ details.card:not([open]) .card-head .chevron {
   transform: scale(1);
 }
 .b2b-bubble.charged {
-  box-shadow: 0 0 16px
-    color-mix(in srgb, var(--b2b-col, var(--warn)) 75%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--b2b-col, var(--warn)) 75%, transparent);
 }
 .chain-slot.show .b2b-bubble.pop {
   animation: b2b-pop 0.32s ease;
@@ -2019,16 +1998,7 @@ details.card:not([open]) .card-head .chevron {
   left: 2px;
   width: 16px;
   height: 16px;
-  clip-path: polygon(
-    4px 0,
-    12px 0,
-    16px 4px,
-    16px 12px,
-    12px 16px,
-    4px 16px,
-    0 12px,
-    0 4px
-  );
+  clip-path: polygon(4px 0, 12px 0, 16px 4px, 16px 12px, 12px 16px, 4px 16px, 0 12px, 0 4px);
   background: var(--text-dim);
   transition:
     transform 0.18s cubic-bezier(0.3, 1.4, 0.6, 1),

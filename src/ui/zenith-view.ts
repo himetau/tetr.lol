@@ -3,24 +3,48 @@
 // bot-generated garbage pressure, climb speed, and altitude scoring.
 // No grading here: this mode is for feeling out the speed, not the loop.
 
-import { Game, type LockEvent } from '../core/game';
-import { VISIBLE_H, BOARD_W } from '../core/board';
-import { cellsAt } from '../core/pieces';
-import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
-import { FieldRenderer, renderPieceTile, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
-import { ZenithAltimeter } from './zenith-altimeter';
-import { SceneBackground, altHue } from './scene-background';
-import { settings, onSettingsChange } from './settings';
-import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
+import { Game, type LockEvent } from "../core/game";
+import { VISIBLE_H, BOARD_W } from "../core/board";
+import { cellsAt } from "../core/pieces";
+import { InputHandler, keyDescriptor, type Keybinds } from "../core/handling";
 import {
-  lockSound, clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound,
-  b2bBreakSound, b2bSound, spinSound, comboBreakSound, countdownSound, goSound, GarbageWarner,
-  dangerSound, clutchSound, levelUpSound, personalBestSound, gameOverSound,
-  surgeSound, bigSendSound, BIG_SEND_MIN,
-} from './sound';
-import { stats, saveStats, recordSession } from './stats';
-import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
-import { PIECE_COLORS } from '../core/pieces';
+  FieldRenderer,
+  renderPieceTile,
+  holdCellOf,
+  queueCellOf,
+  sideColWidth,
+} from "./board-canvas";
+import { ZenithAltimeter } from "./zenith-altimeter";
+import { SceneBackground, altHue } from "./scene-background";
+import { settings, onSettingsChange } from "./settings";
+import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from "../core/zenith";
+import {
+  lockSound,
+  clearSound,
+  comboSound,
+  garbageSound,
+  garbageQueuedSound,
+  actionSound,
+  b2bBreakSound,
+  b2bSound,
+  spinSound,
+  comboBreakSound,
+  countdownSound,
+  goSound,
+  GarbageWarner,
+  dangerSound,
+  clutchSound,
+  levelUpSound,
+  personalBestSound,
+  gameOverSound,
+  surgeSound,
+  bigSendSound,
+  BIG_SEND_MIN,
+} from "./sound";
+import { stats, saveStats, recordSession, fmtSprint } from "./stats";
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from "./fx";
+import { PIECE_COLORS } from "../core/pieces";
+import { btn, panel } from "./dom";
 
 export class ZenithView {
   readonly root: HTMLElement;
@@ -48,7 +72,7 @@ export class ZenithView {
 
   // launch options (kept across retries)
   private startAltitude = 0;
-  private pressure: Pressure = 'normal';
+  private pressure: Pressure = "normal";
   private gravityMod = false;
 
   private fieldPanel!: HTMLElement;
@@ -77,6 +101,7 @@ export class ZenithView {
   private bestAltitude = 0;
   private pbPlayed = true;
   private inDanger = false;
+  private hudAt = 0; // last HUD innerHTML rebuild (throttled)
 
   private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
   private keyup = (e: KeyboardEvent) => this.input.keyUp(e.code, performance.now());
@@ -86,16 +111,21 @@ export class ZenithView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.input.onAction = (a) => {
-      if (a === 'hold') {
+      if (a === "hold") {
         this.resetLockdown();
         // the hold/next panes swap the instant you hold, like tetr.io
         this.refreshPanes();
       }
-      if (settings.soundFx && this.run) actionSound(a);
+      if (settings.soundFx && this.run) {
+        actionSound(a);
+      }
     };
-    // lock-delay resets come from *successful* moves only (guideline EPLD)
+    // lock-delay resets come from *successful* moves only (guideline EPLD);
+    // soft drop never resets the timer
     this.game.onMove = (kind) => {
-      if (kind === 'drop') return; // soft drop never resets the timer
+      if (kind === "drop") {
+        return;
+      }
       if (this.moveResets < 15) {
         this.moveResets++;
         this.lockTimerMs = 0;
@@ -114,8 +144,8 @@ export class ZenithView {
       this.refreshPanes();
     });
     this.showLaunch();
-    document.addEventListener('keydown', this.keydown);
-    document.addEventListener('keyup', this.keyup);
+    document.addEventListener("keydown", this.keydown);
+    document.addEventListener("keyup", this.keyup);
     this.loop(performance.now());
   }
 
@@ -125,8 +155,8 @@ export class ZenithView {
     cancelAnimationFrame(this.rafId);
     this.background.destroy();
     this.unsubSettings();
-    document.removeEventListener('keydown', this.keydown);
-    document.removeEventListener('keyup', this.keyup);
+    document.removeEventListener("keydown", this.keydown);
+    document.removeEventListener("keyup", this.keyup);
   }
 
   private cellSize(): number {
@@ -137,8 +167,8 @@ export class ZenithView {
   }
 
   private build(): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'game-wrap has-scene';
+    const wrap = document.createElement("div");
+    wrap.className = "game-wrap has-scene";
     // full-scene falling-particle backdrop, painted behind every panel;
     // retinted with altitude as the climb heats up
     this.background = new SceneBackground(wrap, altHue(0));
@@ -146,41 +176,41 @@ export class ZenithView {
     // side columns share the sizing of every other mode (hug the queue tiles)
     const colWq = sideColWidth(this.cellSize());
 
-    const left = document.createElement('div');
-    left.className = 'side-col';
+    const left = document.createElement("div");
+    left.className = "side-col";
     left.style.width = colWq; /* match the queue column so text has room */
     this.leftCol = left;
-    this.holdBox = panel('Hold');
+    this.holdBox = panel("Hold");
     left.appendChild(this.holdBox);
-    const runPanel = panel('Run');
-    this.hud = document.createElement('div');
-    this.hud.className = 'zenith-hud';
+    const runPanel = panel("Run");
+    this.hud = document.createElement("div");
+    this.hud.className = "zenith-hud";
     runPanel.appendChild(this.hud);
     left.appendChild(runPanel);
-    const controls = document.createElement('div');
-    controls.className = 'drill-controls';
-    controls.style.flexDirection = 'column';
+    const controls = document.createElement("div");
+    controls.className = "drill-controls";
+    controls.style.flexDirection = "column";
     controls.append(
-      btn('Retry (R)', () => this.startRun()),
-      btn('Change floor (Esc)', () => this.showLaunch()),
+      btn("Retry (R)", () => this.startRun()),
+      btn("Change floor (Esc)", () => this.showLaunch()),
     );
     left.appendChild(controls);
 
-    this.fieldPanel = document.createElement('div');
-    this.fieldPanel.className = 'field-panel';
-    const row = document.createElement('div');
-    row.className = 'field-row';
-    const strip = document.createElement('div');
-    strip.className = 'board-strip';
+    this.fieldPanel = document.createElement("div");
+    this.fieldPanel.className = "field-panel";
+    const row = document.createElement("div");
+    row.className = "field-row";
+    const strip = document.createElement("div");
+    strip.className = "board-strip";
     // B2B chain bubble (slot above the Next queue): heats gold→red as the
     // chain charges (it holds the pending surge, B2B−3)
     this.b2bTag = new ChainBubble();
-    const meter = document.createElement('div');
-    meter.className = 'gmeter';
-    this.gmQueued = document.createElement('div');
-    this.gmQueued.className = 'gm-queued';
-    this.gmActive = document.createElement('div');
-    this.gmActive.className = 'gm-active';
+    const meter = document.createElement("div");
+    meter.className = "gmeter";
+    this.gmQueued = document.createElement("div");
+    this.gmQueued.className = "gm-queued";
+    this.gmActive = document.createElement("div");
+    this.gmActive.className = "gm-active";
     meter.append(this.gmQueued, this.gmActive);
     strip.append(meter);
     row.append(strip, this.renderer.el);
@@ -189,20 +219,20 @@ export class ZenithView {
     // altitude count, floor progress, climb-speed meter, surge sparks
     this.altimeter = new ZenithAltimeter(BOARD_W * this.cellSize());
     this.fieldPanel.appendChild(this.altimeter.el);
-    this.toast = document.createElement('div');
-    this.toast.className = 'reason-toast';
-    this.overlay = document.createElement('div');
-    this.overlay.className = 'zenith-overlay';
-    this.deathWarn = document.createElement('div');
-    this.deathWarn.className = 'death-warn';
-    this.deathWarn.textContent = '!';
+    this.toast = document.createElement("div");
+    this.toast.className = "reason-toast";
+    this.overlay = document.createElement("div");
+    this.overlay.className = "zenith-overlay";
+    this.deathWarn = document.createElement("div");
+    this.deathWarn.className = "death-warn";
+    this.deathWarn.textContent = "!";
     this.fieldPanel.append(this.toast, this.overlay, this.deathWarn);
 
-    const right = document.createElement('div');
-    right.className = 'side-col';
+    const right = document.createElement("div");
+    right.className = "side-col";
     right.style.width = colWq;
     this.rightCol = right;
-    this.queueBox = panel('Next');
+    this.queueBox = panel("Next");
     right.append(this.b2bTag.el, this.queueBox);
 
     wrap.append(left, this.fieldPanel, right);
@@ -215,84 +245,96 @@ export class ZenithView {
     this.endRun(false);
     this.input.enabled = false;
     this.overlay.replaceChildren();
-    this.overlay.classList.remove('results');
-    this.overlay.classList.add('show');
+    this.overlay.classList.remove("results");
+    this.overlay.classList.add("show");
 
-    const box = document.createElement('div');
-    box.className = 'zenith-box qp-menu';
-    const head = document.createElement('div');
-    head.className = 'qp-head';
+    const box = document.createElement("div");
+    box.className = "zenith-box qp-menu";
+    const head = document.createElement("div");
+    head.className = "qp-head";
     head.innerHTML = `<h2>Quick play</h2>
       <p class="sub">${QP_HINTS[Math.floor(Math.random() * QP_HINTS.length)]}</p>`;
     box.appendChild(head);
 
     // floor picker - plain themed boxes, pick your starting altitude
-    const grid = document.createElement('div');
-    grid.className = 'qp-floors';
+    const grid = document.createElement("div");
+    grid.className = "qp-floors";
     let selectedBtn: HTMLElement | null = null;
     FLOORS.forEach((f) => {
-      const b = document.createElement('button');
-      b.className = 'qp-floor';
+      const b = document.createElement("button");
+      b.className = "qp-floor";
       b.innerHTML =
         `<span class="qp-fbody"><span class="qp-fname">${f.name}</span>` +
         `<span class="qp-falt">${f.from}m</span></span>`;
       if (f.from === this.startAltitude) {
-        b.classList.add('on');
+        b.classList.add("on");
         selectedBtn = b;
       }
-      b.addEventListener('click', () => {
-        selectedBtn?.classList.remove('on');
+      b.addEventListener("click", () => {
+        selectedBtn?.classList.remove("on");
         selectedBtn = b;
-        b.classList.add('on');
+        b.classList.add("on");
         this.startAltitude = f.from;
-        if (settings.soundFx) actionSound('rotateCW');
+        if (settings.soundFx) {
+          actionSound("rotateCW");
+        }
       });
       grid.appendChild(b);
     });
     box.appendChild(grid);
 
     // options: garbage pressure as a segmented control + a gravity-mod pill
-    const opts = document.createElement('div');
-    opts.className = 'qp-opts';
+    const opts = document.createElement("div");
+    opts.className = "qp-opts";
 
-    const pressGroup = document.createElement('div');
-    pressGroup.className = 'qp-opt';
-    const pressLabel = document.createElement('span');
-    pressLabel.className = 'qp-opt-label';
-    pressLabel.textContent = 'Garbage';
-    const seg = document.createElement('div');
-    seg.className = 'qp-seg';
+    const pressGroup = document.createElement("div");
+    pressGroup.className = "qp-opt";
+    const pressLabel = document.createElement("span");
+    pressLabel.className = "qp-opt-label";
+    pressLabel.textContent = "Garbage";
+    const seg = document.createElement("div");
+    seg.className = "qp-seg";
     const segBtns: HTMLElement[] = [];
-    for (const [v, label] of [['calm', 'calm'], ['normal', 'normal'], ['brutal', 'brutal']] as const) {
-      const sb = document.createElement('button');
-      sb.className = 'qp-seg-btn' + (v === this.pressure ? ' on' : '');
+    for (const [v, label] of [
+      ["calm", "calm"],
+      ["normal", "normal"],
+      ["brutal", "brutal"],
+    ] as const) {
+      const sb = document.createElement("button");
+      sb.className = "qp-seg-btn" + (v === this.pressure ? " on" : "");
       sb.textContent = label;
-      sb.addEventListener('click', () => {
+      sb.addEventListener("click", () => {
         this.pressure = v as Pressure;
-        for (const el of segBtns) el.classList.remove('on');
-        sb.classList.add('on');
-        if (settings.soundFx) actionSound('left');
+        for (const el of segBtns) {
+          el.classList.remove("on");
+        }
+        sb.classList.add("on");
+        if (settings.soundFx) {
+          actionSound("left");
+        }
       });
       segBtns.push(sb);
       seg.appendChild(sb);
     }
     pressGroup.append(pressLabel, seg);
 
-    const gmod = document.createElement('button');
-    gmod.className = 'qp-toggle' + (this.gravityMod ? ' on' : '');
+    const gmod = document.createElement("button");
+    gmod.className = "qp-toggle" + (this.gravityMod ? " on" : "");
     gmod.innerHTML = `<span class="qp-toggle-label">Gravity mod<small>0.48G → 3.18G</small></span><span class="qp-switch"></span>`;
-    gmod.addEventListener('click', () => {
+    gmod.addEventListener("click", () => {
       this.gravityMod = !this.gravityMod;
-      gmod.classList.toggle('on', this.gravityMod);
-      if (settings.soundFx) actionSound('move');
+      gmod.classList.toggle("on", this.gravityMod);
+      if (settings.soundFx) {
+        actionSound("move");
+      }
     });
     opts.append(pressGroup, gmod);
     box.appendChild(opts);
 
-    const start = document.createElement('button');
-    start.className = 'btn primary qp-start';
-    start.textContent = 'Start climb';
-    start.addEventListener('click', () => this.startRun());
+    const start = document.createElement("button");
+    start.className = "btn primary qp-start";
+    start.textContent = "Start climb";
+    start.addEventListener("click", () => this.startRun());
     box.appendChild(start);
 
     this.overlay.appendChild(box);
@@ -301,19 +343,21 @@ export class ZenithView {
 
   private showResults(): void {
     const r = this.run;
-    if (!r) return;
+    if (!r) {
+      return;
+    }
     this.overlay.replaceChildren();
-    this.overlay.classList.add('show', 'results');
-    const box = document.createElement('div');
-    box.className = 'zenith-box';
+    this.overlay.classList.add("show", "results");
+    const box = document.createElement("div");
+    box.className = "zenith-box";
     const f = FLOORS[floorIndexAt(r.altitude)];
     box.innerHTML = `<h2>${Math.round(r.altitude)}m</h2>
-      <p class="sub">${f.name} · ${fmtTime(r.timeMs)} · ${this.pieces} pieces · ${r.linesSent} sent</p>`;
-    const row = document.createElement('div');
-    row.className = 'zenith-opts';
+      <p class="sub">${f.name} · ${fmtSprint(r.timeMs, false)} · ${this.pieces} pieces · ${r.linesSent} sent</p>`;
+    const row = document.createElement("div");
+    row.className = "zenith-opts";
     row.append(
-      btn('Retry (R)', () => this.startRun()),
-      btn('Change floor', () => this.showLaunch()),
+      btn("Retry (R)", () => this.startRun()),
+      btn("Change floor", () => this.showLaunch()),
     );
     box.appendChild(row);
     this.overlay.appendChild(box);
@@ -322,12 +366,12 @@ export class ZenithView {
   private startRun(): void {
     // retry restarts the run outright - an abandoned climb records nothing
     this.endRun(false);
-    this.overlay.classList.remove('show', 'results');
+    this.overlay.classList.remove("show", "results");
     this.overlay.replaceChildren();
     this.game.reset();
     this.run = new ZenithRun(this.startAltitude, this.pressure, this.gravityMod);
     this.warner.reset();
-    this.deathWarn.classList.remove('show');
+    this.deathWarn.classList.remove("show");
     this.gravAcc = 0;
     this.resetLockdown();
     this.pieces = 0;
@@ -335,8 +379,8 @@ export class ZenithView {
     this.tsses = 0;
     this.lastIncoming = 0;
     this.b2bTag.reset();
-    this.gmActive.style.height = '0px';
-    this.gmQueued.style.height = '0px';
+    this.gmActive.style.height = "0px";
+    this.gmQueued.style.height = "0px";
     this.lastFloor = floorIndexAt(this.startAltitude);
     this.inDanger = false;
     this.altimeter.reset(this.startAltitude);
@@ -344,7 +388,10 @@ export class ZenithView {
     this.background.setHue(altHue(this.startAltitude));
     this.bgAlt = null;
     // PB jingle only when there is a real record to chase from below
-    this.bestAltitude = Math.max(0, ...stats.sessions.filter((s) => s.mode === 'quick').map((s) => s.altitude ?? 0));
+    this.bestAltitude = Math.max(
+      0,
+      ...stats.sessions.filter((s) => s.mode === "quick").map((s) => s.altitude ?? 0),
+    );
     this.pbPlayed = this.bestAltitude < Math.max(50, this.startAltitude + 10);
     this.beginCountdown();
     this.refreshPanes();
@@ -356,16 +403,18 @@ export class ZenithView {
     this.clearCountdown();
     this.counting = true;
     this.input.enabled = false;
-    const digit = document.createElement('div');
-    digit.className = 'zenith-count';
+    const digit = document.createElement("div");
+    digit.className = "zenith-count";
     this.overlay.replaceChildren(digit);
-    this.overlay.classList.add('show', 'counting');
+    this.overlay.classList.add("show", "counting");
     const step = (n: 1 | 2 | 3) => {
       digit.textContent = String(n);
-      digit.classList.remove('tick');
+      digit.classList.remove("tick");
       void digit.offsetWidth; // restart the pop animation
-      digit.classList.add('tick');
-      if (settings.soundFx) countdownSound(n);
+      digit.classList.add("tick");
+      if (settings.soundFx) {
+        countdownSound(n);
+      }
     };
     step(3);
     this.countdownTimers = [
@@ -373,19 +422,23 @@ export class ZenithView {
       window.setTimeout(() => step(1), 900),
       window.setTimeout(() => {
         this.clearCountdown();
-        this.overlay.classList.remove('show');
+        this.overlay.classList.remove("show");
         this.overlay.replaceChildren();
         this.input.enabled = true;
-        if (settings.soundFx) goSound();
+        if (settings.soundFx) {
+          goSound();
+        }
       }, 1350),
     ];
   }
 
   private clearCountdown(): void {
-    for (const t of this.countdownTimers) clearTimeout(t);
+    for (const t of this.countdownTimers) {
+      clearTimeout(t);
+    }
     this.countdownTimers = [];
     this.counting = false;
-    this.overlay.classList.remove('counting');
+    this.overlay.classList.remove("counting");
   }
 
   /**
@@ -398,7 +451,9 @@ export class ZenithView {
     const r = this.run;
     this.run = null;
     this.input.enabled = false;
-    if (!r || !persist || this.pieces < 5) return;
+    if (!r || !persist || this.pieces < 5) {
+      return;
+    }
     const m = stats.modes.quick;
     m.pieces += this.pieces;
     m.tsds += this.tsds;
@@ -407,7 +462,7 @@ export class ZenithView {
     saveStats();
     recordSession({
       at: new Date().toISOString(),
-      mode: 'quick',
+      mode: "quick",
       pieces: this.pieces,
       tsds: this.tsds,
       grades: { best: 0, good: 0, inaccuracy: 0, mistake: 0, killer: 0 },
@@ -426,13 +481,17 @@ export class ZenithView {
       this.startRun();
       return;
     }
-    if (e.code === 'Escape') {
+    if (e.code === "Escape") {
       e.preventDefault();
       this.showLaunch();
       return;
     }
-    if (desc !== e.code) return;
-    if (Object.values(b).some((codes) => codes.includes(desc))) e.preventDefault();
+    if (desc !== e.code) {
+      return;
+    }
+    if (Object.values(b).some((codes) => codes.includes(desc))) {
+      e.preventDefault();
+    }
     this.input.keyDown(desc, performance.now());
   }
 
@@ -443,19 +502,25 @@ export class ZenithView {
     this.pieces++;
     // clutch: the next piece climbed into the buffer to fit - a saved block-out
     if (this.game.clutched && !this.game.topOut) {
-      if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
-      if (settings.soundFx) clutchSound();
+      if (settings.effects) {
+        actionText(this.fieldPanel, "CLUTCH", "", "surge");
+      }
+      if (settings.soundFx) {
+        clutchSound();
+      }
     }
     // tsd/tss stats are T-spins specifically, not the new all-spins
-    if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) {
+    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) {
       this.tsds++;
-    } else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) {
+    } else if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared === 1) {
       this.tsses++;
     }
     this.gravAcc = 0;
     this.resetLockdown();
     // a spin that didn't clear (a setup) still gets its own cue
-    if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
+    if (settings.soundFx && ev.spin !== "none" && ev.linesCleared === 0) {
+      spinSound();
+    }
     if (settings.effects) {
       this.renderer.fxLock(ev.cells);
       this.renderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
@@ -466,16 +531,25 @@ export class ZenithView {
         const b2bBefore = r.b2b;
         const out = r.onClear(ev.linesCleared, ev.spin, ev.boardAfter.isEmpty());
         if (settings.soundFx) {
-          if (b2bBefore > 0 && r.b2b === 0) b2bBreakSound();
-          clearSound(ev.linesCleared, ev.spin === 'full', r.b2b, ev.boardAfter.isEmpty());
+          if (b2bBefore > 0 && r.b2b === 0) {
+            b2bBreakSound();
+          }
+          clearSound(ev.linesCleared, ev.spin === "full", r.b2b, ev.boardAfter.isEmpty());
           b2bSound(r.b2b); // rising jingle, climbs with the chain
           // escalating combo jingle from the second consecutive clear
-          if (r.combo >= 1) comboSound(r.combo, ev.spin !== 'none' || ev.linesCleared === 4);
+          if (r.combo >= 1) {
+            comboSound(r.combo, ev.spin !== "none" || ev.linesCleared === 4);
+          }
           // blocked a big wave right before it hit
-          if (out.canceled >= 4) clutchSound();
+          if (out.canceled >= 4) {
+            clutchSound();
+          }
           // the surge burst on a broken chain, else the spike sound for a big send
-          if (out.surged > 0) surgeSound(out.surged + out.sent);
-          else if (out.sent >= BIG_SEND_MIN) bigSendSound(out.sent);
+          if (out.surged > 0) {
+            surgeSound(out.surged + out.sent);
+          } else if (out.sent >= BIG_SEND_MIN) {
+            bigSendSound(out.sent);
+          }
         }
         // big attack: a shaking "+N" number and a field kick that scale with it
         const spike = out.surged + out.sent;
@@ -484,31 +558,49 @@ export class ZenithView {
           this.renderer.kick(2 + Math.min(10, spike));
         }
         if (settings.effects) {
-          if (ev.boardAfter.isEmpty()) this.renderer.fxAllClear();
-          else this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+          if (ev.boardAfter.isEmpty()) {
+            this.renderer.fxAllClear();
+          } else {
+            this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], "#ffffff"]);
+          }
           const label = lockActionLabel(ev);
           if (label) {
-            const sub = [r.b2b >= 2 ? `B2B ×${r.b2b}` : '', r.combo >= 1 ? `COMBO ×${r.combo}` : '']
-              .filter(Boolean).join('   ');
+            const sub = [r.b2b >= 2 ? `B2B ×${r.b2b}` : "", r.combo >= 1 ? `COMBO ×${r.combo}` : ""]
+              .filter(Boolean)
+              .join("   ");
             actionText(this.fieldPanel, label.main, sub, label.kind);
           }
-          if (out.surged > 0) actionText(this.fieldPanel, 'SURGE', `${out.surged + out.sent + out.canceled} LINES`, 'surge', 'low');
+          if (out.surged > 0) {
+            actionText(
+              this.fieldPanel,
+              "SURGE",
+              `${out.surged + out.sent + out.canceled} LINES`,
+              "surge",
+              "low",
+            );
+          }
         }
         if (out.surged > 0) {
           this.altimeter.surge(out.surged + out.sent);
           this.background.pulse(out.surged + out.sent, 20);
           this.showToast(`SURGE - ${out.surged + out.sent + out.canceled} lines`);
-        } else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
+        } else if (out.canceled > 0) {
+          this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ""}`);
+        }
       } else {
         // combo (>=2 consecutive clears) just ended without a clear
-        if (settings.soundFx && r.combo >= 1) comboBreakSound();
+        if (settings.soundFx && r.combo >= 1) {
+          comboBreakSound();
+        }
         r.onLockNoClear();
         // garbage rises while you are not clearing (cancelable until here)
         const rows = r.riseGarbage(8, this.game.garbageBoardView());
         if (rows.length > 0) {
           this.game.addGarbage(rows);
           this.lastIncoming = r.incomingLines();
-          if (settings.soundFx) garbageSound(rows.length);
+          if (settings.soundFx) {
+            garbageSound(rows.length);
+          }
           this.renderer.fxGarbage(rows.length);
           this.renderer.fxGarbageIn(rows.length);
         }
@@ -517,7 +609,9 @@ export class ZenithView {
 
     if (this.game.topOut) {
       this.renderer.fxTopout(this.game.board, this.game.colors);
-      if (settings.soundFx) gameOverSound();
+      if (settings.soundFx) {
+        gameOverSound();
+      }
       this.endRunToResults();
     } else if (r) {
       // stack-danger alarm: sounds once as the board climbs into the red,
@@ -525,7 +619,9 @@ export class ZenithView {
       const h = this.game.board.maxHeight();
       if (h >= 16 && !this.inDanger) {
         this.inDanger = true;
-        if (settings.soundFx) dangerSound();
+        if (settings.soundFx) {
+          dangerSound();
+        }
       } else if (h <= 12) {
         this.inDanger = false;
       }
@@ -551,12 +647,16 @@ export class ZenithView {
   private applyGravity(dtMs: number): void {
     const r = this.run;
     const a = this.game.active;
-    if (!r || !a) return;
+    if (!r || !a) {
+      return;
+    }
     // reaching a new lowest row restores the move-reset budget (guideline).
     // Measured on the lowest CELL, not the piece origin - rotation states
     // have different cell offsets and would fake "lower" on a flat floor.
     let bottom = Infinity;
-    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
+    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) {
+      bottom = Math.min(bottom, cy);
+    }
     if (bottom < this.lowestY) {
       this.lowestY = bottom;
       this.moveResets = 0;
@@ -568,7 +668,9 @@ export class ZenithView {
       this.gravAcc += r.gravityCps() * (dtMs / 1000);
       while (this.gravAcc >= 1) {
         this.gravAcc--;
-        if (!this.game.softDropStep()) break;
+        if (!this.game.softDropStep()) {
+          break;
+        }
       }
     } else {
       this.gravAcc = 0;
@@ -577,7 +679,10 @@ export class ZenithView {
       this.renderer.lockProgress = this.lockTimerMs / r.lockMs();
       // lock delay; stalling is bounded by the 15-move reset budget
       if (this.lockTimerMs >= r.lockMs()) {
-        if (settings.soundFx) lockSound(); // gravity lock, not a hard drop
+        // gravity lock, not a hard drop
+        if (settings.soundFx) {
+          lockSound();
+        }
         this.game.hardDrop();
       }
     }
@@ -593,12 +698,18 @@ export class ZenithView {
       r.tick(dt);
       // telegraph sound when new garbage gets queued against you
       const inc = r.incomingLines();
-      if (inc > this.lastIncoming && settings.soundFx) garbageQueuedSound(inc - this.lastIncoming);
+      if (inc > this.lastIncoming && settings.soundFx) {
+        garbageQueuedSound(inc - this.lastIncoming);
+      }
       this.lastIncoming = inc;
       // escalating incoming-garbage warnings + the death "!" (letting the whole
       // queue through would bury the stack past the top of the field)
-      const lethal = this.warner.update(inc, this.game.board.maxHeight() + inc >= VISIBLE_H, settings.soundFx);
-      this.deathWarn.classList.toggle('show', lethal);
+      const lethal = this.warner.update(
+        inc,
+        this.game.board.maxHeight() + inc >= VISIBLE_H,
+        settings.soundFx,
+      );
+      this.deathWarn.classList.toggle("show", lethal);
       this.applyGravity(dt);
       this.updateHud();
       // red vignette bleeds in as the stack climbs toward the top
@@ -629,31 +740,43 @@ export class ZenithView {
     const cell = this.cellSize();
     const holdCell = holdCellOf(cell);
     const queueCell = queueCellOf(cell);
-    this.holdBox.querySelector('canvas')?.remove();
+    this.holdBox.querySelector("canvas")?.remove();
     this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
-    for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
-    for (const t of this.game.preview()) this.queueBox.appendChild(renderPieceTile(t, queueCell));
+    for (const c of [...this.queueBox.querySelectorAll("canvas")]) {
+      c.remove();
+    }
+    for (const t of this.game.preview()) {
+      this.queueBox.appendChild(renderPieceTile(t, queueCell));
+    }
   }
 
   private updateHud(): void {
     const r = this.run;
     // keep the last numbers on screen when the run just ended (the same
     // frame that locks the final piece still calls this from loop())
-    if (!r) return;
+    if (!r) {
+      return;
+    }
     const fi = floorIndexAt(r.altitude);
     const incoming = r.incomingLines();
 
     if (fi > this.lastFloor) {
       this.lastFloor = fi;
-      if (settings.soundFx) levelUpSound();
+      if (settings.soundFx) {
+        levelUpSound();
+      }
       if (settings.effects) {
-        actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), 'floor');
+        actionText(this.fieldPanel, `FLOOR ${fi + 1}`, FLOORS[fi].name.toUpperCase(), "floor");
         this.background.sweep(6);
-      } else this.showToast(`Floor ${fi + 1} - ${FLOORS[fi].name}`);
+      } else {
+        this.showToast(`Floor ${fi + 1} - ${FLOORS[fi].name}`);
+      }
     }
     if (!this.pbPlayed && r.altitude > this.bestAltitude) {
       this.pbPlayed = true;
-      if (settings.soundFx) personalBestSound();
+      if (settings.soundFx) {
+        personalBestSound();
+      }
       this.showToast(`New personal best - past ${Math.round(this.bestAltitude)}m!`);
     }
 
@@ -667,28 +790,31 @@ export class ZenithView {
     this.gmQueued.style.height = `${queued * cell}px`;
 
     // glows once a surge is actually banked (breaking would release B2B−3)
-    this.b2bTag.set('B2B', r.b2b, r.b2b >= 4);
+    this.b2bTag.set("B2B", r.b2b, r.b2b >= 4);
 
     // altitude/floor/climb speed live on the altimeter canvas under the
-    // board - the side panel keeps the secondary numbers
-    this.hud.innerHTML =
-      `<div class="meta m-time">time <b>${fmtTime(r.timeMs)}</b></div>` +
-      `<div class="meta m-sent">sent <b>${r.linesSent}</b></div>` +
-      `<div class="meta m-taken">taken <b>${r.garbageTaken}</b></div>` +
-      (incoming > 0 ? `<div class="incoming">▼ ${incoming} incoming</div>` : `<div class="meta">&nbsp;</div>`);
+    // board - the side panel keeps the secondary numbers. The clock only
+    // shows seconds, so throttle the innerHTML rebuild (updateHud runs per
+    // frame and DOM churn is expensive, especially on Firefox).
+    const now = performance.now();
+    if (now - this.hudAt > 200) {
+      this.hudAt = now;
+      this.hud.innerHTML =
+        `<div class="meta m-time">time <b>${fmtSprint(r.timeMs, false)}</b></div>` +
+        `<div class="meta m-sent">sent <b>${r.linesSent}</b></div>` +
+        `<div class="meta m-taken">taken <b>${r.garbageTaken}</b></div>` +
+        (incoming > 0
+          ? `<div class="incoming">▼ ${incoming} incoming</div>`
+          : `<div class="meta">&nbsp;</div>`);
+    }
   }
 
   private showToast(text: string): void {
     this.toast.textContent = text;
-    this.toast.classList.add('show');
+    this.toast.classList.add("show");
     clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 2200);
+    this.toastTimer = window.setTimeout(() => this.toast.classList.remove("show"), 2200);
   }
-}
-
-function fmtTime(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 // rotating one-liner under the Quick play heading (in the app's voice)
@@ -700,21 +826,3 @@ const QP_HINTS = [
   "Hi stephen",
   "Message eye.balm on discord if you hate this",
 ];
-
-function panel(label: string): HTMLElement {
-  const p = document.createElement('div');
-  p.className = 'panel';
-  const l = document.createElement('div');
-  l.className = 'label';
-  l.textContent = label;
-  p.appendChild(l);
-  return p;
-}
-
-function btn(text: string, onClick: () => void): HTMLElement {
-  const b = document.createElement('button');
-  b.className = 'btn';
-  b.textContent = text;
-  b.addEventListener('click', onClick);
-  return b;
-}

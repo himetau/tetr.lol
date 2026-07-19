@@ -3,7 +3,7 @@
 // enabled (settings.fpsCounter) and averages frame times over a short window
 // so the number is steady, colour-coded green/amber/red by smoothness.
 
-import { settings, onSettingsChange } from './settings';
+import { settings, onSettingsChange } from "./settings";
 
 let el: HTMLElement | null = null;
 let rafId = 0;
@@ -21,14 +21,16 @@ function tick(t: number): void {
   if (acc >= 250 && el) {
     const fps = Math.round(frames / (acc / 1000));
     el.textContent = `${fps} FPS`;
-    el.style.color = fps >= 55 ? 'var(--good)' : fps >= 30 ? 'var(--warn)' : 'var(--bad)';
+    el.style.color = fps >= 55 ? "var(--good)" : fps >= 30 ? "var(--warn)" : "var(--bad)";
     frames = 0;
     acc = 0;
   }
 }
 
 function start(): void {
-  if (rafId) return;
+  if (rafId) {
+    return;
+  }
   last = 0;
   frames = 0;
   acc = 0;
@@ -36,22 +38,29 @@ function start(): void {
 }
 
 function stop(): void {
-  if (rafId) cancelAnimationFrame(rafId);
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+  }
   rafId = 0;
 }
 
 /** Create the readout and wire it to the setting; call once at app startup. */
 export function initFpsCounter(): void {
-  if (el) return;
-  el = document.createElement('div');
-  el.className = 'fps-counter';
-  el.textContent = '– FPS';
+  if (el) {
+    return;
+  }
+  el = document.createElement("div");
+  el.className = "fps-counter";
+  el.textContent = "– FPS";
   document.body.appendChild(el);
   const apply = () => {
     const on = settings.fpsCounter;
-    el!.classList.toggle('show', on);
-    if (on) start();
-    else stop();
+    el!.classList.toggle("show", on);
+    if (on) {
+      start();
+    } else {
+      stop();
+    }
   };
   apply();
   onSettingsChange(apply);

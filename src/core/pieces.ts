@@ -2,8 +2,8 @@
 // origin (the SRS rotation center). Rotation states: 0=spawn, 1=CW(east),
 // 2=180(south), 3=CCW(west).
 
-export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export const PIECE_TYPES: PieceType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+export type PieceType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
+export const PIECE_TYPES: PieceType[] = ["I", "O", "T", "S", "Z", "J", "L"];
 
 export type Rot = 0 | 1 | 2 | 3;
 export type Cell = readonly [number, number];
@@ -22,22 +22,77 @@ function fourStates(spawn: Cell[]): Cell[][] {
 }
 
 const SPAWN_CELLS: Record<PieceType, Cell[]> = {
-  T: [[-1, 0], [0, 0], [1, 0], [0, 1]],
-  S: [[-1, 0], [0, 0], [0, 1], [1, 1]],
-  Z: [[-1, 1], [0, 1], [0, 0], [1, 0]],
-  J: [[-1, 1], [-1, 0], [0, 0], [1, 0]],
-  L: [[1, 1], [-1, 0], [0, 0], [1, 0]],
-  O: [[0, 0], [1, 0], [0, 1], [1, 1]],
-  I: [[-1, 0], [0, 0], [1, 0], [2, 0]],
+  T: [
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+    [0, 1],
+  ],
+  S: [
+    [-1, 0],
+    [0, 0],
+    [0, 1],
+    [1, 1],
+  ],
+  Z: [
+    [-1, 1],
+    [0, 1],
+    [0, 0],
+    [1, 0],
+  ],
+  J: [
+    [-1, 1],
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+  ],
+  L: [
+    [1, 1],
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+  ],
+  O: [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+  ],
+  I: [
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+    [2, 0],
+  ],
 };
 
 // I rotates about the center of its 4x4 SRS box, which isn't a lattice point;
 // hardcode the four states instead of generating them.
 const I_STATES: Cell[][] = [
-  [[-1, 0], [0, 0], [1, 0], [2, 0]],
-  [[1, 1], [1, 0], [1, -1], [1, -2]],
-  [[-1, -1], [0, -1], [1, -1], [2, -1]],
-  [[0, 1], [0, 0], [0, -1], [0, -2]],
+  [
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+    [2, 0],
+  ],
+  [
+    [1, 1],
+    [1, 0],
+    [1, -1],
+    [1, -2],
+  ],
+  [
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+    [2, -1],
+  ],
+  [
+    [0, 1],
+    [0, 0],
+    [0, -1],
+    [0, -2],
+  ],
 ];
 
 // O never kicks; keep all states identical so rotation is a no-op visually.
@@ -55,13 +110,13 @@ export const PIECE_CELLS: Record<PieceType, Cell[][]> = {
 
 // Sampled from the user's tetr.io skin sheet (tetrio-plus .tpse export)
 export const PIECE_COLORS: Record<PieceType, string> = {
-  I: '#42afe1',
-  O: '#f6d03c',
-  T: '#9739a2',
-  S: '#51b84d',
-  Z: '#eb4f65',
-  J: '#1165b5',
-  L: '#f38927',
+  I: "#42afe1",
+  O: "#f6d03c",
+  T: "#9739a2",
+  S: "#51b84d",
+  Z: "#eb4f65",
+  J: "#1165b5",
+  L: "#f38927",
 };
 
 export function cellsAt(type: PieceType, rot: Rot, x: number, y: number): Cell[] {

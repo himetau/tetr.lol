@@ -8,15 +8,15 @@
 // viability with the engine's own reachability. Off-book residuals (after a
 // mistake) fall back to live enumeration so recovery is graded too.
 
-import { Board } from '../core/board';
-import type { PieceType, Rot } from '../core/pieces';
-import type { SpinKind } from '../core/spin';
-import { enumeratePlacements } from './enumerate';
-import { residualKey, stateToBoard, wellCellCount } from './fourwide-core';
-import type { GradeRequest, GradeResult, AltInfo, Grade } from './grade';
-import bookData from '../data/fourwide.json';
+import { Board } from "../core/board";
+import { PIECE_TYPES, type PieceType, type Rot } from "../core/pieces";
+import type { SpinKind } from "../core/spin";
+import { enumeratePlacements, placementKey } from "./enumerate";
+import { residualKey, stateToBoard } from "./fourwide-core";
+import type { GradeRequest, GradeResult, AltInfo, Grade } from "./grade";
+import bookData from "../data/fourwide.json";
 
-export { WELL_X, WELL_W, WALL_H, refillWalls, residualKey, wallMask } from './fourwide-core';
+export { WELL_X, WELL_W, WALL_H, refillWalls, residualKey, wallMask } from "./fourwide-core";
 
 interface BookPlacement {
   piece: PieceType;
@@ -37,24 +37,23 @@ interface BookState {
 const STATES = bookData.states as unknown as BookState[];
 const KEY_TO_STATE = new Map(STATES.map((s, i) => [s.key, i]));
 
-function cellKey(piece: string, cells: readonly (readonly [number, number])[]): string {
-  return piece + ':' + cells.map(([x, y]) => x * 32 + y).sort((a, b) => a - b).join(',');
-}
-
 /** States that continue with the most piece types - fair drill starts. */
 const START_STATES: number[] = (() => {
   const counts = STATES.map((s) => Object.keys(s.placements).length);
   const top = Math.max(...counts);
   const picks: number[] = [];
-  for (let i = 0; i < STATES.length; i++) if (counts[i] >= top - 1) picks.push(i);
+  for (let i = 0; i < STATES.length; i++) {
+    if (counts[i] >= top - 1) {
+      picks.push(i);
+    }
+  }
   return picks;
 })();
 
 /** Fresh drill board: walls + a random well-connected residual state. */
 export function buildFourwideStart(seed?: number): { board: Board; stateIndex: number } {
-  const r = seed === undefined
-    ? Math.random()
-    : (((seed * 1103515245 + 12345) >>> 8) % 10007) / 10007;
+  const r =
+    seed === undefined ? Math.random() : (((seed * 1103515245 + 12345) >>> 8) % 10007) / 10007;
   const stateIndex = START_STATES[Math.floor(r * START_STATES.length) % START_STATES.length];
   return { board: stateToBoard(STATES[stateIndex].key), stateIndex };
 }
@@ -63,7 +62,6 @@ export function buildFourwideStart(seed?: number): { board: Board; stateIndex: n
 
 const PIECE_BIT: Record<PieceType, number> = { I: 1, O: 2, T: 4, S: 8, Z: 16, J: 32, L: 64 };
 const HOLD_IDX: Record<PieceType, number> = { I: 1, O: 2, T: 3, S: 4, Z: 5, J: 6, L: 7 };
-const ALL_PIECES: PieceType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
 /**
  * Multiset of the current 7-bag still undealt past the visible queue, as a
@@ -73,10 +71,17 @@ const ALL_PIECES: PieceType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
  */
 export function bagRemainder(queue: PieceType[], pieceIndex: number): number {
   const k = (pieceIndex + queue.length) % 7;
-  if (k === 0) return 0;
-  if (k > queue.length) return 0; // short test queues: fall back to a fresh bag
+  if (k === 0) {
+    return 0;
+  }
+  // short test queues: fall back to a fresh bag
+  if (k > queue.length) {
+    return 0;
+  }
   let mask = 127;
-  for (const p of queue.slice(queue.length - k)) mask &= ~PIECE_BIT[p];
+  for (const p of queue.slice(queue.length - k)) {
+    mask &= ~PIECE_BIT[p];
+  }
   return mask;
 }
 
@@ -101,7 +106,7 @@ const DEPTH_CAP = 63;
 function computeGuaranteedDepth(): Uint8Array {
   // placement next-states per (state, piece), deduped
   const nexts: number[][][] = STATES.map((s) =>
-    ALL_PIECES.map((p) => [...new Set((s.placements[p] ?? []).map((m) => m.next))]),
+    PIECE_TYPES.map((p) => [...new Set((s.placements[p] ?? []).map((m) => m.next))]),
   );
   const depth = new Uint8Array(STATES.length * 8 * 128 * 2);
   let changed = true;
@@ -114,7 +119,10 @@ function computeGuaranteedDepth(): Uint8Array {
             let worst = DEPTH_CAP;
             for (let pi = 0; pi < 7 && worst > 0; pi++) {
               const bit = 1 << pi;
-              if (r !== 0 && !(r & bit)) continue; // piece not in this bag's rest
+              // skip pieces not in this bag's rest
+              if (r !== 0 && !(r & bit)) {
+                continue;
+              }
               const nr = (r === 0 ? 127 : r) & ~bit;
               let best = -1;
               for (const ns of nexts[s][pi]) {
@@ -131,7 +139,10 @@ function computeGuaranteedDepth(): Uint8Array {
               worst = Math.min(worst, best < 0 ? 0 : Math.min(1 + best, DEPTH_CAP));
             }
             const idx = nodeIdx(s, h, r, c);
-            if (depth[idx] !== worst) { depth[idx] = worst; changed = true; }
+            if (depth[idx] !== worst) {
+              depth[idx] = worst;
+              changed = true;
+            }
           }
         }
       }
@@ -141,9 +152,16 @@ function computeGuaranteedDepth(): Uint8Array {
 }
 
 /** Worst-case pieces survivable from here with no preview knowledge. */
-export function guaranteedDepth(state: number, hold: PieceType | null, remainder: number, canHold = true): number {
+export function guaranteedDepth(
+  state: number,
+  hold: PieceType | null,
+  remainder: number,
+  canHold = true,
+): number {
   DEPTH ??= computeGuaranteedDepth();
-  return DEPTH[nodeIdx(state, hold === null ? 0 : HOLD_IDX[hold], remainder & 127, canHold ? 1 : 0)];
+  return DEPTH[
+    nodeIdx(state, hold === null ? 0 : HOLD_IDX[hold], remainder & 127, canHold ? 1 : 0)
+  ];
 }
 
 // ---- queue-depth chain search over the book ------------------------------
@@ -156,11 +174,23 @@ export function guaranteedDepth(state: number, hold: PieceType | null, remainder
  * worst-case bag continuation from the horizon position - so lines that
  * survive the preview are ranked by how bag-proof their endpoint is.
  */
-function chain(state: number, queue: PieceType[], qi: number, hold: PieceType | null, canHold: boolean, horizonBag: number, memo: Map<string, number>): number {
-  if (qi >= queue.length) return guaranteedDepth(state, hold, horizonBag, canHold);
-  const mk = `${state}|${qi}|${hold ?? '-'}|${canHold ? 1 : 0}`;
+function chain(
+  state: number,
+  queue: PieceType[],
+  qi: number,
+  hold: PieceType | null,
+  canHold: boolean,
+  horizonBag: number,
+  memo: Map<string, number>,
+): number {
+  if (qi >= queue.length) {
+    return guaranteedDepth(state, hold, horizonBag, canHold);
+  }
+  const mk = `${state}|${qi}|${hold ?? "-"}|${canHold ? 1 : 0}`;
   const hit = memo.get(mk);
-  if (hit !== undefined) return hit;
+  if (hit !== undefined) {
+    return hit;
+  }
   const active = queue[qi];
   let best = -1;
   for (const p of STATES[state].placements[active] ?? []) {
@@ -218,12 +248,14 @@ const STATE_NPIECES = STATES.map((s) => Object.keys(s.placements).length);
 const dynCache = new Map<string, FourwideMove[]>();
 
 function dynamicClears(board: Board, piece: PieceType, usesHold: boolean): FourwideMove[] {
-  const k = board.key() + '|' + piece;
+  const k = board.key() + "|" + piece;
   let base = dynCache.get(k);
   if (!base) {
     base = [];
     for (const p of enumeratePlacements(board, piece)) {
-      if (p.linesCleared === 0) continue;
+      if (p.linesCleared === 0) {
+        continue;
+      }
       const nk = residualKey(p.after);
       base.push({
         piece,
@@ -235,10 +267,12 @@ function dynamicClears(board: Board, piece: PieceType, usesHold: boolean): Fourw
         usesHold: false,
         next: nk === null ? null : (KEY_TO_STATE.get(nk) ?? null),
         score: 0,
-        key: cellKey(p.type, p.cells),
+        key: placementKey(p.type, p.cells),
       });
     }
-    if (dynCache.size > 400) dynCache.clear();
+    if (dynCache.size > 400) {
+      dynCache.clear();
+    }
     dynCache.set(k, base);
   }
   return base.map((m) => ({ ...m, usesHold }));
@@ -246,7 +280,12 @@ function dynamicClears(board: Board, piece: PieceType, usesHold: boolean): Fourw
 
 /** Advice for a decision point. `queue` is [active, ...preview]; pieceIndex
  * (locked-piece count) pins where the 7-bag boundary falls past the queue. */
-export function fourwideAdvice(board: Board, queue: PieceType[], hold: PieceType | null, pieceIndex = 0): FourwideAdvice {
+export function fourwideAdvice(
+  board: Board,
+  queue: PieceType[],
+  hold: PieceType | null,
+  pieceIndex = 0,
+): FourwideAdvice {
   const key = residualKey(board);
   const state = key === null ? undefined : KEY_TO_STATE.get(key);
   const memo = new Map<string, number>();
@@ -255,52 +294,79 @@ export function fourwideAdvice(board: Board, queue: PieceType[], hold: PieceType
   const moves: FourwideMove[] = [];
   const seen = new Set<string>();
 
-  const holdPiece = hold ?? queue[1] ?? null;   // piece obtained by pressing hold
-  const holdRest = hold ? 1 : 2;                // queue index after a hold placement
-  const holdNext = queue[0];                    // what ends up held
+  const holdPiece = hold ?? queue[1] ?? null; // piece obtained by pressing hold
+  const holdRest = hold ? 1 : 2; // queue index after a hold placement
+  const holdNext = queue[0]; // what ends up held
 
   if (state !== undefined) {
     for (const p of STATES[state].placements[active] ?? []) {
       const score = 1 + chain(p.next, queue, 1, hold, true, horizonBag, memo);
-      moves.push({ ...p, cells: p.cells.map((c) => [...c] as [number, number]), usesHold: false, next: p.next, score, key: cellKey(p.piece, p.cells) });
-      seen.add(cellKey(p.piece, p.cells));
+      moves.push({
+        ...p,
+        cells: p.cells.map((c) => [...c] as [number, number]),
+        usesHold: false,
+        next: p.next,
+        score,
+        key: placementKey(p.piece, p.cells),
+      });
+      seen.add(placementKey(p.piece, p.cells));
     }
     if (holdPiece && holdPiece !== active) {
       for (const p of STATES[state].placements[holdPiece] ?? []) {
-        const k = cellKey(p.piece, p.cells);
-        if (seen.has(k)) continue;
+        const k = placementKey(p.piece, p.cells);
+        if (seen.has(k)) {
+          continue;
+        }
         const score = 1 + chain(p.next, queue, holdRest, holdNext, true, horizonBag, memo);
-        moves.push({ ...p, cells: p.cells.map((c) => [...c] as [number, number]), usesHold: true, next: p.next, score, key: k });
+        moves.push({
+          ...p,
+          cells: p.cells.map((c) => [...c] as [number, number]),
+          usesHold: true,
+          next: p.next,
+          score,
+          key: k,
+        });
       }
     }
   } else {
     // recovery: live enumeration; canonical landings get the book lookahead
     for (const m of dynamicClears(board, active, false)) {
-      if (seen.has(m.key)) continue;
+      if (seen.has(m.key)) {
+        continue;
+      }
       seen.add(m.key);
       m.score = m.next !== null ? 1 + chain(m.next, queue, 1, hold, true, horizonBag, memo) : 1;
       moves.push(m);
     }
     if (holdPiece && holdPiece !== active) {
       for (const m of dynamicClears(board, holdPiece, true)) {
-        if (seen.has(m.key)) continue;
+        if (seen.has(m.key)) {
+          continue;
+        }
         seen.add(m.key);
-        m.score = m.next !== null ? 1 + chain(m.next, queue, holdRest, holdNext, true, horizonBag, memo) : 1;
+        m.score =
+          m.next !== null
+            ? 1 + chain(m.next, queue, holdRest, holdNext, true, horizonBag, memo)
+            : 1;
         moves.push(m);
       }
     }
   }
   // score, then DDRKirby's genericScore of the landing state (continuability
   // beyond the horizon), then book landings before off-book clears
-  moves.sort((a, b) =>
-    b.score - a.score ||
-    (b.next !== null ? STATE_NPIECES[b.next] : 0) - (a.next !== null ? STATE_NPIECES[a.next] : 0) ||
-    (b.next !== null ? 1 : 0) - (a.next !== null ? 1 : 0));
+  moves.sort(
+    (a, b) =>
+      b.score - a.score ||
+      (b.next !== null ? STATE_NPIECES[b.next] : 0) -
+        (a.next !== null ? STATE_NPIECES[a.next] : 0) ||
+      (b.next !== null ? 1 : 0) - (a.next !== null ? 1 : 0),
+  );
 
   const rootScore = state === undefined ? 0 : chain(state, queue, 0, hold, true, horizonBag, memo);
-  const parkScore = state !== undefined && hold === null && queue.length > 1
-    ? 1 + chain(state, queue, 1, queue[0], false, horizonBag, memo)
-    : -1;
+  const parkScore =
+    state !== undefined && hold === null && queue.length > 1
+      ? 1 + chain(state, queue, 1, queue[0], false, horizonBag, memo)
+      : -1;
   return {
     onBook: state !== undefined,
     stateIndex: state ?? null,
@@ -316,8 +382,10 @@ export function fourwideAdvice(board: Board, queue: PieceType[], hold: PieceType
 /** How many piece types could keep the combo from this (off-book) board. */
 function continuationTypes(board: Board): number {
   let n = 0;
-  for (const piece of ['I', 'O', 'T', 'S', 'Z', 'J', 'L'] as PieceType[]) {
-    if (dynamicClears(board, piece, false).length > 0) n++;
+  for (const piece of PIECE_TYPES) {
+    if (dynamicClears(board, piece, false).length > 0) {
+      n++;
+    }
   }
   return n;
 }
@@ -330,7 +398,7 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
   const userAfter = board.clone();
   userAfter.place(req.userCells);
   userAfter.clearLines();
-  const userKey = cellKey(req.userPiece, req.userCells);
+  const userKey = placementKey(req.userPiece, req.userCells);
   const userCleared = req.userLines > 0;
   const userMove = advice.moves.find((m) => m.key === userKey);
   const bestScore = advice.moves[0]?.score ?? 0;
@@ -339,9 +407,13 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
   const reasons: string[] = [];
   const bestMove = advice.moves[0];
   const betterHint = () => {
-    if (!bestMove) return;
+    if (!bestMove) {
+      return;
+    }
     const cols = [...new Set(bestMove.cells.map(([x]) => x))].sort((a, b) => a - b);
-    reasons.push(`Better: ${bestMove.piece}${bestMove.usesHold ? ' (hold)' : ''} on columns ${cols[0] + 1}–${cols[cols.length - 1] + 1}`);
+    reasons.push(
+      `Better: ${bestMove.piece}${bestMove.usesHold ? " (hold)" : ""} on columns ${cols[0] + 1}–${cols[cols.length - 1] + 1}`,
+    );
   };
 
   if (userMove) {
@@ -355,32 +427,41 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     // queue, not the player's fault - that stays out of this branch.
     const parkSaves = advice.parkScore >= previewLen && advice.parkScore > bestScore;
     if (!userSurvivesPreview && bestAny >= previewLen) {
-      grade = 'mistake';
+      grade = "mistake";
       const diesIn = userMove.score;
-      reasons.push(`Combo will be lost - this line runs out in ${diesIn} piece${diesIn === 1 ? '' : 's'}; a continuation existed that survives your whole preview`);
-      if (parkSaves) reasons.push(`Hold ${req.queue[0]} first - parking keeps the combo going`);
-      else betterHint();
+      reasons.push(
+        `Combo will be lost - this line runs out in ${diesIn} piece${diesIn === 1 ? "" : "s"}; a continuation existed that survives your whole preview`,
+      );
+      if (parkSaves) {
+        reasons.push(`Hold ${req.queue[0]} first - parking keeps the combo going`);
+      } else {
+        betterHint();
+      }
     } else if (diff <= 0) {
-      grade = 'best';
+      grade = "best";
       if (advice.parkScore > bestScore) {
         // placing was fine, but parking into the empty hold was strictly longer
-        grade = 'good';
-        reasons.push(`Book: hold ${req.queue[0]} first - parking keeps the combo ${advice.parkScore - bestScore} piece${advice.parkScore - bestScore === 1 ? '' : 's'} longer`);
+        grade = "good";
+        reasons.push(
+          `Book: hold ${req.queue[0]} first - parking keeps the combo ${advice.parkScore - bestScore} piece${advice.parkScore - bestScore === 1 ? "" : "s"} longer`,
+        );
       }
     } else if (userSurvivesPreview) {
       // both survive the whole preview; rank by worst-case bag continuation
-      grade = 'good';
+      grade = "good";
       const userBeyond = userMove.score - previewLen;
       const bestBeyond = bestScore - previewLen;
-      reasons.push(`Book: survives the preview, but the best line guarantees ${bestBeyond} more piece${bestBeyond === 1 ? '' : 's'} past it whatever the bag deals (yours ${userBeyond})`);
+      reasons.push(
+        `Book: survives the preview, but the best line guarantees ${bestBeyond} more piece${bestBeyond === 1 ? "" : "s"} past it whatever the bag deals (yours ${userBeyond})`,
+      );
       betterHint();
     } else if (diff === 1) {
       // combo dies within the preview whatever you do (bad queue); 1 piece short
-      grade = 'good';
+      grade = "good";
       reasons.push(`Book: a better continuation keeps the combo ${diff} piece longer`);
       betterHint();
     } else {
-      grade = 'inaccuracy';
+      grade = "inaccuracy";
       reasons.push(`Book: this line dies ${diff} pieces sooner than the best continuation`);
       betterHint();
     }
@@ -388,33 +469,39 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     const nk = residualKey(userAfter);
     if (nk !== null && KEY_TO_STATE.has(nk)) {
       // canonical landing the book search didn't propose (e.g. via hold quirk)
-      grade = advice.onBook ? 'good' : 'best';
-      if (!advice.onBook) reasons.push('Recovered a book residual - combo is back on track');
+      grade = advice.onBook ? "good" : "best";
+      if (!advice.onBook) {
+        reasons.push("Recovered a book residual - combo is back on track");
+      }
     } else if (advice.onBook) {
       const types = continuationTypes(userAfter);
       if (types >= 3) {
-        grade = 'inaccuracy';
+        grade = "inaccuracy";
         reasons.push(`Left the book: only ${types} piece types continue from this residual`);
       } else if (types >= 1) {
-        grade = 'mistake';
-        reasons.push(`Risky residual - only ${types} piece type${types > 1 ? 's' : ''} can continue`);
+        grade = "mistake";
+        reasons.push(
+          `Risky residual - only ${types} piece type${types > 1 ? "s" : ""} can continue`,
+        );
       } else {
-        grade = 'killer';
-        reasons.push('Dead residual - nothing continues the combo from here');
+        grade = "killer";
+        reasons.push("Dead residual - nothing continues the combo from here");
       }
       betterHint();
     } else {
-      grade = 'good'; // off-book but kept the combo alive
+      grade = "good"; // off-book but kept the combo alive
     }
   } else if (advice.moves.length > 0) {
-    grade = 'killer';
-    reasons.push(`Broke the combo - ${advice.moves[0].piece}${advice.moves[0].usesHold ? ' (hold)' : ''} kept it going`);
+    grade = "killer";
+    reasons.push(
+      `Broke the combo - ${advice.moves[0].piece}${advice.moves[0].usesHold ? " (hold)" : ""} kept it going`,
+    );
     betterHint();
   } else if (advice.onBook) {
-    grade = 'good';
-    reasons.push('Forced break - this queue had no continuation');
+    grade = "good";
+    reasons.push("Forced break - this queue had no continuation");
   } else {
-    grade = 'good'; // rebuilding after a break: no book judgement
+    grade = "good"; // rebuilding after a break: no book judgement
   }
 
   // ---- alternatives list for the paths dock ----
@@ -424,23 +511,49 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
     after.place(m.cells);
     const lines = after.clearLines().length;
     return {
-      piece: m.piece, rot: m.rot, x: m.x, y: m.y,
-      cells: m.cells, spin: m.spin, linesCleared: lines,
-      usesHold: m.usesHold, isBook: m.next !== null, total: m.score,
-      afterRows: Array.from(after.rows), pv: [], isUser, path: [],
+      piece: m.piece,
+      rot: m.rot,
+      x: m.x,
+      y: m.y,
+      cells: m.cells,
+      spin: m.spin,
+      linesCleared: lines,
+      usesHold: m.usesHold,
+      isBook: m.next !== null,
+      total: m.score,
+      afterRows: Array.from(after.rows),
+      pv: [],
+      isUser,
+      path: [],
     };
   };
-  for (const m of advice.moves.slice(0, 8)) alts.push(toAlt(m, m.key === userKey));
-  if (userMove && !alts.some((a) => a.isUser)) alts.push(toAlt(userMove, true));
+  for (const m of advice.moves.slice(0, 8)) {
+    alts.push(toAlt(m, m.key === userKey));
+  }
+  if (userMove && !alts.some((a) => a.isUser)) {
+    alts.push(toAlt(userMove, true));
+  }
   let userRank = alts.findIndex((a) => a.isUser);
   if (userRank === -1) {
     const nk = residualKey(userAfter);
     const userScore = !userCleared ? 0 : nk !== null && KEY_TO_STATE.has(nk) ? 1 : 0.5;
-    alts.push(toAlt({
-      piece: req.userPiece, rot: req.userRot, x: req.userX, y: req.userY,
-      cells: req.userCells, spin: req.userSpin, usesHold: req.usedHold,
-      next: null, score: userScore, key: userKey,
-    }, true));
+    alts.push(
+      toAlt(
+        {
+          piece: req.userPiece,
+          rot: req.userRot,
+          x: req.userX,
+          y: req.userY,
+          cells: req.userCells,
+          spin: req.userSpin,
+          usesHold: req.usedHold,
+          next: null,
+          score: userScore,
+          key: userKey,
+        },
+        true,
+      ),
+    );
     alts.sort((a, b) => b.total - a.total || (a.isUser ? 1 : 0) - (b.isUser ? 1 : 0));
     userRank = alts.findIndex((a) => a.isUser);
   }
@@ -457,12 +570,7 @@ export function gradeFourwide(req: GradeRequest): GradeResult {
       onBook: advice.onBook,
       sustainable: advice.sustainable,
       userMatched: userMove !== undefined && userMove.score >= bestScore,
-      solutions: advice.onBook ? ['4-wide'] : [],
+      solutions: advice.onBook ? ["4-wide"] : [],
     },
   };
-}
-
-/** Off-book well cell count - the view uses it for the recovery hint. */
-export function wellCells(board: Board): number {
-  return wellCellCount(board);
 }

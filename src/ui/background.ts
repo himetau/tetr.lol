@@ -4,13 +4,13 @@
 // the packaged Electron build too). A theme-colored dim overlay keeps the UI
 // readable; the aurora glow takes over when no image background is active.
 
-import { settings, onSettingsChange } from './settings';
+import { settings, onSettingsChange } from "./settings";
 
 // ---- custom image store (IndexedDB) ----
 
 // predates the app's renames (→tetr.ai→tetr.lol) - kept so stored backgrounds survive
-const DB_NAME = 'lst-trainer-bg';
-const STORE = 'images';
+const DB_NAME = "lst-trainer-bg";
+const STORE = "images";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((res, rej) => {
@@ -21,7 +21,11 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-function tx(db: IDBDatabase, mode: IDBTransactionMode, run: (s: IDBObjectStore) => void): Promise<void> {
+function tx(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  run: (s: IDBObjectStore) => void,
+): Promise<void> {
   return new Promise((res, rej) => {
     const t = db.transaction(STORE, mode);
     run(t.objectStore(STORE));
@@ -33,7 +37,7 @@ function tx(db: IDBDatabase, mode: IDBTransactionMode, run: (s: IDBObjectStore) 
 async function dbAll(): Promise<Blob[]> {
   const db = await openDb();
   return new Promise((res, rej) => {
-    const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+    const req = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
     req.onsuccess = () => res(req.result as Blob[]);
     req.onerror = () => rej(req.error);
   });
@@ -44,12 +48,12 @@ async function dbAll(): Promise<Blob[]> {
 /** tiny deterministic rng so the star fields are stable across loads */
 function lcg(seed: number): () => number {
   let s = seed >>> 0;
-  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  return () => (s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32;
 }
 
-function stars(n: number, seed: number, maxY = 900, color = '#cdd6f4'): string {
+function stars(n: number, seed: number, maxY = 900, color = "#cdd6f4"): string {
   const rnd = lcg(seed);
-  let out = '';
+  let out = "";
   for (let i = 0; i < n; i++) {
     const r = rnd() < 0.85 ? 1 + rnd() : 2 + rnd() * 1.5;
     out += `<circle cx='${(rnd() * 1600).toFixed(0)}' cy='${(rnd() * maxY).toFixed(0)}' r='${r.toFixed(1)}' fill='${color}' opacity='${(0.15 + rnd() * 0.55).toFixed(2)}'/>`;
@@ -66,15 +70,17 @@ const BLUR = `<filter id='b' x='-40%' y='-40%' width='180%' height='180%'><feGau
 
 /** synthwave perspective grid below the horizon (y≈562) */
 function synthGrid(): string {
-  let out = '';
+  let out = "";
   for (let i = -12; i <= 12; i++) {
     const xb = 800 + i * 180;
     out += `<line x1='800' y1='562' x2='${xb.toFixed(0)}' y2='900' stroke='#cba6f7' stroke-width='2' opacity='0.28'/>`;
   }
-  let y = 562, step = 10;
+  let y = 562,
+    step = 10;
   while (y < 900) {
     out += `<line x1='0' y1='${y.toFixed(0)}' x2='1600' y2='${y.toFixed(0)}' stroke='#cba6f7' stroke-width='2' opacity='0.28'/>`;
-    y += step; step *= 1.35;
+    y += step;
+    step *= 1.35;
   }
   return out;
 }
@@ -82,9 +88,11 @@ function synthGrid(): string {
 /** diagonal rain streaks */
 function rain(n: number, seed: number): string {
   const rnd = lcg(seed);
-  let out = '';
+  let out = "";
   for (let i = 0; i < n; i++) {
-    const x = rnd() * 1750, y = rnd() * 950, len = 22 + rnd() * 46;
+    const x = rnd() * 1750,
+      y = rnd() * 950,
+      len = 22 + rnd() * 46;
     out += `<line x1='${x.toFixed(0)}' y1='${y.toFixed(0)}' x2='${(x - 16).toFixed(0)}' y2='${(y + len).toFixed(0)}' stroke='#b4befe' stroke-width='1.6' opacity='${(0.08 + rnd() * 0.22).toFixed(2)}'/>`;
   }
   return out;
@@ -154,7 +162,7 @@ const SCENES: string[] = [
     </linearGradient></defs>
     <rect width='1600' height='900' fill='url(#sk)'/>${BLUR}
     <g filter='url(#b)'><circle cx='1150' cy='240' r='260' fill='#f5c2e7' opacity='0.3'/><circle cx='380' cy='520' r='230' fill='#f38ba8' opacity='0.18'/></g>
-    ${stars(95, 91, 900, '#f5c2e7')}`),
+    ${stars(95, 91, 900, "#f5c2e7")}`),
   // sunset - warm sky over a dark sea with a low sun and reflection
   svgUrl(`<defs><linearGradient id='ss' x1='0' y1='0' x2='0' y2='1'>
       <stop offset='0' stop-color='#f9c08a'/><stop offset='0.34' stop-color='#f38ba8'/><stop offset='0.55' stop-color='#7a5a9a'/>
@@ -170,7 +178,7 @@ const SCENES: string[] = [
     <rect width='1600' height='900' fill='url(#hl)'/>${BLUR}
     <circle cx='340' cy='210' r='54' fill='#e6eec9' opacity='0.92'/>
     <circle cx='340' cy='210' r='104' fill='#e6eec9' opacity='0.16' filter='url(#b)'/>
-    ${stars(70, 101, 420, '#cdd6c0')}
+    ${stars(70, 101, 420, "#cdd6c0")}
     <path d='M0,900 0,610 C300,540 520,650 860,600 C1160,556 1360,640 1600,590 L1600,900 Z' fill='#1c3327'/>
     <path d='M0,900 0,720 C340,660 620,760 960,710 C1240,668 1420,740 1600,700 L1600,900 Z' fill='#16281f'/>
     <path d='M0,900 0,820 C380,770 760,860 1160,810 C1400,782 1520,830 1600,812 L1600,900 Z' fill='#0f1c16'/>`),
@@ -195,64 +203,81 @@ let front = 0; // which layer is currently visible
 let cycleTimer = 0;
 let customUrls: string[] = [];
 let idx = 0;
-let currentImage = '';
+let currentImage = "";
 
 function activeList(): string[] {
   const bg = settings.background;
-  if (bg.mode === 'custom') return customUrls.length ? customUrls.map((u) => `url("${u}")`) : SCENES;
-  if (bg.mode === 'scenes') return SCENES;
+  if (bg.mode === "custom") {
+    return customUrls.length ? customUrls.map((u) => `url("${u}")`) : SCENES;
+  }
+  if (bg.mode === "scenes") {
+    return SCENES;
+  }
   return [];
 }
 
 function showImage(img: string, instant = false): void {
-  if (!layerA || !layerB) return;
-  if (img === currentImage) return;
+  if (!layerA || !layerB) {
+    return;
+  }
+  if (img === currentImage) {
+    return;
+  }
   currentImage = img;
   const inc = front === 0 ? layerB : layerA;
   const out = front === 0 ? layerA : layerB;
   front = 1 - front;
   inc.style.backgroundImage = img;
-  if (instant) inc.style.transition = 'none';
-  inc.classList.add('show');
+  if (instant) {
+    inc.style.transition = "none";
+  }
+  inc.classList.add("show");
   if (instant) {
     void inc.offsetWidth;
-    inc.style.transition = '';
+    inc.style.transition = "";
   }
-  out.classList.remove('show');
+  out.classList.remove("show");
 }
 
 function apply(): void {
   const list = activeList();
-  document.body.classList.toggle('has-bg', list.length > 0);
-  if (dimEl) dimEl.style.opacity = String(settings.background.dim / 100);
+  document.body.classList.toggle("has-bg", list.length > 0);
+  if (dimEl) {
+    dimEl.style.opacity = String(settings.background.dim / 100);
+  }
   clearInterval(cycleTimer);
   if (list.length === 0) {
-    currentImage = '';
-    layerA?.classList.remove('show');
-    layerB?.classList.remove('show');
+    currentImage = "";
+    layerA?.classList.remove("show");
+    layerB?.classList.remove("show");
     return;
   }
   showImage(list[idx % list.length]);
   if (list.length > 1) {
-    cycleTimer = window.setInterval(() => {
-      const l = activeList();
-      if (l.length === 0) return;
-      idx = (idx + 1) % l.length;
-      showImage(l[idx]);
-    }, Math.max(15, settings.background.cycleSec) * 1000);
+    cycleTimer = window.setInterval(
+      () => {
+        const l = activeList();
+        if (l.length === 0) {
+          return;
+        }
+        idx = (idx + 1) % l.length;
+        showImage(l[idx]);
+      },
+      Math.max(15, settings.background.cycleSec) * 1000,
+    );
   }
 }
 
 /** Mount the background layer and start cycling. Call once at startup. */
 export function initBackground(): void {
-  const root = document.createElement('div');
-  root.className = 'bg-root';
-  layerA = document.createElement('div');
-  layerA.className = 'bg-img';
-  layerB = document.createElement('div');
-  layerB.className = 'bg-img';
-  dimEl = document.createElement('div');
-  dimEl.className = 'bg-dim';
+  const root = document.createElement("div");
+  root.className = "bg-root";
+  layerA = document.createElement("div");
+  layerA.className = "bg-img";
+  layerB = document.createElement("div");
+  layerB.className = "bg-img";
+  dimEl = document.createElement("div");
+  dimEl.className = "bg-dim";
   root.append(layerA, layerB, dimEl);
   document.body.prepend(root);
   idx = (Math.random() * 1000) | 0; // start on a random scene, like tetr.io
@@ -267,7 +292,9 @@ export function initBackground(): void {
 /** Skip to the next background right away (settings preview). */
 export function nextBackground(): void {
   const list = activeList();
-  if (list.length === 0) return;
+  if (list.length === 0) {
+    return;
+  }
   idx = (idx + 1) % list.length;
   apply();
 }
@@ -278,13 +305,19 @@ export function customImageCount(): number {
 
 /** Store user-picked images; they join the cycle immediately. */
 export async function addCustomImages(files: FileList | File[]): Promise<number> {
-  const images = [...files].filter((f) => f.type.startsWith('image/'));
-  if (images.length === 0) return 0;
+  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  if (images.length === 0) {
+    return 0;
+  }
   const db = await openDb();
-  await tx(db, 'readwrite', (s) => {
-    for (const f of images) s.add(f);
+  await tx(db, "readwrite", (s) => {
+    for (const f of images) {
+      s.add(f);
+    }
   });
-  for (const f of images) customUrls.push(URL.createObjectURL(f));
+  for (const f of images) {
+    customUrls.push(URL.createObjectURL(f));
+  }
   apply();
   return images.length;
 }
@@ -292,8 +325,10 @@ export async function addCustomImages(files: FileList | File[]): Promise<number>
 /** Forget every stored custom image. */
 export async function clearCustomImages(): Promise<void> {
   const db = await openDb();
-  await tx(db, 'readwrite', (s) => s.clear());
-  for (const u of customUrls) URL.revokeObjectURL(u);
+  await tx(db, "readwrite", (s) => s.clear());
+  for (const u of customUrls) {
+    URL.revokeObjectURL(u);
+  }
   customUrls = [];
   apply();
 }

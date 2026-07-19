@@ -4,22 +4,53 @@
 // Rounds end on a top out; first to the chosen score takes the match.
 // No grading, no undo - this mode is for playing the matchup.
 
-import { Game, type LockEvent } from '../core/game';
-import { VISIBLE_H } from '../core/board';
-import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
-import { FieldRenderer, renderPieceTile, holdCellOf, queueCellOf, sideColWidth } from './board-canvas';
-import { settings, saveSettings, onSettingsChange, botNodesOf, DEFAULT_SETTINGS, type BotLevel } from './settings';
-import { GarbageQueue, versusAttack, scaleAttack, type GarbageConfig } from '../core/versus';
-import { BotPlayer } from './bot-player';
+import { Game, type LockEvent } from "../core/game";
+import { VISIBLE_H } from "../core/board";
+import { InputHandler, keyDescriptor, type Keybinds } from "../core/handling";
 import {
-  clearSound, comboSound, garbageSound, garbageQueuedSound, actionSound, b2bBreakSound, b2bSound,
-  spinSound, comboBreakSound, countdownSound, goSound, clutchSound, GarbageWarner,
-  personalBestSound, gameOverSound, topoutSound, lockSound, surgeSound, bigSendSound, BIG_SEND_MIN,
-} from './sound';
-import { stats, saveStats, recordSession } from './stats';
-import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
-import { SceneBackground, MODE_HUE, hotHue } from './scene-background';
-import { PIECE_COLORS, cellsAt } from '../core/pieces';
+  FieldRenderer,
+  renderPieceTile,
+  holdCellOf,
+  queueCellOf,
+  sideColWidth,
+} from "./board-canvas";
+import {
+  settings,
+  saveSettings,
+  onSettingsChange,
+  botNodesOf,
+  DEFAULT_SETTINGS,
+  type BotLevel,
+} from "./settings";
+import { GarbageQueue, versusAttack, scaleAttack, type GarbageConfig } from "../core/versus";
+import { BotPlayer } from "./bot-player";
+import {
+  clearSound,
+  comboSound,
+  garbageSound,
+  garbageQueuedSound,
+  actionSound,
+  b2bBreakSound,
+  b2bSound,
+  spinSound,
+  comboBreakSound,
+  countdownSound,
+  goSound,
+  clutchSound,
+  GarbageWarner,
+  personalBestSound,
+  gameOverSound,
+  topoutSound,
+  lockSound,
+  surgeSound,
+  bigSendSound,
+  BIG_SEND_MIN,
+} from "./sound";
+import { stats, saveStats, recordSession, fmtSprint } from "./stats";
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from "./fx";
+import { SceneBackground, MODE_HUE, hotHue } from "./scene-background";
+import { PIECE_COLORS, cellsAt } from "../core/pieces";
+import { btn, panel } from "./dom";
 
 export class VersusView {
   readonly root: HTMLElement;
@@ -37,8 +68,8 @@ export class VersusView {
   private unsubSettings: () => void;
 
   private roundLive = false;
-  private clock = 0;        // current round ms
-  private matchMs = 0;      // all rounds so far + current
+  private clock = 0; // current round ms
+  private matchMs = 0; // all rounds so far + current
   private b2b = 0;
   private combo = -1;
   private score = { me: 0, cc: 0 };
@@ -75,11 +106,12 @@ export class VersusView {
   private gmQueued!: HTMLElement;
   private botGm!: HTMLElement;
   private playerMeter!: HTMLElement; // garbage-bolt landing point (player side)
-  private botMeter!: HTMLElement;    // garbage-bolt landing point (bot side)
+  private botMeter!: HTMLElement; // garbage-bolt landing point (bot side)
   private toastTimer = 0;
   private roundTimer = 0;
   private countdownTimers: number[] = [];
   private counting = false;
+  private hudAt = 0; // last HUD repaint; throttles the per-frame innerHTML rebuild
 
   private keydown = (e: KeyboardEvent) => this.onKeyDown(e);
   private keyup = (e: KeyboardEvent) => this.input.keyUp(e.code, performance.now());
@@ -89,15 +121,20 @@ export class VersusView {
     this.input.settings = settings.handling;
     this.input.binds = settings.binds;
     this.input.onAction = (a) => {
-      if (a === 'hold') {
+      if (a === "hold") {
         this.resetLockdown();
         this.refreshPanes();
       }
-      if (settings.soundFx && this.roundLive) actionSound(a);
+      if (settings.soundFx && this.roundLive) {
+        actionSound(a);
+      }
     };
-    // lock-delay resets come from *successful* moves only (guideline EPLD)
+    // lock-delay resets come from *successful* moves only (guideline EPLD);
+    // soft drop never resets the timer
     this.game.onMove = (kind) => {
-      if (kind === 'drop') return; // soft drop never resets the timer
+      if (kind === "drop") {
+        return;
+      }
       if (this.moveResets < 15) {
         this.moveResets++;
         this.lockTimerMs = 0;
@@ -118,8 +155,8 @@ export class VersusView {
       this.refreshPanes();
     });
     this.showLaunch();
-    document.addEventListener('keydown', this.keydown);
-    document.addEventListener('keyup', this.keyup);
+    document.addEventListener("keydown", this.keydown);
+    document.addEventListener("keyup", this.keyup);
     this.loop(performance.now());
   }
 
@@ -131,8 +168,8 @@ export class VersusView {
     this.clearCountdown();
     this.unsubSettings();
     this.bot?.destroy();
-    document.removeEventListener('keydown', this.keydown);
-    document.removeEventListener('keyup', this.keyup);
+    document.removeEventListener("keydown", this.keydown);
+    document.removeEventListener("keyup", this.keyup);
   }
 
   private cellSize(): number {
@@ -149,92 +186,92 @@ export class VersusView {
   }
 
   private build(): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'game-wrap has-scene';
+    const wrap = document.createElement("div");
+    wrap.className = "game-wrap has-scene";
     // full-scene falling-particle backdrop behind every panel (teal 1v1 tint)
     this.background = new SceneBackground(wrap, MODE_HUE.versus);
     wrap.appendChild(this.background.el);
     // side columns share the sizing of every other mode (hug the queue tiles)
     const colW = sideColWidth(this.cellSize());
 
-    const left = document.createElement('div');
-    left.className = 'side-col';
+    const left = document.createElement("div");
+    left.className = "side-col";
     left.style.width = colW;
     this.leftCol = left;
-    this.holdBox = panel('Hold');
+    this.holdBox = panel("Hold");
     left.appendChild(this.holdBox);
-    const match = panel('Match');
-    this.hud = document.createElement('div');
-    this.hud.className = 'zenith-hud';
+    const match = panel("Match");
+    this.hud = document.createElement("div");
+    this.hud.className = "zenith-hud";
     match.appendChild(this.hud);
     left.appendChild(match);
-    const controls = document.createElement('div');
-    controls.className = 'drill-controls';
-    controls.style.flexDirection = 'column';
+    const controls = document.createElement("div");
+    controls.className = "drill-controls";
+    controls.style.flexDirection = "column";
     controls.append(
-      btn('Rematch (R)', () => this.startMatch()),
-      btn('Setup (Esc)', () => this.showLaunch()),
+      btn("Rematch (R)", () => this.startMatch()),
+      btn("Setup (Esc)", () => this.showLaunch()),
     );
     left.appendChild(controls);
 
-    this.fieldPanel = document.createElement('div');
-    this.fieldPanel.className = 'field-panel';
-    const row = document.createElement('div');
-    row.className = 'field-row';
-    const strip = document.createElement('div');
-    strip.className = 'board-strip';
+    this.fieldPanel = document.createElement("div");
+    this.fieldPanel.className = "field-panel";
+    const row = document.createElement("div");
+    row.className = "field-row";
+    const strip = document.createElement("div");
+    strip.className = "board-strip";
     this.b2bTag = new ChainBubble();
-    const meter = document.createElement('div');
-    meter.className = 'gmeter';
-    this.gmQueued = document.createElement('div');
-    this.gmQueued.className = 'gm-queued';
-    this.gmActive = document.createElement('div');
-    this.gmActive.className = 'gm-active';
+    const meter = document.createElement("div");
+    meter.className = "gmeter";
+    this.gmQueued = document.createElement("div");
+    this.gmQueued.className = "gm-queued";
+    this.gmActive = document.createElement("div");
+    this.gmActive.className = "gm-active";
     meter.append(this.gmQueued, this.gmActive);
     this.playerMeter = meter;
     strip.append(meter);
     row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
-    this.toast = document.createElement('div');
-    this.toast.className = 'reason-toast';
-    this.overlay = document.createElement('div');
-    this.overlay.className = 'zenith-overlay';
-    this.deathWarn = document.createElement('div');
-    this.deathWarn.className = 'death-warn';
-    this.deathWarn.textContent = '!';
+    this.toast = document.createElement("div");
+    this.toast.className = "reason-toast";
+    this.overlay = document.createElement("div");
+    this.overlay.className = "zenith-overlay";
+    this.deathWarn = document.createElement("div");
+    this.deathWarn.className = "death-warn";
+    this.deathWarn.textContent = "!";
     this.fieldPanel.append(this.toast, this.overlay, this.deathWarn);
 
-    const right = document.createElement('div');
-    right.className = 'side-col';
+    const right = document.createElement("div");
+    right.className = "side-col";
     right.style.width = colW;
     right.style.transform = `translateY(-${this.cellSize()}px)`; // queue rides one row high, like the drills
     this.rightCol = right;
-    this.queueBox = panel('Next');
+    this.queueBox = panel("Next");
     right.append(this.b2bTag.el, this.queueBox);
 
     // the opponent's board, live
-    const botCol = document.createElement('div');
-    botCol.className = 'vs-bot-col';
-    const tag = document.createElement('div');
-    tag.className = 'vs-nametag';
-    tag.textContent = '✦ Cold Clear';
-    this.botPanel = document.createElement('div');
-    this.botPanel.className = 'field-panel vs-bot-field';
-    const botRow = document.createElement('div');
-    botRow.className = 'field-row';
-    const botStrip = document.createElement('div');
-    botStrip.className = 'board-strip';
-    const botMeter = document.createElement('div');
-    botMeter.className = 'gmeter';
-    this.botGm = document.createElement('div');
-    this.botGm.className = 'gm-active';
+    const botCol = document.createElement("div");
+    botCol.className = "vs-bot-col";
+    const tag = document.createElement("div");
+    tag.className = "vs-nametag";
+    tag.textContent = "✦ Cold Clear";
+    this.botPanel = document.createElement("div");
+    this.botPanel.className = "field-panel vs-bot-field";
+    const botRow = document.createElement("div");
+    botRow.className = "field-row";
+    const botStrip = document.createElement("div");
+    botStrip.className = "board-strip";
+    const botMeter = document.createElement("div");
+    botMeter.className = "gmeter";
+    this.botGm = document.createElement("div");
+    this.botGm.className = "gm-active";
     botMeter.appendChild(this.botGm);
     this.botMeter = botMeter;
     botStrip.appendChild(botMeter);
     botRow.append(botStrip, this.botRenderer.el);
     this.botPanel.appendChild(botRow);
-    this.botHud = document.createElement('div');
-    this.botHud.className = 'vs-bot-hud';
+    this.botHud = document.createElement("div");
+    this.botHud.className = "vs-bot-hud";
     // nametag under the board - above it the bot's vanish-zone pieces cover it
     botCol.append(this.botPanel, tag, this.botHud);
 
@@ -258,81 +295,224 @@ export class VersusView {
   private showLaunch(): void {
     this.stopRound();
     this.overlay.replaceChildren();
-    this.overlay.classList.add('show');
+    this.overlay.classList.add("show");
     const v = settings.versus;
 
-    const box = document.createElement('div');
-    box.className = 'zenith-box';
+    const box = document.createElement("div");
+    box.className = "zenith-box";
     box.innerHTML = `<h2>1v1 vs Cold Clear</h2>
       <p class="sub">1v1 against Cold Clear <br>You can also change the bot in settings</p>`;
 
-    const opts = document.createElement('div');
-    opts.className = 'zenith-opts';
-    const strength = document.createElement('select');
-    for (const lv of ['easy', 'normal', 'hard', 'elite', 'custom'] as BotLevel[]) {
-      const o = document.createElement('option');
+    const opts = document.createElement("div");
+    opts.className = "zenith-opts";
+    const strength = document.createElement("select");
+    for (const lv of ["easy", "normal", "hard", "elite", "custom"] as BotLevel[]) {
+      const o = document.createElement("option");
       o.value = lv;
       o.textContent = `strength: ${lv}`;
-      if (lv === v.botLevel) o.selected = true;
+      if (lv === v.botLevel) {
+        o.selected = true;
+      }
       strength.appendChild(o);
     }
-    const firstTo = document.createElement('select');
+    const firstTo = document.createElement("select");
     for (const n of [1, 2, 3, 5, 7, 10]) {
-      const o = document.createElement('option');
+      const o = document.createElement("option");
       o.value = String(n);
       o.textContent = `first to ${n}`;
-      if (n === v.firstTo) o.selected = true;
+      if (n === v.firstTo) {
+        o.selected = true;
+      }
       firstTo.appendChild(o);
     }
-    firstTo.addEventListener('change', () => { v.firstTo = Number(firstTo.value); saveSettings(); });
-    const grav = document.createElement('select');
+    firstTo.addEventListener("change", () => {
+      v.firstTo = Number(firstTo.value);
+      saveSettings();
+    });
+    const grav = document.createElement("select");
     for (const g of [0, 0.5, 1, 1.5, 2, 3, 5, 20]) {
-      const o = document.createElement('option');
+      const o = document.createElement("option");
       o.value = String(g);
-      o.textContent = g === 0 ? 'gravity: off' : `gravity: ${g}G`;
-      if (g === v.gravity) o.selected = true;
+      o.textContent = g === 0 ? "gravity: off" : `gravity: ${g}G`;
+      if (g === v.gravity) {
+        o.selected = true;
+      }
       grav.appendChild(o);
     }
-    grav.addEventListener('change', () => { v.gravity = Number(grav.value); saveSettings(); });
+    grav.addEventListener("change", () => {
+      v.gravity = Number(grav.value);
+      saveSettings();
+    });
     opts.append(strength, firstTo, grav);
     box.appendChild(opts);
 
-    const save = <T,>(set: (val: T) => void) => (val: T) => { set(val); saveSettings(); };
-    box.appendChild(launchSlider('bot speed', 'pps', 0.5, 4, 0.25, v.botPps, save((val) => { v.botPps = val; })));
+    const save =
+      <T>(set: (val: T) => void) =>
+      (val: T) => {
+        set(val);
+        saveSettings();
+      };
+    box.appendChild(
+      launchSlider(
+        "bot speed",
+        "pps",
+        0.5,
+        4,
+        0.25,
+        v.botPps,
+        save((val) => {
+          v.botPps = val;
+        }),
+      ),
+    );
     // custom node budget - only meaningful when strength is 'custom'
-    const nodesRow = launchSlider('bot nodes', '', 500, 100000, 500, v.botNodes, save((val) => { v.botNodes = val; }));
-    nodesRow.style.display = v.botLevel === 'custom' ? '' : 'none';
-    strength.addEventListener('change', () => {
+    const nodesRow = launchSlider(
+      "bot nodes",
+      "",
+      500,
+      100000,
+      500,
+      v.botNodes,
+      save((val) => {
+        v.botNodes = val;
+      }),
+    );
+    nodesRow.style.display = v.botLevel === "custom" ? "" : "none";
+    strength.addEventListener("change", () => {
       v.botLevel = strength.value as BotLevel;
-      nodesRow.style.display = v.botLevel === 'custom' ? '' : 'none';
+      nodesRow.style.display = v.botLevel === "custom" ? "" : "none";
       saveSettings();
     });
     box.appendChild(nodesRow);
-    box.appendChild(launchSlider('garbage delay', 's', 0, 5, 0.25, v.garbageDelayMs / 1000, save((val) => { v.garbageDelayMs = Math.round(val * 1000); })));
-    box.appendChild(launchSlider('messiness', '%', 0, 100, 5, v.messiness, save((val) => { v.messiness = val; })));
+    box.appendChild(
+      launchSlider(
+        "garbage delay",
+        "s",
+        0,
+        5,
+        0.25,
+        v.garbageDelayMs / 1000,
+        save((val) => {
+          v.garbageDelayMs = Math.round(val * 1000);
+        }),
+      ),
+    );
+    box.appendChild(
+      launchSlider(
+        "messiness",
+        "%",
+        0,
+        100,
+        5,
+        v.messiness,
+        save((val) => {
+          v.messiness = val;
+        }),
+      ),
+    );
 
     // every remaining dial: handicaps, cap, and the damage table itself
-    const adv = document.createElement('details');
-    adv.className = 'vs-adv';
-    const sum = document.createElement('summary');
-    sum.textContent = 'advanced - damage rules & handicaps';
+    const adv = document.createElement("details");
+    adv.className = "vs-adv";
+    const sum = document.createElement("summary");
+    sum.textContent = "advanced - damage rules & handicaps";
     adv.appendChild(sum);
-    const advBody = document.createElement('div');
+    const advBody = document.createElement("div");
     const rebuildAdv = () => {
       advBody.replaceChildren(
-        launchSlider('my attack', '%', 25, 300, 25, v.attackScale, save((val) => { v.attackScale = val; })),
-        launchSlider('bot attack', '%', 25, 300, 25, v.botAttackScale, save((val) => { v.botAttackScale = val; })),
-        launchSlider('garbage cap', ' rows', 1, 20, 1, v.garbageCap, save((val) => { v.garbageCap = val; })),
-        launchSlider('spin attack', '× lines', 0, 4, 0.5, v.rules.spinMult, save((val) => { v.rules.spinMult = val; })),
-        launchSlider('quad attack', '', 0, 8, 1, v.rules.quadAttack, save((val) => { v.rules.quadAttack = val; })),
-        launchSlider('B2B bonus', '', 0, 4, 1, v.rules.b2bBonus, save((val) => { v.rules.b2bBonus = val; })),
-        launchSlider('combo interval', ' (0 = off)', 0, 4, 1, v.rules.comboDiv, save((val) => { v.rules.comboDiv = val; })),
-        launchSlider('all clear', '', 0, 20, 1, v.rules.allClear, save((val) => { v.rules.allClear = val; })),
+        launchSlider(
+          "my attack",
+          "%",
+          25,
+          300,
+          25,
+          v.attackScale,
+          save((val) => {
+            v.attackScale = val;
+          }),
+        ),
+        launchSlider(
+          "bot attack",
+          "%",
+          25,
+          300,
+          25,
+          v.botAttackScale,
+          save((val) => {
+            v.botAttackScale = val;
+          }),
+        ),
+        launchSlider(
+          "garbage cap",
+          " rows",
+          1,
+          20,
+          1,
+          v.garbageCap,
+          save((val) => {
+            v.garbageCap = val;
+          }),
+        ),
+        launchSlider(
+          "spin attack",
+          "× lines",
+          0,
+          4,
+          0.5,
+          v.rules.spinMult,
+          save((val) => {
+            v.rules.spinMult = val;
+          }),
+        ),
+        launchSlider(
+          "quad attack",
+          "",
+          0,
+          8,
+          1,
+          v.rules.quadAttack,
+          save((val) => {
+            v.rules.quadAttack = val;
+          }),
+        ),
+        launchSlider(
+          "B2B bonus",
+          "",
+          0,
+          4,
+          1,
+          v.rules.b2bBonus,
+          save((val) => {
+            v.rules.b2bBonus = val;
+          }),
+        ),
+        launchSlider(
+          "combo interval",
+          " (0 = off)",
+          0,
+          4,
+          1,
+          v.rules.comboDiv,
+          save((val) => {
+            v.rules.comboDiv = val;
+          }),
+        ),
+        launchSlider(
+          "all clear",
+          "",
+          0,
+          20,
+          1,
+          v.rules.allClear,
+          save((val) => {
+            v.rules.allClear = val;
+          }),
+        ),
       );
-      const reset = document.createElement('button');
-      reset.className = 'btn vs-rules-reset';
-      reset.textContent = 'Reset damage & handicaps';
-      reset.addEventListener('click', () => {
+      const reset = document.createElement("button");
+      reset.className = "btn vs-rules-reset";
+      reset.textContent = "Reset damage & handicaps";
+      reset.addEventListener("click", () => {
         const d = DEFAULT_SETTINGS.versus;
         v.attackScale = d.attackScale;
         v.botAttackScale = d.botAttackScale;
@@ -347,10 +527,10 @@ export class VersusView {
     adv.appendChild(advBody);
     box.appendChild(adv);
 
-    const start = document.createElement('button');
-    start.className = 'btn primary zenith-start';
-    start.textContent = 'Start match';
-    start.addEventListener('click', () => this.startMatch());
+    const start = document.createElement("button");
+    start.className = "btn primary zenith-start";
+    start.textContent = "Start match";
+    start.addEventListener("click", () => this.startMatch());
     box.appendChild(start);
     this.overlay.appendChild(box);
     this.updateHud();
@@ -359,16 +539,16 @@ export class VersusView {
   private showResults(): void {
     const won = this.score.me > this.score.cc;
     this.overlay.replaceChildren();
-    this.overlay.classList.add('show');
-    const box = document.createElement('div');
-    box.className = 'zenith-box';
-    box.innerHTML = `<h2>${won ? 'Victory' : 'Defeat'} · ${this.score.me}–${this.score.cc}</h2>
-      <p class="sub">${this.pieces} pieces · ${this.sent} sent · ${this.taken} taken · ${fmtTime(this.matchMs)}</p>`;
-    const rowEl = document.createElement('div');
-    rowEl.className = 'zenith-opts';
+    this.overlay.classList.add("show");
+    const box = document.createElement("div");
+    box.className = "zenith-box";
+    box.innerHTML = `<h2>${won ? "Victory" : "Defeat"} · ${this.score.me}–${this.score.cc}</h2>
+      <p class="sub">${this.pieces} pieces · ${this.sent} sent · ${this.taken} taken · ${fmtSprint(this.matchMs, false)}</p>`;
+    const rowEl = document.createElement("div");
+    rowEl.className = "zenith-opts";
     rowEl.append(
-      btn('Rematch (R)', () => this.startMatch()),
-      btn('Setup', () => this.showLaunch()),
+      btn("Rematch (R)", () => this.startMatch()),
+      btn("Setup", () => this.showLaunch()),
     );
     box.appendChild(rowEl);
     this.overlay.appendChild(box);
@@ -393,7 +573,7 @@ export class VersusView {
   private startRound(): void {
     this.stopRound();
     clearTimeout(this.roundTimer);
-    this.overlay.classList.remove('show');
+    this.overlay.classList.remove("show");
     this.overlay.replaceChildren();
     this.round++;
     this.clock = 0;
@@ -402,17 +582,22 @@ export class VersusView {
     this.background.reset();
     this.lastPending = 0;
     this.warner.reset();
-    this.deathWarn.classList.remove('show');
+    this.deathWarn.classList.remove("show");
     this.b2bTag.reset();
-    this.gmActive.style.height = '0px';
-    this.gmQueued.style.height = '0px';
-    this.botGm.style.height = '0px';
+    this.gmActive.style.height = "0px";
+    this.gmQueued.style.height = "0px";
+    this.botGm.style.height = "0px";
     this.game.reset(undefined, (Math.random() * 2 ** 31) | 0);
     this.resetLockdown();
     this.incoming = new GarbageQueue(this.garbageCfg());
     const v = settings.versus;
     if (this.bot) {
-      this.bot.configure({ pps: v.botPps, nodes: botNodesOf(v), rules: v.rules, attackScale: v.botAttackScale });
+      this.bot.configure({
+        pps: v.botPps,
+        nodes: botNodesOf(v),
+        rules: v.rules,
+        attackScale: v.botAttackScale,
+      });
       this.bot.reset((Math.random() * 2 ** 31) | 0);
     } else {
       this.bot = new BotPlayer({
@@ -429,7 +614,7 @@ export class VersusView {
       // in the queue (cancelable) the instant it launches, tetr.io style
       this.flyGarbage(this.botPanel, this.playerMeter, lines);
     };
-    this.bot.onTopOut = () => this.endRound('me');
+    this.bot.onTopOut = () => this.endRound("me");
     this.bot.onLockEvent = (ev) => this.onBotLock(ev);
     this.beginCountdown();
     this.refreshPanes();
@@ -450,16 +635,18 @@ export class VersusView {
     this.clearCountdown();
     this.counting = true;
     this.input.enabled = false;
-    const digit = document.createElement('div');
-    digit.className = 'zenith-count';
+    const digit = document.createElement("div");
+    digit.className = "zenith-count";
     this.overlay.replaceChildren(digit);
-    this.overlay.classList.add('show', 'counting');
+    this.overlay.classList.add("show", "counting");
     const step = (n: 1 | 2 | 3) => {
       digit.textContent = String(n);
-      digit.classList.remove('tick');
+      digit.classList.remove("tick");
       void digit.offsetWidth; // restart the pop animation
-      digit.classList.add('tick');
-      if (settings.soundFx) countdownSound(n);
+      digit.classList.add("tick");
+      if (settings.soundFx) {
+        countdownSound(n);
+      }
     };
     step(3);
     this.countdownTimers = [
@@ -467,48 +654,62 @@ export class VersusView {
       window.setTimeout(() => step(1), 900),
       window.setTimeout(() => {
         this.clearCountdown();
-        this.overlay.classList.remove('show');
+        this.overlay.classList.remove("show");
         this.overlay.replaceChildren();
         this.roundLive = true;
         this.input.enabled = true;
-        if (settings.soundFx) goSound();
+        if (settings.soundFx) {
+          goSound();
+        }
       }, 1350),
     ];
   }
 
   private clearCountdown(): void {
-    for (const t of this.countdownTimers) clearTimeout(t);
+    for (const t of this.countdownTimers) {
+      clearTimeout(t);
+    }
     this.countdownTimers = [];
     this.counting = false;
-    this.overlay.classList.remove('counting');
+    this.overlay.classList.remove("counting");
   }
 
-  private endRound(winner: 'me' | 'cc'): void {
-    if (!this.roundLive) return;
+  private endRound(winner: "me" | "cc"): void {
+    if (!this.roundLive) {
+      return;
+    }
     this.stopRound();
     this.score[winner]++;
     if (settings.soundFx) {
-      if (winner === 'me') personalBestSound();
-      else gameOverSound();
+      if (winner === "me") {
+        personalBestSound();
+      } else {
+        gameOverSound();
+      }
     }
-    if (winner === 'me' && settings.effects) {
+    if (winner === "me" && settings.effects) {
       this.botRenderer.fxTopout(this.bot!.game.board, this.bot!.game.colors);
-      actionText(this.botPanel, 'KO', '', 'surge');
+      actionText(this.botPanel, "KO", "", "surge");
     }
-    const over = this.score.me >= settings.versus.firstTo || this.score.cc >= settings.versus.firstTo;
+    const over =
+      this.score.me >= settings.versus.firstTo || this.score.cc >= settings.versus.firstTo;
     this.updateHud();
     if (over) {
       this.recordMatch();
       this.roundTimer = window.setTimeout(() => this.showResults(), 900);
     } else {
-      this.showToast(`${winner === 'me' ? 'You take' : 'Cold Clear takes'} round ${this.round} - ${this.score.me}–${this.score.cc}`);
+      this.showToast(
+        `${winner === "me" ? "You take" : "Cold Clear takes"} round ${this.round} - ${this.score.me}–${this.score.cc}`,
+      );
       this.roundTimer = window.setTimeout(() => this.startRound(), 1800);
     }
   }
 
   /** Fold the finished rounds into lifetime stats (once per match). */
   private recordMatch(): void {
-    if (this.matchRecorded || this.score.me + this.score.cc === 0 || this.pieces < 5) return;
+    if (this.matchRecorded || this.score.me + this.score.cc === 0 || this.pieces < 5) {
+      return;
+    }
     this.matchRecorded = true;
     const m = stats.modes.versus;
     m.pieces += this.pieces;
@@ -518,7 +719,7 @@ export class VersusView {
     saveStats();
     recordSession({
       at: new Date().toISOString(),
-      mode: 'versus',
+      mode: "versus",
       pieces: this.pieces,
       tsds: this.tsds,
       grades: { best: 0, good: 0, inaccuracy: 0, mistake: 0, killer: 0 },
@@ -538,13 +739,18 @@ export class VersusView {
       this.startMatch();
       return;
     }
-    if (e.code === 'Escape') {
+    if (e.code === "Escape") {
       e.preventDefault();
       this.showLaunch();
       return;
     }
-    if (desc !== e.code) return; // no undo/combo chords in versus
-    if (Object.values(b).some((codes) => codes.includes(desc))) e.preventDefault();
+    // no undo/combo chords in versus
+    if (desc !== e.code) {
+      return;
+    }
+    if (Object.values(b).some((codes) => codes.includes(desc))) {
+      e.preventDefault();
+    }
     this.input.keyDown(desc, performance.now());
   }
 
@@ -569,7 +775,9 @@ export class VersusView {
     // a new lowest row restores the move-reset budget (guideline), measured
     // on the lowest cell - rotation states have different cell offsets
     let bottom = Infinity;
-    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) bottom = Math.min(bottom, cy);
+    for (const [, cy] of cellsAt(a.type, a.rot, a.x, a.y)) {
+      bottom = Math.min(bottom, cy);
+    }
     if (bottom < this.lowestY) {
       this.lowestY = bottom;
       this.moveResets = 0;
@@ -581,7 +789,9 @@ export class VersusView {
       this.gravAcc += g * 60 * (dtMs / 1000); // 1G = 1 cell/frame @ 60fps
       while (this.gravAcc >= 1) {
         this.gravAcc--;
-        if (!this.game.softDropStep()) break;
+        if (!this.game.softDropStep()) {
+          break;
+        }
       }
     } else {
       this.gravAcc = 0;
@@ -589,7 +799,10 @@ export class VersusView {
       // the grounded piece dims as its lock timer runs (tetr.io cue)
       this.renderer.lockProgress = this.lockTimerMs / 500;
       if (this.lockTimerMs >= 500) {
-        if (settings.soundFx) lockSound(); // gravity lock, not a hard drop
+        // gravity lock, not a hard drop
+        if (settings.soundFx) {
+          lockSound();
+        }
         this.game.hardDrop();
       }
     }
@@ -600,12 +813,21 @@ export class VersusView {
     this.pieces++;
     // clutch: the next piece climbed into the buffer to fit - a saved block-out
     if (this.game.clutched && !this.game.topOut) {
-      if (settings.effects) actionText(this.fieldPanel, 'CLUTCH', '', 'surge');
-      if (settings.soundFx) clutchSound();
+      if (settings.effects) {
+        actionText(this.fieldPanel, "CLUTCH", "", "surge");
+      }
+      if (settings.soundFx) {
+        clutchSound();
+      }
     }
-    if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared >= 2) this.tsds++;
-    else if (ev.piece === 'T' && ev.spin === 'full' && ev.linesCleared === 1) this.tsses++;
-    if (settings.soundFx && ev.spin !== 'none' && ev.linesCleared === 0) spinSound();
+    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) {
+      this.tsds++;
+    } else if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared === 1) {
+      this.tsses++;
+    }
+    if (settings.soundFx && ev.spin !== "none" && ev.linesCleared === 0) {
+      spinSound();
+    }
     if (settings.effects) {
       this.renderer.fxLock(ev.cells);
       this.renderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
@@ -615,10 +837,17 @@ export class VersusView {
       if (ev.linesCleared > 0) {
         this.combo++;
         const b2bBefore = this.b2b;
-        const keepsB2b = ev.spin !== 'none' || ev.linesCleared === 4;
+        const keepsB2b = ev.spin !== "none" || ev.linesCleared === 4;
         const v = settings.versus;
         const atk = scaleAttack(
-          versusAttack(ev.linesCleared, ev.spin, this.combo, b2bBefore, ev.boardAfter.isEmpty(), v.rules),
+          versusAttack(
+            ev.linesCleared,
+            ev.spin,
+            this.combo,
+            b2bBefore,
+            ev.boardAfter.isEmpty(),
+            v.rules,
+          ),
           v.attackScale,
         );
         this.b2b = keepsB2b ? this.b2b + 1 : 0;
@@ -632,13 +861,23 @@ export class VersusView {
         if (settings.soundFx) {
           if (b2bBefore > 0 && this.b2b === 0) {
             b2bBreakSound();
-            if (b2bBefore >= BIG_SEND_MIN) surgeSound(b2bBefore); // cashing out a big chain
+            // cashing out a big chain
+            if (b2bBefore >= BIG_SEND_MIN) {
+              surgeSound(b2bBefore);
+            }
           }
-          clearSound(ev.linesCleared, ev.spin === 'full', this.b2b, ev.boardAfter.isEmpty());
+          clearSound(ev.linesCleared, ev.spin === "full", this.b2b, ev.boardAfter.isEmpty());
           b2bSound(this.b2b); // rising jingle, climbs with the chain
-          if (this.combo >= 1) comboSound(this.combo, keepsB2b);
-          if (canceled >= 4) clutchSound();
-          if (sentNow >= BIG_SEND_MIN) bigSendSound(sentNow); // spike slam
+          if (this.combo >= 1) {
+            comboSound(this.combo, keepsB2b);
+          }
+          if (canceled >= 4) {
+            clutchSound();
+          }
+          // spike slam
+          if (sentNow >= BIG_SEND_MIN) {
+            bigSendSound(sentNow);
+          }
         }
         // big attack: a shaking "+N" number and a field kick that scale with it
         if (settings.effects && sentNow >= BIG_SEND_MIN) {
@@ -651,52 +890,77 @@ export class VersusView {
             this.background.pulse(8, 30);
             this.background.sweep(30);
           } else {
-            this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
-            this.background.pulse(ev.linesCleared + Math.max(this.b2b, this.combo) * 0.5, ev.spin !== 'none' ? 16 : 0);
+            this.renderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], "#ffffff"]);
+            this.background.pulse(
+              ev.linesCleared + Math.max(this.b2b, this.combo) * 0.5,
+              ev.spin !== "none" ? 16 : 0,
+            );
           }
           // a spike slam drops a bright boundary down the shaft
-          if (sentNow >= BIG_SEND_MIN) this.background.sweep(12);
+          if (sentNow >= BIG_SEND_MIN) {
+            this.background.sweep(12);
+          }
           const label = lockActionLabel(ev);
           if (label) {
-            const sub = [this.b2b >= 2 ? `B2B ×${this.b2b}` : '', this.combo >= 1 ? `COMBO ×${this.combo}` : '', sentNow > 0 ? `+${sentNow}` : '']
-              .filter(Boolean).join('   ');
+            const sub = [
+              this.b2b >= 2 ? `B2B ×${this.b2b}` : "",
+              this.combo >= 1 ? `COMBO ×${this.combo}` : "",
+              sentNow > 0 ? `+${sentNow}` : "",
+            ]
+              .filter(Boolean)
+              .join("   ");
             actionText(this.fieldPanel, label.main, sub, label.kind);
           }
         }
-        if (canceled > 0) this.showToast(`blocked ${canceled}${sentNow > 0 ? ` · +${sentNow} sent` : ''}`);
+        if (canceled > 0) {
+          this.showToast(`blocked ${canceled}${sentNow > 0 ? ` · +${sentNow} sent` : ""}`);
+        }
       } else {
-        if (settings.soundFx && this.combo >= 1) comboBreakSound();
+        if (settings.soundFx && this.combo >= 1) {
+          comboBreakSound();
+        }
         this.combo = -1;
         const rows = this.incoming.rise(this.clock);
         if (rows.length > 0) {
           this.game.addGarbage(rows);
           this.taken += rows.length;
-          if (settings.soundFx) garbageSound(rows.length);
+          if (settings.soundFx) {
+            garbageSound(rows.length);
+          }
           this.renderer.fxGarbage(rows.length);
           this.renderer.fxGarbageIn(rows.length);
         }
       }
-      this.b2bTag.set('B2B', this.b2b, this.b2b >= BIG_SEND_MIN);
+      this.b2bTag.set("B2B", this.b2b, this.b2b >= BIG_SEND_MIN);
     }
 
     if (this.game.topOut) {
       this.renderer.fxTopout(this.game.board, this.game.colors);
-      if (settings.soundFx) topoutSound();
-      this.endRound('cc');
+      if (settings.soundFx) {
+        topoutSound();
+      }
+      this.endRound("cc");
     }
     this.refreshPanes();
   }
 
   /** fx/sounds for the bot's visible board (its logic lives in BotPlayer) */
   private onBotLock(ev: LockEvent): void {
-    if (!settings.effects) return;
+    if (!settings.effects) {
+      return;
+    }
     this.botRenderer.fxLock(ev.cells);
     this.botRenderer.fxDrop(ev.cells, PIECE_COLORS[ev.piece]);
     if (ev.linesCleared > 0) {
-      if (ev.boardAfter.isEmpty()) this.botRenderer.fxAllClear();
-      else this.botRenderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], '#ffffff']);
+      if (ev.boardAfter.isEmpty()) {
+        this.botRenderer.fxAllClear();
+      } else {
+        this.botRenderer.fxClear(clearedRowsOf(ev), [PIECE_COLORS[ev.piece], "#ffffff"]);
+      }
       const label = lockActionLabel(ev);
-      if (label) actionText(this.botPanel, label.main, '', label.kind);
+      if (label) {
+        actionText(this.botPanel, label.main, "", label.kind);
+      }
     }
   }
 
@@ -713,12 +977,18 @@ export class VersusView {
       this.matchMs += dt;
       this.bot?.update(dt);
       const inc = this.incoming?.pending() ?? 0;
-      if (inc > this.lastPending && settings.soundFx) garbageQueuedSound(inc - this.lastPending);
+      if (inc > this.lastPending && settings.soundFx) {
+        garbageQueuedSound(inc - this.lastPending);
+      }
       this.lastPending = inc;
       // escalating incoming-garbage warnings + the death "!" (letting the whole
       // queue through would bury the stack past the top of the field)
-      const lethal = this.warner.update(inc, this.game.board.maxHeight() + inc >= VISIBLE_H, settings.soundFx);
-      this.deathWarn.classList.toggle('show', lethal);
+      const lethal = this.warner.update(
+        inc,
+        this.game.board.maxHeight() + inc >= VISIBLE_H,
+        settings.soundFx,
+      );
+      this.deathWarn.classList.toggle("show", lethal);
       // meters + danger vignettes
       const cell = this.cellSize();
       const active = Math.min(this.incoming?.active(this.clock) ?? 0, 20);
@@ -727,8 +997,16 @@ export class VersusView {
       this.gmQueued.style.height = `${queued * cell}px`;
       this.botGm.style.height = `${Math.min(this.bot?.pendingLines() ?? 0, 20) * this.botCellSize()}px`;
       this.renderer.danger = Math.max(0, Math.min(1, (this.game.board.maxHeight() - 12) / 6));
-      this.botRenderer.danger = Math.max(0, Math.min(1, ((this.bot?.game.board.maxHeight() ?? 0) - 12) / 6));
-      this.updateHud();
+      this.botRenderer.danger = Math.max(
+        0,
+        Math.min(1, ((this.bot?.game.board.maxHeight() ?? 0) - 12) / 6),
+      );
+      // the HUD clock only shows seconds - rebuilding its DOM every frame
+      // would be pure layout churn
+      if (t - this.hudAt > 200) {
+        this.hudAt = t;
+        this.updateHud();
+      }
       // backdrop: fall speed off placement pace, colour off the live chain
       const pps = this.matchMs > 500 && this.pieces >= 2 ? this.pieces / (this.matchMs / 1000) : 0;
       const chain = Math.max(0, this.b2b, this.combo);
@@ -741,7 +1019,9 @@ export class VersusView {
     }
     this.background.frame(dt);
     this.renderer.render(this.game);
-    if (this.bot) this.botRenderer.render(this.bot.game);
+    if (this.bot) {
+      this.botRenderer.render(this.bot.game);
+    }
   }
 
   // ---- panes / hud ----
@@ -751,36 +1031,40 @@ export class VersusView {
     const cell = this.cellSize();
     const holdCell = holdCellOf(cell);
     const queueCell = queueCellOf(cell);
-    this.holdBox.querySelector('canvas')?.remove();
+    this.holdBox.querySelector("canvas")?.remove();
     this.holdBox.appendChild(renderPieceTile(this.game.hold, holdCell));
-    for (const c of [...this.queueBox.querySelectorAll('canvas')]) c.remove();
-    for (const p of this.game.preview()) this.queueBox.appendChild(renderPieceTile(p, queueCell));
+    for (const c of [...this.queueBox.querySelectorAll("canvas")]) {
+      c.remove();
+    }
+    for (const p of this.game.preview()) {
+      this.queueBox.appendChild(renderPieceTile(p, queueCell));
+    }
   }
 
   private updateHud(): void {
     const v = settings.versus;
-    const botTag = v.botLevel === 'custom' ? `${v.botNodes} nodes` : v.botLevel;
+    const botTag = v.botLevel === "custom" ? `${v.botNodes} nodes` : v.botLevel;
     this.hud.innerHTML =
       `<div class="alt vs-score">${this.score.me}<small>–</small>${this.score.cc}</div>` +
       // deliberately two lines - the column is too narrow for one
       `<div class="floor">first to ${v.firstTo}</div>` +
       `<div class="floor">round ${Math.max(1, this.round)}</div>` +
-      `<div class="meta">time <b>${fmtTime(this.clock)}</b></div>` +
+      `<div class="meta">time <b>${fmtSprint(this.clock, false)}</b></div>` +
       `<div class="meta">sent <b>${this.sent}</b> · taken <b>${this.taken}</b></div>` +
       `<div class="meta">bot <b>${botTag}</b></div>` +
       `<div class="meta"><b>${v.botPps}</b> pps</div>`;
     const bot = this.bot;
     this.botHud.innerHTML = bot
       ? `sent <b>${bot.linesSent}</b> · taken <b>${bot.garbageTaken}</b>` +
-        (bot.b2b >= 1 ? ` · B2B <b>×${bot.b2b}</b>` : '')
-      : '&nbsp;';
+        (bot.b2b >= 1 ? ` · B2B <b>×${bot.b2b}</b>` : "")
+      : "&nbsp;";
   }
 
   private showToast(text: string): void {
     this.toast.textContent = text;
-    this.toast.classList.add('show');
+    this.toast.classList.add("show");
     clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 2600);
+    this.toastTimer = window.setTimeout(() => this.toast.classList.remove("show"), 2600);
   }
 
   /**
@@ -791,15 +1075,17 @@ export class VersusView {
    * of the attack; the bolt fades as it merges into the meter.
    */
   private flyGarbage(fromEl: HTMLElement, toEl: HTMLElement, lines: number): void {
-    if (!settings.effects || lines <= 0) return;
+    if (!settings.effects || lines <= 0) {
+      return;
+    }
     const from = fromEl.getBoundingClientRect();
     const to = toEl.getBoundingClientRect();
     const x0 = from.left + from.width / 2;
     const y0 = from.top + from.height / 2;
     const x1 = to.left + to.width / 2;
     const y1 = to.top + to.height / 2;
-    const bolt = document.createElement('div');
-    bolt.className = 'garbage-bolt';
+    const bolt = document.createElement("div");
+    bolt.className = "garbage-bolt";
     bolt.style.left = `${x0}px`;
     bolt.style.top = `${y0}px`;
     bolt.style.height = `${Math.max(6, Math.min(20, lines) * 3)}px`;
@@ -808,55 +1094,42 @@ export class VersusView {
     document.body.appendChild(bolt);
     requestAnimationFrame(() => {
       bolt.style.transform = `translate(${x1 - x0}px, ${y1 - y0}px) rotate(${angle}deg)`;
-      bolt.style.opacity = '0.1';
+      bolt.style.opacity = "0.1";
     });
     const done = () => bolt.remove();
-    bolt.addEventListener('transitionend', done, { once: true });
+    bolt.addEventListener("transitionend", done, { once: true });
     window.setTimeout(done, 600); // safety net if transitionend is missed
   }
 }
 
 /** compact labelled slider for the launch overlay */
-function launchSlider(name: string, unit: string, min: number, max: number, step: number, value: number, onChange: (v: number) => void): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'vs-slider';
-  const label = document.createElement('span');
-  const show = (v: number) => { label.textContent = `${name} · ${v}${unit}`; };
+function launchSlider(
+  name: string,
+  unit: string,
+  min: number,
+  max: number,
+  step: number,
+  value: number,
+  onChange: (v: number) => void,
+): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "vs-slider";
+  const label = document.createElement("span");
+  const show = (v: number) => {
+    label.textContent = `${name} · ${v}${unit}`;
+  };
   show(value);
-  const input = document.createElement('input');
-  input.type = 'range';
+  const input = document.createElement("input");
+  input.type = "range";
   input.min = String(min);
   input.max = String(max);
   input.step = String(step);
   input.value = String(value);
-  input.addEventListener('input', () => {
+  input.addEventListener("input", () => {
     const v = Number(input.value);
     show(v);
     onChange(v);
   });
   row.append(label, input);
   return row;
-}
-
-function fmtTime(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
-function panel(label: string): HTMLElement {
-  const p = document.createElement('div');
-  p.className = 'panel';
-  const l = document.createElement('div');
-  l.className = 'label';
-  l.textContent = label;
-  p.appendChild(l);
-  return p;
-}
-
-function btn(text: string, onClick: () => void): HTMLElement {
-  const b = document.createElement('button');
-  b.className = 'btn';
-  b.textContent = text;
-  b.addEventListener('click', onClick);
-  return b;
 }

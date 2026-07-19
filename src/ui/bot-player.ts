@@ -6,18 +6,25 @@
 // position sent to the analysis worker is still valid when the answer
 // comes back - applyMove cannot race with incoming garbage.
 
-import { Game, type LockEvent } from '../core/game';
-import type { PieceType } from '../core/pieces';
-import type { SpinKind } from '../core/spin';
-import { GarbageQueue, versusAttack, scaleAttack, DEFAULT_RULES, type AttackRules, type GarbageConfig } from '../core/versus';
-import { ColdClearClient } from './cc2-client';
+import { Game, type LockEvent } from "../core/game";
+import type { PieceType } from "../core/pieces";
+import type { SpinKind } from "../core/spin";
+import {
+  GarbageQueue,
+  versusAttack,
+  scaleAttack,
+  DEFAULT_RULES,
+  type AttackRules,
+  type GarbageConfig,
+} from "../core/versus";
+import { ColdClearClient, pairsOf } from "./cc2-client";
 
 export interface BotOptions {
-  pps: number;    // pieces per second (mean; each move jitters a little)
-  nodes: number;  // CC2 search budget per move - the strength knob
+  pps: number; // pieces per second (mean; each move jitters a little)
+  nodes: number; // CC2 search budget per move - the strength knob
   garbage: GarbageConfig;
-  rules?: AttackRules;   // damage table for the bot's clears
-  attackScale?: number;  // percent handicap on the bot's outgoing attack
+  rules?: AttackRules; // damage table for the bot's clears
+  attackScale?: number; // percent handicap on the bot's outgoing attack
   seed?: number;
 }
 
@@ -57,13 +64,15 @@ export class BotPlayer {
   }
 
   /** Retune pace/strength/rules without rebuilding the worker. */
-  configure(opts: Partial<Omit<BotOptions, 'garbage' | 'seed'>>): void {
+  configure(opts: Partial<Omit<BotOptions, "garbage" | "seed">>): void {
     Object.assign(this.opts, opts);
   }
 
   /** Opponent (the player) sent lines at the bot. */
   receiveAttack(lines: number): void {
-    if (lines > 0) this.incoming.queue(lines, this.nowMs);
+    if (lines > 0) {
+      this.incoming.queue(lines, this.nowMs);
+    }
   }
 
   pendingLines(): number {
@@ -92,15 +101,21 @@ export class BotPlayer {
   /** Advance the bot's clock; fires a move when one is due. */
   update(dtMs: number): void {
     this.nowMs += dtMs;
-    if (this.dead || this.destroyed || this.thinking) return;
-    if (this.nowMs < this.nextMoveAtMs) return;
+    if (this.dead || this.destroyed || this.thinking) {
+      return;
+    }
+    if (this.nowMs < this.nextMoveAtMs) {
+      return;
+    }
     void this.makeMove();
   }
 
   private async makeMove(): Promise<void> {
     const g = this.game;
     const a = g.active;
-    if (!a) return;
+    if (!a) {
+      return;
+    }
     this.thinking = true;
     const moves = await this.cc.analyze(
       Array.from(g.board.rows),
@@ -111,13 +126,15 @@ export class BotPlayer {
       this.opts.nodes,
     );
     this.thinking = false;
-    if (this.dead || this.destroyed || !g.active) return;
+    if (this.dead || this.destroyed || !g.active) {
+      return;
+    }
     const best = moves[0];
     if (best) {
-      const spin: SpinKind = best.spin === 'f' ? 'full' : best.spin === 'm' ? 'mini' : 'none';
-      const cells: [number, number][] = [];
-      for (let i = 0; i + 1 < best.cells.length; i += 2) cells.push([best.cells[i], best.cells[i + 1]]);
-      if (!g.applyMove(best.piece as PieceType, cells, spin)) g.hardDrop();
+      const spin: SpinKind = best.spin === "f" ? "full" : best.spin === "m" ? "mini" : "none";
+      if (!g.applyMove(best.piece as PieceType, pairsOf(best.cells), spin)) {
+        g.hardDrop();
+      }
     } else {
       // no suggestion (position too dire / worker hiccup): drop and move on
       g.hardDrop();
@@ -129,9 +146,16 @@ export class BotPlayer {
     this.pieces++;
     if (ev.linesCleared > 0) {
       this.combo++;
-      const keepsB2b = ev.spin !== 'none' || ev.linesCleared === 4;
+      const keepsB2b = ev.spin !== "none" || ev.linesCleared === 4;
       const atk = scaleAttack(
-        versusAttack(ev.linesCleared, ev.spin, this.combo, this.b2b, ev.boardAfter.isEmpty(), this.opts.rules ?? DEFAULT_RULES),
+        versusAttack(
+          ev.linesCleared,
+          ev.spin,
+          this.combo,
+          this.b2b,
+          ev.boardAfter.isEmpty(),
+          this.opts.rules ?? DEFAULT_RULES,
+        ),
         this.opts.attackScale ?? 100,
       );
       this.b2b = keepsB2b ? this.b2b + 1 : 0;

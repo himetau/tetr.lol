@@ -13,10 +13,10 @@
 // L<->J, S<->Z), because four.lol builds the loop on the left while parts of
 // the swng data are right-handed.
 
-import { Board, BOARD_H, BOARD_W } from '../core/board';
-import type { PieceType } from '../core/pieces';
-import { enumeratePlacements } from './enumerate';
-import coverData from '../data/lst-cover.json';
+import { Board, BOARD_H, BOARD_W } from "../core/board";
+import type { PieceType } from "../core/pieces";
+import { enumeratePlacements, placementKey } from "./enumerate";
+import coverData from "../data/lst-cover.json";
 
 interface RawPlacement {
   piece: string;
@@ -39,7 +39,7 @@ interface BookSolution {
   name: string;
   start: Uint32Array; // row masks
   startHeight: number;
-  cellCount: number;  // start field cells
+  cellCount: number; // start field cells
   placements: BookPlacement[];
 }
 
@@ -63,18 +63,30 @@ export interface BookAdvice {
   solutions: string[];
 }
 
-export const OFF_BOOK: BookAdvice = { onBook: false, sustainable: false, moves: [], holdIsBook: false, solutions: [] };
+export const OFF_BOOK: BookAdvice = {
+  onBook: false,
+  sustainable: false,
+  moves: [],
+  holdIsBook: false,
+  solutions: [],
+};
 
-const MIRROR_PIECE: Record<string, PieceType> = { I: 'I', O: 'O', T: 'T', S: 'Z', Z: 'S', J: 'L', L: 'J' };
-
-function cellKey(piece: string, cells: readonly (readonly [number, number])[]): string {
-  return piece + ':' + cells.map(([x, y]) => x * 32 + y).sort((a, b) => a - b).join(',');
-}
+const MIRROR_PIECE: Record<string, PieceType> = {
+  I: "I",
+  O: "O",
+  T: "T",
+  S: "Z",
+  Z: "S",
+  J: "L",
+  L: "J",
+};
 
 function toPlacement(piece: PieceType, cells: [number, number][], clears: number): BookPlacement {
   const masks = new Map<number, number>();
-  for (const [x, y] of cells) masks.set(y, (masks.get(y) ?? 0) | (1 << x));
-  return { piece, cells, masks, finisher: clears > 0, key: cellKey(piece, cells) };
+  for (const [x, y] of cells) {
+    masks.set(y, (masks.get(y) ?? 0) | (1 << x));
+  }
+  return { piece, cells, masks, finisher: clears > 0, key: placementKey(piece, cells) };
 }
 
 function loadSolutions(): BookSolution[] {
@@ -87,12 +99,19 @@ function loadSolutions(): BookSolution[] {
     for (let i = 0; i < h; i++) {
       const y = h - 1 - i;
       for (let x = 0; x < Math.min(BOARD_W, group.start[i].length); x++) {
-        if (group.start[i][x] === 'X') { start[y] |= 1 << x; cellCount++; }
+        if (group.start[i][x] === "X") {
+          start[y] |= 1 << x;
+          cellCount++;
+        }
       }
     }
     const mirrorStart = new Uint32Array(BOARD_H);
     for (let y = 0; y < BOARD_H; y++) {
-      for (let x = 0; x < BOARD_W; x++) if (start[y] >>> x & 1) mirrorStart[y] |= 1 << (BOARD_W - 1 - x);
+      for (let x = 0; x < BOARD_W; x++) {
+        if ((start[y] >>> x) & 1) {
+          mirrorStart[y] |= 1 << (BOARD_W - 1 - x);
+        }
+      }
     }
     for (const sol of group.solutions) {
       const raw = sol.placements as RawPlacement[];
@@ -133,25 +152,40 @@ function matchSolution(sol: BookSolution, board: Board): BookPlacement[] | null 
   let extraCells = 0;
   for (let y = 0; y < BOARD_H; y++) {
     const row = board.rows[y];
-    if ((row & sol.start[y]) !== sol.start[y]) return null; // start cell missing
+    // a missing start cell means this is not that solution's build
+    if ((row & sol.start[y]) !== sol.start[y]) {
+      return null;
+    }
     let extra = row & ~sol.start[y];
-    while (extra) { extraCells += extra & 1; extra >>>= 1; }
+    while (extra) {
+      extraCells += extra & 1;
+      extra >>>= 1;
+    }
   }
   const remaining: BookPlacement[] = [];
   let placedCells = 0;
   for (const p of sol.placements) {
     let present = 0;
-    for (const [y, mask] of p.masks) if ((board.rows[y] & mask) === mask) present++;
-    if (present === p.masks.size && !p.finisher) placedCells += p.cells.length;
-    else remaining.push(p);
+    for (const [y, mask] of p.masks) {
+      if ((board.rows[y] & mask) === mask) {
+        present++;
+      }
+    }
+    if (present === p.masks.size && !p.finisher) {
+      placedCells += p.cells.length;
+    } else {
+      remaining.push(p);
+    }
   }
   // every extra cell must be accounted for by whole placements; overlapping
   // pieces would double-count, which this equality also rejects
-  if (placedCells !== extraCells) return null;
+  if (placedCells !== extraCells) {
+    return null;
+  }
   return remaining;
 }
 
-const HOLD_SLOTS: (PieceType | null)[] = [null, 'I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+const HOLD_SLOTS: (PieceType | null)[] = [null, "I", "O", "T", "S", "Z", "J", "L"];
 
 /**
  * Can `remaining` be completed from `board` given the visible queue and hold?
@@ -173,34 +207,51 @@ function searchSolution(
   const memo = new Map<number, boolean>();
 
   const reachable = (b: Board, piece: PieceType): Set<string> => {
-    const k = b.key() + '|' + piece;
+    const k = b.key() + "|" + piece;
     let set = reachCache.get(k);
     if (!set) {
-      set = new Set(enumeratePlacements(b, piece).map((p) => cellKey(p.type, p.cells)));
+      set = new Set(enumeratePlacements(b, piece).map((p) => placementKey(p.type, p.cells)));
       reachCache.set(k, set);
     }
     return set;
   };
 
   const dfs = (b: Board, rem: number, qi: number, h: PieceType | null, depth: number): boolean => {
-    if (rem === 0) return true;
-    if (qi >= queue.length) return true;
-    const memoKey = ((rem * 8 + HOLD_SLOTS.indexOf(h)) * 8 + qi);
+    if (rem === 0) {
+      return true;
+    }
+    if (qi >= queue.length) {
+      return true;
+    }
+    const memoKey = (rem * 8 + HOLD_SLOTS.indexOf(h)) * 8 + qi;
     const hit = memo.get(memoKey);
-    if (hit !== undefined && depth > 0) return hit;
+    if (hit !== undefined && depth > 0) {
+      return hit;
+    }
 
     let ok = false;
     const bits: number[] = [];
-    for (let i = 0; i < remaining.length; i++) if (rem >>> i & 1) bits.push(i);
+    for (let i = 0; i < remaining.length; i++) {
+      if ((rem >>> i) & 1) {
+        bits.push(i);
+      }
+    }
     const lastOnly = bits.length === 1;
 
     const tryPlace = (piece: PieceType, usesHold: boolean, nextHold: PieceType | null) => {
       const reach = reachable(b, piece);
       for (const i of bits) {
         const p = remaining[i];
-        if (p.piece !== piece) continue;
-        if (p.finisher && !lastOnly) continue; // its clears would shift the rest
-        if (!reach.has(p.key)) continue;
+        if (p.piece !== piece) {
+          continue;
+        }
+        // a finisher's clears would shift the remaining placements
+        if (p.finisher && !lastOnly) {
+          continue;
+        }
+        if (!reach.has(p.key)) {
+          continue;
+        }
         const nb = b.clone();
         nb.place(p.cells);
         nb.clearLines();
@@ -209,21 +260,37 @@ function searchSolution(
           if (depth === 0) {
             const existing = rootMoves.get(p.key);
             if (!existing || (existing.usesHold && !usesHold)) {
-              rootMoves.set(p.key, { piece: p.piece, cells: p.cells, usesHold, solution: `${sol.group}: ${sol.name}` });
+              rootMoves.set(p.key, {
+                piece: p.piece,
+                cells: p.cells,
+                usesHold,
+                solution: `${sol.group}: ${sol.name}`,
+              });
             }
-          } else return true; // deeper levels only need one witness
+          } else {
+            // deeper levels only need one witness
+            return true;
+          }
         }
       }
       return false;
     };
 
     const active = queue[qi];
-    if (tryPlace(active, false, h) && depth > 0) { memo.set(memoKey, true); return true; }
-    if (h && h !== active && tryPlace(h, true, active) && depth > 0) { memo.set(memoKey, true); return true; }
+    if (tryPlace(active, false, h) && depth > 0) {
+      memo.set(memoKey, true);
+      return true;
+    }
+    if (h && h !== active && tryPlace(h, true, active) && depth > 0) {
+      memo.set(memoKey, true);
+      return true;
+    }
     // park the active piece in hold (how the loop's T waits for its slot)
     if (h === null && dfs(b, rem, qi + 1, active, depth + 1)) {
       ok = true;
-      if (depth === 0) rootHold.ok = true;
+      if (depth === 0) {
+        rootHold.ok = true;
+      }
     }
     memo.set(memoKey, ok);
     return ok;
@@ -238,7 +305,9 @@ function searchSolution(
  */
 export function bookAdvice(board: Board, queue: PieceType[], hold: PieceType | null): BookAdvice {
   // book fields are at most 6 rows tall mid-build; skip tall/burned stacks fast
-  if (board.maxHeight() > 8) return OFF_BOOK;
+  if (board.maxHeight() > 8) {
+    return OFF_BOOK;
+  }
   const moves = new Map<string, BookMove>();
   const rootHold = { ok: false };
   const sustained: string[] = [];
@@ -246,13 +315,23 @@ export function bookAdvice(board: Board, queue: PieceType[], hold: PieceType | n
   const reachCache = new Map<string, Set<string>>(); // shared: solutions revisit the same boards
   for (const sol of solutions()) {
     const remaining = matchSolution(sol, board);
-    if (remaining === null) continue;
-    if (remaining.length === 0) continue; // build finished; next stage matches instead
+    if (remaining === null) {
+      continue;
+    }
+    // build finished; the next stage matches instead
+    if (remaining.length === 0) {
+      continue;
+    }
     const label = `${sol.group}: ${sol.name}`;
-    if (searchSolution(board, remaining, queue, hold, sol, moves, rootHold, reachCache)) sustained.push(label);
-    else consistent.push(label);
+    if (searchSolution(board, remaining, queue, hold, sol, moves, rootHold, reachCache)) {
+      sustained.push(label);
+    } else {
+      consistent.push(label);
+    }
   }
-  if (sustained.length === 0 && consistent.length === 0) return OFF_BOOK;
+  if (sustained.length === 0 && consistent.length === 0) {
+    return OFF_BOOK;
+  }
   return {
     onBook: true,
     sustainable: sustained.length > 0,
@@ -263,7 +342,11 @@ export function bookAdvice(board: Board, queue: PieceType[], hold: PieceType | n
 }
 
 /** True when the user's placement is one of the advised book moves. */
-export function matchesBookMove(advice: BookAdvice, piece: PieceType, cells: readonly (readonly [number, number])[]): boolean {
-  const key = cellKey(piece, cells);
-  return advice.moves.some((m) => cellKey(m.piece, m.cells) === key);
+export function matchesBookMove(
+  advice: BookAdvice,
+  piece: PieceType,
+  cells: readonly (readonly [number, number])[],
+): boolean {
+  const key = placementKey(piece, cells);
+  return advice.moves.some((m) => placementKey(m.piece, m.cells) === key);
 }

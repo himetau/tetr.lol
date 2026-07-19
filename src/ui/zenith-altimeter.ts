@@ -3,18 +3,22 @@
 // and the climb-speed meter, drawn on one canvas so the number can heat up
 // and throw sparks while the run climbs fast (and erupt on a surge payout).
 
-import { FLOORS, floorIndexAt, nextFloorFrom, type ZenithRun } from '../core/zenith';
-import { settings } from './settings';
+import { FLOORS, floorIndexAt, nextFloorFrom, type ZenithRun } from "../core/zenith";
+import { settings } from "./settings";
+import { altHue } from "./scene-background";
 
 interface Spark {
-  x: number; y: number;   // css px
-  vx: number; vy: number; // px/s
-  age: number; ttl: number;
+  x: number;
+  y: number; // css px
+  vx: number;
+  vy: number; // px/s
+  age: number;
+  ttl: number;
   size: number;
   hue: number;
 }
 
-const HUD_H = 78;      // css px
+const HUD_H = 78; // css px
 const SPARK_MAX = 220;
 
 /** Per-floor accent, hot toward the top (matches the launch cards). */
@@ -22,10 +26,28 @@ function floorColor(i: number): string {
   return `hsl(${205 - i * 22}, 72%, 58%)`;
 }
 
-/** Hue for the meter count: shifts smoothly with altitude, cool blue at the
- * bottom (~205°) burning to red (~0°) by the top floor (~1700m). */
-function altHue(altitude: number): number {
-  return Math.max(0, Math.min(205, 205 - altitude * 0.12));
+// Soft glow sprites per hue bucket. Canvas shadowBlur re-blurs the text every
+// frame - one of the slowest canvas operations, especially on Firefox - while
+// a cached radial-gradient sprite stretched behind the text reads the same at
+// a fraction of the cost.
+const GLOW_SPRITES = new Map<number, HTMLCanvasElement>();
+
+function glowSprite(hue: number): HTMLCanvasElement {
+  const key = Math.round(hue / 8) * 8;
+  let c = GLOW_SPRITES.get(key);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 64;
+    const g = c.getContext("2d")!;
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, `hsla(${key}, 100%, 60%, 0.85)`);
+    grad.addColorStop(1, `hsla(${key}, 100%, 60%, 0)`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    GLOW_SPRITES.set(key, c);
+  }
+  return c;
 }
 
 export class ZenithAltimeter {
@@ -34,23 +56,23 @@ export class ZenithAltimeter {
   private w = 300;
   private dpr = 1;
 
-  private shown = 0;              // tweened altitude readout
+  private shown = 0; // tweened altitude readout
   private lastAlt: number | null = null;
-  private speed = 0;              // smoothed climb rate, m/s
-  private surgeGlow = 0;          // 0..1, decays after a surge
+  private speed = 0; // smoothed climb rate, m/s
+  private surgeGlow = 0; // 0..1, decays after a surge
   private sparks: Spark[] = [];
   private spawnAcc = 0;
 
   // theme snapshot (canvas needs concrete values, not CSS vars)
-  private cText = '#dde';
-  private cDim = '#889';
-  private cAccent = '#04a5e5';
-  private font = 'sans-serif';
+  private cText = "#dde";
+  private cDim = "#889";
+  private cAccent = "#04a5e5";
+  private font = "sans-serif";
 
   constructor(width: number) {
-    this.el = document.createElement('canvas');
-    this.el.className = 'zenith-altimeter';
-    this.ctx = this.el.getContext('2d')!;
+    this.el = document.createElement("canvas");
+    this.el.className = "zenith-altimeter";
+    this.ctx = this.el.getContext("2d")!;
     this.setWidth(width);
   }
 
@@ -63,10 +85,10 @@ export class ZenithAltimeter {
     this.el.style.height = `${HUD_H}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const cs = getComputedStyle(document.documentElement);
-    this.cText = cs.getPropertyValue('--text').trim() || this.cText;
-    this.cDim = cs.getPropertyValue('--text-dim').trim() || this.cDim;
-    this.cAccent = cs.getPropertyValue('--accent2').trim() || this.cAccent;
-    this.font = cs.getPropertyValue('--font-display').trim() || this.font;
+    this.cText = cs.getPropertyValue("--text").trim() || this.cText;
+    this.cDim = cs.getPropertyValue("--text-dim").trim() || this.cDim;
+    this.cAccent = cs.getPropertyValue("--accent2").trim() || this.cAccent;
+    this.font = cs.getPropertyValue("--font-display").trim() || this.font;
   }
 
   /** New run: snap the readout so it doesn't count up from the old value. */
@@ -82,7 +104,9 @@ export class ZenithAltimeter {
   /** Surge payout: ignite the counter and erupt sparks that scale with it. */
   surge(lines: number): void {
     this.surgeGlow = 1;
-    if (!settings.effects) return;
+    if (!settings.effects) {
+      return;
+    }
     const n = Math.min(120, 24 + lines * 8);
     for (let i = 0; i < n; i++) {
       this.spawnSpark(
@@ -96,8 +120,17 @@ export class ZenithAltimeter {
     }
   }
 
-  private spawnSpark(x: number, y: number, vx: number, vy: number, ttl: number, size: number): void {
-    if (this.sparks.length >= SPARK_MAX) this.sparks.shift();
+  private spawnSpark(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    ttl: number,
+    size: number,
+  ): void {
+    if (this.sparks.length >= SPARK_MAX) {
+      this.sparks.shift();
+    }
     this.sparks.push({ x, y, vx, vy, age: 0, ttl, size, hue: 28 + Math.random() * 20 });
   }
 
@@ -119,7 +152,9 @@ export class ZenithAltimeter {
     }
     this.lastAlt = run.altitude;
     this.shown += (run.altitude - this.shown) * Math.min(1, dt * 10);
-    if (Math.abs(run.altitude - this.shown) < 0.05) this.shown = run.altitude;
+    if (Math.abs(run.altitude - this.shown) < 0.05) {
+      this.shown = run.altitude;
+    }
     this.surgeGlow = Math.max(0, this.surgeGlow - dt / 1.4);
 
     // how much the counter "burns": fast climb, a surge, or a near-hyperspeed
@@ -160,22 +195,24 @@ export class ZenithAltimeter {
     const hue = altHue(this.shown);
     ctx.save();
     ctx.font = `800 34px ${this.font}`;
-    ctx.textBaseline = 'alphabetic';
+    ctx.textBaseline = "alphabetic";
+    const num = this.shown.toFixed(1);
+    const numW = ctx.measureText(num).width;
     if (heat > 0.02) {
-      ctx.shadowColor = `hsla(${30 - heat * 14}, 100%, 55%, ${0.35 + heat * 0.6})`;
-      ctx.shadowBlur = 4 + heat * 18;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.25 + heat * 0.55;
+      ctx.drawImage(glowSprite(30 - heat * 14), 6 - 14, 4, numW + 28, 50);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
     }
     // altitude-tinted, brightening to white-hot as heat rises
     const sat = Math.round(70 + heat * 25);
     const light = Math.round(62 + heat * 22);
     ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
-    const num = this.shown.toFixed(1);
     ctx.fillText(num, 6, 44);
-    const numW = ctx.measureText(num).width;
-    ctx.shadowBlur = 0;
     ctx.font = `700 16px ${this.font}`;
     ctx.fillStyle = this.cDim;
-    ctx.fillText('m', 6 + numW + 4, 44);
+    ctx.fillText("m", 6 + numW + 4, 44);
     ctx.restore();
     return 6 + numW + 18;
   }
@@ -207,15 +244,17 @@ export class ZenithAltimeter {
     ctx.save();
     ctx.font = `800 10px ${this.font}`;
     ctx.fillStyle = this.cDim;
-    ctx.fillText('CLIMB SPEED', x, 26);
+    ctx.fillText("CLIMB SPEED", x, 26);
+    if (rank >= 8) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(glowSprite(Math.max(8, 205 - rank * 22)), x - 10, 28, 90, 28);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+    }
     ctx.font = `800 20px ${this.font}`;
     ctx.fillStyle = col;
-    if (rank >= 8) {
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 10;
-    }
     ctx.fillText(`×${run.climbMultiplier().toFixed(2)}`, x, 48);
-    ctx.shadowBlur = 0;
     // XP toward the next rank (promotion at 4·rank)
     const frac = Math.min(1, Math.max(0, run.climbProgress / (4 * rank)));
     ctx.globalAlpha = 0.25;
@@ -244,13 +283,17 @@ export class ZenithAltimeter {
         );
       }
     }
-    if (this.sparks.length === 0) return;
+    if (this.sparks.length === 0) {
+      return;
+    }
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = "lighter";
     let n = 0;
     for (const p of this.sparks) {
       p.age += dt * 1000;
-      if (p.age >= p.ttl) continue;
+      if (p.age >= p.ttl) {
+        continue;
+      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.vy -= 30 * dt; // embers accelerate upward a little
