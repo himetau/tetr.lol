@@ -1840,14 +1840,14 @@ details.card:not([open]) .card-head .chevron {
   letter-spacing: 0.14em;
   color: var(--text-dim);
 }
-/* segmented control */
+/* segmented control - squared-off to match the settings controls */
 .qp-seg {
   display: inline-flex;
   padding: 3px;
   gap: 2px;
   background: var(--bg-inset);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius);
 }
 .qp-seg-btn {
   border: none;
@@ -1857,7 +1857,7 @@ details.card:not([open]) .card-head .chevron {
   font-size: 12px;
   font-weight: 700;
   padding: 5px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
     color 0.14s,
@@ -1874,14 +1874,14 @@ details.card:not([open]) .card-head .chevron {
   background: var(--accent);
   color: var(--on-accent);
 }
-/* gravity-mod toggle pill */
+/* gravity-mod row: label + a settings-style switch toggle */
 .qp-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 14px;
+  gap: 12px;
+  padding: 7px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--bg-inset);
   color: var(--text-dim);
   font: inherit;
@@ -1893,6 +1893,10 @@ details.card:not([open]) .card-head .chevron {
     border-color 0.14s,
     background 0.14s;
 }
+.qp-toggle-label {
+  display: block;
+  text-align: left;
+}
 .qp-toggle small {
   display: block;
   font-size: 9.5px;
@@ -1900,17 +1904,41 @@ details.card:not([open]) .card-head .chevron {
   letter-spacing: 0.04em;
   opacity: 0.75;
 }
-.qp-toggle-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+/* mirrors the settings `.toggle` switch (chamfered knob), driven by `.on` */
+.qp-switch {
+  appearance: none;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius);
   background: var(--bg-raised);
-  border: 2px solid var(--text-dim);
-  transition:
-    background 0.16s,
-    border-color 0.16s,
-    box-shadow 0.16s;
+  border: 1px solid var(--line);
+  position: relative;
   flex-shrink: 0;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.qp-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  clip-path: polygon(
+    4px 0,
+    12px 0,
+    16px 4px,
+    16px 12px,
+    12px 16px,
+    4px 16px,
+    0 12px,
+    0 4px
+  );
+  background: var(--text-dim);
+  transition:
+    transform 0.18s cubic-bezier(0.3, 1.4, 0.6, 1),
+    background 0.15s;
 }
 .qp-toggle:hover {
   color: var(--text);
@@ -1918,12 +1946,14 @@ details.card:not([open]) .card-head .chevron {
 }
 .qp-toggle.on {
   color: var(--text);
-  border-color: var(--accent2);
-  background: color-mix(in srgb, var(--accent2) 14%, var(--bg-inset));
 }
-.qp-toggle.on .qp-toggle-dot {
-  background: var(--accent2);
-  border-color: var(--accent2);
+.qp-toggle.on .qp-switch {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.qp-toggle.on .qp-switch::after {
+  transform: translateX(18px);
+  background: var(--on-accent);
 }
 /* oversized start CTA */
 .qp-start {

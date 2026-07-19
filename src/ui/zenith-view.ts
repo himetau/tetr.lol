@@ -272,7 +272,7 @@ export class ZenithView {
 
     const gmod = document.createElement('button');
     gmod.className = 'qp-toggle' + (this.gravityMod ? ' on' : '');
-    gmod.innerHTML = `<span class="qp-toggle-dot"></span><span>Gravity mod<small>0.48G → 3.18G</small></span>`;
+    gmod.innerHTML = `<span class="qp-toggle-label">Gravity mod<small>0.48G → 3.18G</small></span><span class="qp-switch"></span>`;
     gmod.addEventListener('click', () => {
       this.gravityMod = !this.gravityMod;
       gmod.classList.toggle('on', this.gravityMod);
