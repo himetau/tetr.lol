@@ -206,30 +206,27 @@ export class ZenithView {
     const head = document.createElement('div');
     head.className = 'qp-head';
     head.innerHTML = `<h2>Quick play</h2>
-      <p class="sub">Zenith-style climb at your chosen altitude — garbage pressure is simulated, no live opponents.</p>`;
+      <p class="sub">${QP_HINTS[Math.floor(Math.random() * QP_HINTS.length)]}</p>`;
     box.appendChild(head);
 
-    // floor cards — pick your starting altitude, tetr.io-style
+    // floor picker — plain themed boxes, pick your starting altitude
     const grid = document.createElement('div');
     grid.className = 'qp-floors';
     let selectedBtn: HTMLElement | null = null;
-    FLOORS.forEach((f, i) => {
+    FLOORS.forEach((f) => {
       const b = document.createElement('button');
-      b.className = 'floor-btn qp-floor';
-      b.style.setProperty('--fc', floorColor(i));
-      b.style.setProperty('--d', `${i * 34}ms`);
+      b.className = 'qp-floor';
       b.innerHTML =
-        `<span class="qp-fnum">F${i + 1}</span>` +
-        `<span class="qp-fname">${f.name}</span>` +
-        `<span class="qp-falt">${f.from}m</span>`;
+        `<span class="qp-fbody"><span class="qp-fname">${f.name}</span>` +
+        `<span class="qp-falt">${f.from}m</span></span>`;
       if (f.from === this.startAltitude) {
-        b.classList.add('primary');
+        b.classList.add('on');
         selectedBtn = b;
       }
       b.addEventListener('click', () => {
-        selectedBtn?.classList.remove('primary');
+        selectedBtn?.classList.remove('on');
         selectedBtn = b;
-        b.classList.add('primary');
+        b.classList.add('on');
         this.startAltitude = f.from;
         if (settings.soundFx) actionSound('rotateCW');
       });
@@ -658,10 +655,15 @@ function fmtTime(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Per-floor accent for the launch cards: cool at the bottom, hot at the top. */
-function floorColor(i: number): string {
-  return `hsl(${205 - i * 22}, 72%, 58%)`;
-}
+// rotating one-liner under the Quick play heading (in the app's voice)
+const QP_HINTS = [
+  'Pick a floor. Climb. Simple as that.',
+  'The garbage is fake but the pressure is real.',
+  'No opponents. Just you and gravity.',
+  'Start high if you like living dangerously.',
+  'Floor 10 is not a suggestion.',
+  'Surge responsibly.',
+];
 
 function panel(label: string): HTMLElement {
   const p = document.createElement('div');
