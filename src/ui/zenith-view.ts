@@ -203,6 +203,7 @@ export class ZenithView {
     this.endRun(false);
     this.input.enabled = false;
     this.overlay.replaceChildren();
+    this.overlay.classList.remove('results');
     this.overlay.classList.add('show');
 
     const box = document.createElement('div');
@@ -290,7 +291,7 @@ export class ZenithView {
     const r = this.run;
     if (!r) return;
     this.overlay.replaceChildren();
-    this.overlay.classList.add('show');
+    this.overlay.classList.add('show', 'results');
     const box = document.createElement('div');
     box.className = 'zenith-box';
     const f = FLOORS[floorIndexAt(r.altitude)];
@@ -309,7 +310,7 @@ export class ZenithView {
   private startRun(): void {
     // retry restarts the run outright — an abandoned climb records nothing
     this.endRun(false);
-    this.overlay.classList.remove('show');
+    this.overlay.classList.remove('show', 'results');
     this.overlay.replaceChildren();
     this.game.reset();
     this.run = new ZenithRun(this.startAltitude, this.pressure, this.gravityMod);

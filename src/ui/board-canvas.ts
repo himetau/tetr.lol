@@ -132,6 +132,11 @@ export class FieldRenderer {
   lockProgress = 0;
   /** 0..1 stack-danger level — red vignette pulses in from the top */
   danger = 0;
+
+  /** column bitmask of "infinite" wall columns (4-wide drill) whose locked
+   * cells are clipped to the visible field instead of spilling into the
+   * buffer rows above it */
+  wallCols = 0;
   /** freshly-inserted garbage rising into the board (tetr.io style): the bottom
    * `rows` are real on the board already, but the stack is drawn `rows` lower
    * and settles up one row at a time so the garbage pushes up from the floor */
@@ -502,6 +507,7 @@ export class FieldRenderer {
     // boards, previews) use the pack's garbage mino
     const keyAt = (x: number, y: number): SkinKey | null => {
       if (x < 0 || x >= BOARD_W || y < 0 || y >= 26) return null;
+      if (y >= VISIBLE_H && (this.wallCols >>> x & 1)) return null;
       if (!game.board.filled(x, y)) return null;
       return game.colors?.[y]?.[x] ?? 'G';
     };

@@ -23,7 +23,7 @@ import { bookAdvice } from '../engine/book';
 import { enumeratePlacements } from '../engine/enumerate';
 import { lstLoopMove } from '../engine/lst-loop';
 import { CC2_LST_LOOP_JSON } from '../engine/cc2-weights';
-import { buildFourwideStart, refillWalls, WELL_X, WELL_W } from '../engine/fourwide';
+import { buildFourwideStart, refillWalls, wallMask, WELL_X, WELL_W } from '../engine/fourwide';
 import { genAllspin } from '../engine/allspin-gen';
 import {
   gradeSound, actionSound, clearSound, comboSound, b2bBreakSound, b2bSound, topoutSound,
@@ -157,6 +157,9 @@ export class GameView {
       if (settings.soundFx) actionSound(a);
     };
     this.renderer = new FieldRenderer(this.cellSize());
+    // the 4-wide walls are engine-infinite so pieces can't escape the well,
+    // but they should draw no taller than the field
+    if (this.mode === 'fourwide') this.renderer.wallCols = wallMask();
     this.root = this.build();
     this.game.onLock = (ev) => this.onLock(ev);
     this.engine.onResult = (r) => this.onGrade(r);
@@ -570,6 +573,16 @@ export class GameView {
     }
   }
 
+  /** Stack height for pressure warnings — in 4-wide the infinite wall
+   * columns don't count, only the well. */
+  private stackHeight(): number {
+    const b = this.game.board;
+    if (this.mode !== 'fourwide') return b.maxHeight();
+    let h = 0;
+    for (let x = WELL_X; x < WELL_X + WELL_W; x++) h = Math.max(h, b.columnHeight(x));
+    return h;
+  }
+
   /** The pressure clock only runs while the player is actually drilling. */
   private opponentLive(): boolean {
     if (!this.opp || this.paused || this.game.topOut) return false;
@@ -590,7 +603,7 @@ export class GameView {
     this.vsLastPending = pending;
     // escalating incoming-garbage warnings + the death "!" (letting the whole
     // queue through would bury the stack past the top of the field)
-    const lethal = this.warner.update(pending, this.game.board.maxHeight() + pending >= VISIBLE_H, settings.soundFx);
+    const lethal = this.warner.update(pending, this.stackHeight() + pending >= VISIBLE_H, settings.soundFx);
     this.deathWarn.classList.toggle('show', lethal);
     const cell = this.cellSize();
     const active = Math.min(o.queue.active(this.vsClock), 20);

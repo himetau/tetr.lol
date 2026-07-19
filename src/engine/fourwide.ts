@@ -16,7 +16,7 @@ import { residualKey, stateToBoard, wellCellCount } from './fourwide-core';
 import type { GradeRequest, GradeResult, AltInfo, Grade } from './grade';
 import bookData from '../data/fourwide.json';
 
-export { WELL_X, WELL_W, WALL_H, refillWalls, residualKey } from './fourwide-core';
+export { WELL_X, WELL_W, WALL_H, refillWalls, residualKey, wallMask } from './fourwide-core';
 
 interface BookPlacement {
   piece: PieceType;

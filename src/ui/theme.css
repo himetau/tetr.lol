@@ -854,18 +854,22 @@ details.card:not([open]) .card-head .chevron {
   gap: 5px;
 }
 .board-strip {
-  width: 15px;
+  width: 16px;
   position: relative;
   flex-shrink: 0;
 }
 .gmeter {
   position: absolute;
-  inset: 0 3px 0 3px;
+  /* panel padding (12px) on the left ↔ inset + row gap (7+5px) on the right,
+     so the meter sits centered between panel edge and board */
+  inset: 0 7px 0 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   border-radius: 5px;
   overflow: hidden;
+  /* empty track reads slightly darker than the card behind it */
+  background: color-mix(in srgb, var(--bg-raised) 82%, black);
 }
 .gm-active,
 .gm-queued {
@@ -1679,6 +1683,15 @@ details.card:not([open]) .card-head .chevron {
 .zenith-overlay.counting {
   background: transparent;
   backdrop-filter: none;
+}
+/* run over: the final board stays fully visible; only a dark plate
+   behind the results text */
+.zenith-overlay.results {
+  background: transparent;
+}
+.zenith-overlay.results .zenith-box {
+  background: color-mix(in srgb, var(--field-bg) 80%, transparent);
+  padding: 15px;
 }
 .zenith-count {
   font-family: var(--font-display);
