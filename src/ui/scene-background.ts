@@ -43,6 +43,7 @@ export class SceneBackground {
   private dpr = 1;
 
   private dust: Dust[] = [];
+  private maxDust = 0;         // hard cap so pulse() gusts can't grow unbounded
   private sweeps: Sweep[] = [];
   private energy = 0;          // eased 0..1 (drives ambient fall speed)
   private energyTarget = 0;
@@ -85,6 +86,7 @@ export class SceneBackground {
   /** Populate a screen's worth of dust, sized to the area. */
   private seed(): void {
     const target = Math.min(230, Math.round((this.w * this.h) / 5400));
+    this.maxDust = target + 120; // headroom for transient pulse gusts
     const next: Dust[] = [];
     for (let i = 0; i < target; i++) next.push(this.spawn(Math.random() * this.h));
     this.dust = next;
@@ -135,6 +137,8 @@ export class SceneBackground {
     if (!settings.effects || this.h === 0) return;
     const n = Math.min(26, Math.round(5 + strength * 3));
     for (let i = 0; i < n; i++) this.dust.push(this.spawn(-Math.random() * this.h * 0.4));
+    // trim oldest so repeated clears can't grow the array without bound
+    if (this.dust.length > this.maxDust) this.dust.splice(0, this.dust.length - this.maxDust);
   }
 
   /** A boundary was crossed: drop a bright line that sweeps down the shaft. */

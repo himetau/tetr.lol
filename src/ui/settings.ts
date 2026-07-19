@@ -64,6 +64,7 @@ export interface AppSettings {
   ghost: boolean;
   grid: boolean;
   effects: boolean; // particles, screen shake, action text popups
+  fpsCounter: boolean; // live FPS readout pinned to the right edge
   stopOnMistake: boolean;
   soundOnMistake: boolean;
   soundFx: boolean;
@@ -89,6 +90,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ghost: true,
   grid: true,
   effects: true,
+  fpsCounter: false,
   stopOnMistake: false,
   soundOnMistake: true,
   soundFx: true,

@@ -179,6 +179,7 @@ export function settingsView(): HTMLElement {
   appearance.appendChild(toggleRow('Ghost piece', '', settings.ghost, (v) => { settings.ghost = v; }));
   appearance.appendChild(toggleRow('Grid', '', settings.grid, (v) => { settings.grid = v; }));
   appearance.appendChild(toggleRow('Board effects', 'particles, screen shake and action text', settings.effects, (v) => { settings.effects = v; }));
+  appearance.appendChild(toggleRow('FPS counter', 'live frame rate pinned to the right edge', settings.fpsCounter, (v) => { settings.fpsCounter = v; }));
   page.appendChild(appearance);
 
   // ---- background ----

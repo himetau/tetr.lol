@@ -5,6 +5,7 @@ import { ZenithView } from './zenith-view';
 import { VersusView } from './versus-view';
 import { sfx } from './sound';
 import { initBackground } from './background';
+import { initFpsCounter } from './fps-counter';
 import type { Mode } from './stats';
 
 type ViewName = 'lst' | 'fourwide' | 'free' | 'quick' | 'allspin' | 'versus' | 'patterns' | 'stats' | 'settings';
@@ -71,6 +72,7 @@ const TAGLINES = [
 export function startApp(root: HTMLElement): void {
   applyTheme();
   initBackground();
+  initFpsCounter();
 
   const sidebar = document.createElement('nav');
   sidebar.className = 'sidebar';

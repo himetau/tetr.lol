@@ -764,6 +764,30 @@ details.card:not([open]) .card-head .chevron {
   min-height: 0;
 }
 
+/* optional FPS readout, pinned to the right edge over everything */
+.fps-counter {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: none;
+  padding: 3px 8px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--good);
+  background: color-mix(in srgb, var(--bg-deep) 80%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+.fps-counter.show {
+  display: block;
+}
+
 /* every mode: a full-scene falling-particle backdrop sits behind the panels.
    The canvas fills the wrap at z 0; every other flex child rides above it */
 .game-wrap.has-scene {
