@@ -301,6 +301,34 @@ export class Game {
     return ev;
   }
 
+  /** Snapshot for tetr.io's dig-difficulty garbage placement: per-column
+   * stack heights plus the hole column of the SHALLOWEST (topmost) garbage
+   * row — the one the player is digging into — or −1 with no garbage left.
+   * The anchor deliberately lags behind fresh garbage: after the well
+   * relocates, the old pile on top keeps pulling re-picks back toward the
+   * old column until it is dug out, which is what turns a pattern break
+   * into a stretch of messy cheese. Garbage cells are the filled cells with
+   * no piece color. */
+  garbageBoardView(): { heights: number[]; garbageAnchor: number } {
+    const heights: number[] = [];
+    for (let x = 0; x < BOARD_W; x++) heights.push(this.board.columnHeight(x));
+    let garbageAnchor = -1;
+    for (let y = this.board.maxHeight() - 1; y >= 0; y--) {
+      const r = this.board.rows[y];
+      if (r === 0) continue;
+      let isGarbage = false;
+      for (let x = 0; x < BOARD_W; x++) {
+        if ((r >>> x & 1) === 1 && this.colors[y][x] === null) { isGarbage = true; break; }
+      }
+      if (!isGarbage) continue;
+      for (let x = 0; x < BOARD_W; x++) {
+        if ((r >>> x & 1) === 0) { garbageAnchor = x; break; }
+      }
+      break;
+    }
+    return { heights, garbageAnchor };
+  }
+
   /** Push garbage rows in from the bottom (quick play / versus). Lifts the
    * active piece if the stack shoves into it; tops out only when the stack is
    * genuinely buried past the ceiling, or the piece cannot be nudged back

@@ -32,7 +32,7 @@ export interface VersusSettings {
   botLevel: BotLevel;
   botNodes: number;       // CC2 nodes per move when botLevel = 'custom'
   garbageDelayMs: number; // telegraph before an attack can rise
-  messiness: number;      // percent 0..100 — hole-column chaos
+  messiness: number;      // percent 0..100 — within-attack hole re-rolls (tetr.io: 0)
   garbageCap: number;     // max rows rising on one non-clearing lock
   pressure: Pressure;     // scheduled-garbage intensity ('garbage' opponents)
   attackScale: number;    // percent — scales the player's outgoing attack
@@ -94,7 +94,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     botLevel: 'normal',
     botNodes: 10000,
     garbageDelayMs: 2000,
-    messiness: 15,
+    messiness: 0,
     garbageCap: 8,
     pressure: 'normal',
     attackScale: 100,

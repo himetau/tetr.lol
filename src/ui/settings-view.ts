@@ -104,7 +104,7 @@ export function settingsView(): HTMLElement {
   vs.appendChild(sliderRow('Garbage delay', 'telegraph time (ms) before an attack can rise', 500, 5000, 250, v.garbageDelayMs, (val) => {
     v.garbageDelayMs = val;
   }));
-  vs.appendChild(sliderRow('Messiness', 'chance (%) each garbage row moves the hole column', 0, 100, 5, v.messiness, (val) => {
+  vs.appendChild(sliderRow('Messiness', 'chance (%) each row re-rolls the hole within an attack — new attacks always re-roll (tetr.io: 0)', 0, 100, 5, v.messiness, (val) => {
     v.messiness = val;
   }));
   vs.appendChild(sliderRow('Garbage cap', 'max rows rising on one non-clearing lock', 1, 12, 1, v.garbageCap, (val) => {

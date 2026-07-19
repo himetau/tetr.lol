@@ -54,6 +54,19 @@ const NAV: { name: ViewName; label: string; tag: string; sec?: string }[] = [
   { name: 'settings', label: 'Settings', tag: 'handling · keys' },
 ];
 
+const TAGLINES = [
+  "Don't look at any code", 
+  "It's a game!", 
+  "Made without labor", 
+  "Singleplayer!", 
+  "Closed source (Open if you can find it)",
+  "4815162342 lines of code!",
+  "Splash not stolen",
+  "Sugar free",
+  "Sodium free",
+  "We're working on it",
+];
+
 export function startApp(root: HTMLElement): void {
   applyTheme();
   initBackground();
@@ -62,7 +75,7 @@ export function startApp(root: HTMLElement): void {
   sidebar.className = 'sidebar';
   const brand = document.createElement('div');
   brand.className = 'brand';
-  brand.innerHTML = `<span class="logo">tetr<em>.lol</em></span><span class="tagline">stacking practice</span>`;
+  brand.innerHTML = `<span class="logo">tetr<em>.lol</em></span><span class="tagline">${TAGLINES[Math.floor(Math.random()*TAGLINES.length)]}</span>`;
   sidebar.appendChild(brand);
 
   const viewEl = document.createElement('main');

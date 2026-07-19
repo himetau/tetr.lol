@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FLOORS, floorIndexAt, attackFor, ZenithRun, garbageFavor, columnWeights, speedCap, windupSplit } from '../src/core/zenith';
+import { FLOORS, floorIndexAt, attackFor, ZenithRun, garbageFavor, columnWeights, pickHoleColumn, speedCap, windupSplit } from '../src/core/zenith';
 import { Board, BOARD_H } from '../src/core/board';
 import { Game } from '../src/core/game';
 import { mulberry32 } from '../src/core/rng';
@@ -201,27 +201,75 @@ describe('garbage favor (column placement)', () => {
     }
   });
 
-  it('low floors bias the well to the edge; high floors spread it flat', () => {
-    const low = columnWeights(garbageFavor(0));   // F1: one-column well
+  it('low floors front-load the easiest-to-dig ranks; high floors flatten', () => {
+    const low = columnWeights(garbageFavor(0));   // F1: easiest ranks only
     const high = columnWeights(garbageFavor(9));   // F10: cheese everywhere
-    expect(low[0]).toBeGreaterThan(low[5]);        // front-loaded
-    expect(low[9]).toBe(0);                        // right edge never gets it
-    expect(Math.min(...high)).toBeGreaterThan(0);  // every column reachable
-    // the low-floor distribution is far spikier than the high-floor one
+    expect(low[0]).toBeGreaterThan(low[5]);        // front-loaded onto easy ranks
+    expect(low[9]).toBe(0);                        // hardest rank never picked
+    expect(Math.min(...high)).toBeGreaterThan(0);  // every rank reachable
+    // the low-floor rank distribution is far spikier than the high-floor one
     expect(low[0] / (low[9] + 1)).toBeGreaterThan(high[0] / (high[9] + 1));
   });
 
-  it('the mean well column sits lower on low floors than high floors', () => {
-    const meanCol = (altitude: number) => {
-      const run = new ZenithRun(altitude, 'brutal', false, mulberry32(11));
-      const holes: number[] = [];
-      for (let i = 0; i < 6000 && holes.length < 500; i++) {
-        run.tick(100);
-        holes.push(...run.riseGarbage(8));
-      }
-      return holes.reduce((a, b) => a + b, 0) / holes.length;
-    };
-    expect(meanCol(0)).toBeLessThan(meanCol(1700));
+  it('targeting grace banks on received attacks and drains between them', () => {
+    const run = new ZenithRun(0, 'calm', false, mulberry32(3));
+    let guard = 0;
+    while (run.targetingGrace() === 0 && guard++ < 2000) run.tick(100);
+    expect(run.targetingGrace()).toBeGreaterThan(0);    // attack banked grace
+    expect(run.targetingGrace()).toBeLessThanOrEqual(18); // capped
+    // F1 releases a point every 4.8s; calm attack gaps are long enough for
+    // the bank to hit 0 again somewhere in the next stretch
+    let sawZero = false;
+    for (let i = 0; i < 2000 && !sawZero; i++) {
+      run.tick(100);
+      if (run.targetingGrace() === 0) sawZero = true;
+    }
+    expect(sawZero).toBe(true);
+  });
+
+  it('floors 1–5 gather garbage into the center columns (messiness_center)', () => {
+    const run = new ZenithRun(0, 'brutal', false, mulberry32(11));
+    const holes: number[] = [];
+    for (let i = 0; i < 6000 && holes.length < 300; i++) {
+      run.tick(100);
+      holes.push(...run.riseGarbage(8));
+    }
+    expect(holes.length).toBeGreaterThan(0);
+    for (const h of holes) {
+      expect(h).toBeGreaterThanOrEqual(2); // never the two leftmost…
+      expect(h).toBeLessThanOrEqual(7);    // …or two rightmost columns
+    }
+  });
+
+  it('after a break the old pile pulls re-picks back (messy transition)', () => {
+    // the well just relocated: new rows opened col 4 at the bottom (low
+    // height) while the OLD pile on top still anchors at 4; the current
+    // hole col 7 is buried under that pile. Re-picks must not settle on 7 —
+    // they scatter toward the old well and its neighbors (cheese).
+    const rng = mulberry32(17);
+    const view = { heights: [9, 9, 10, 9, 2, 9, 10, 9, 9, 10], garbageAnchor: 4 };
+    const counts = new Array<number>(10).fill(0);
+    const N = 300;
+    for (let i = 0; i < N; i++) counts[pickHoleColumn(garbageFavor(6), view, false, rng)]++; // F7 favor
+    expect(counts[4]).toBe(Math.max(...counts));           // old well is the modal pick…
+    expect(counts[4] / N).toBeLessThan(0.5);               // …but nothing dominates: cheese
+    expect(counts[7] / N).toBeLessThan(0.15);              // the buried column rarely wins
+    expect(counts.filter((n) => n > 0).length).toBeGreaterThanOrEqual(5); // wide scatter
+  });
+
+  it('a re-pick sticks to the current well (dig-difficulty ranking)', () => {
+    // tall stack everywhere except an open well at col 6 (= the anchor):
+    // with F1 favor, fresh holes land in or right next to the well
+    const rng = mulberry32(13);
+    const view = { heights: [8, 8, 8, 8, 8, 8, 0, 8, 8, 8], garbageAnchor: 6 };
+    let near = 0;
+    const N = 300;
+    for (let i = 0; i < N; i++) {
+      const c = pickHoleColumn(garbageFavor(0), view, false, rng);
+      expect(Math.abs(c - 6)).toBeLessThanOrEqual(3); // never sprays far away
+      if (Math.abs(c - 6) <= 1) near++;
+    }
+    expect(near / N).toBeGreaterThan(0.6); // mostly the well and its neighbors
   });
 });
 

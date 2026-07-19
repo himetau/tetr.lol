@@ -828,19 +828,6 @@ details.card:not([open]) .card-head .chevron {
     display: none;
   }
 }
-.b2b-tag {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg);
-  writing-mode: vertical-rl;
-  color: var(--warn);
-  font-weight: 800;
-  font-style: italic;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-}
 
 /* ---- action text popups (QUAD / T-SPIN DOUBLE / B2B …) ---- */
 .action-layer {
@@ -858,6 +845,11 @@ details.card:not([open]) .card-head .chevron {
   text-align: center;
   transform: translateX(var(--at-x, 0)) rotate(var(--at-r, 0deg));
   animation: at-pop 0.95s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+/* low-anchored popups (SURGE): bottom third, clear of the clear labels
+   above and pointing at the altimeter erupting below */
+.action-text.at-low {
+  top: 64%;
 }
 .action-text .at-main {
   font-family: var(--font-display);
@@ -1396,6 +1388,106 @@ details.card:not([open]) .card-head .chevron {
 }
 
 /* ---- quick play (zenith) ---- */
+/* chain bubble in a reserved slot above the Next queue: the chain label
+   ("B2B" / "COMBO") sits above a drifting bubble that heats gold → deep red
+   with the chain (--b2b-col set inline on the slot) and glows once a surge
+   is banked. The slot keeps its height while hidden so the queue never
+   jumps. `translate`/`scale` longhands keep the drift/pop animations
+   independent of the show/hide transform. */
+.chain-slot {
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.chain-slot.show {
+  opacity: 1;
+}
+/* label + bubble drift together on this wrapper */
+.chain-float {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.chain-slot.show .chain-float {
+  animation: b2b-drift 5s ease-in-out infinite;
+}
+.chain-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--b2b-col, var(--warn));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: color 0.35s ease;
+}
+.b2b-bubble {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  background: color-mix(in srgb, var(--b2b-col, var(--warn)) 30%, rgba(12, 12, 20, 0.62));
+  border: 2px solid var(--b2b-col, var(--warn));
+  transform: scale(0.4);
+  transition:
+    transform 0.25s ease,
+    border-color 0.35s ease,
+    background 0.35s ease;
+}
+.chain-slot.show .b2b-bubble {
+  transform: scale(1);
+}
+.b2b-bubble.charged {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--b2b-col, var(--warn)) 75%, transparent);
+}
+.chain-slot.show .b2b-bubble.pop {
+  animation: b2b-pop 0.32s ease;
+}
+@keyframes b2b-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 3px -10px;
+  }
+  50% {
+    translate: -2px 5px;
+  }
+  75% {
+    translate: 4px 9px;
+  }
+}
+@keyframes b2b-pop {
+  0% {
+    scale: 1.5;
+  }
+  100% {
+    scale: 1;
+  }
+}
+/* run readout canvas along the board's bottom edge (altitude, floor
+   progress, climb-speed meter, surge sparks); offset past the garbage
+   strip (15px) + row gap (5px) so it sits flush under the board */
+.zenith-altimeter {
+  display: block;
+  margin: 6px 0 0 20px;
+}
 .zenith-hud .alt {
   font-family: var(--font-display);
   font-size: 27px;

@@ -30,7 +30,7 @@ import {
   personalBestSound, garbageSound, garbageQueuedSound, clutchSound, GarbageWarner,
   surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
-import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
 import { stats, saveStats, gradeAccuracy, emptyGrades, recordSession, fmtSprint, type Mode } from './stats';
 import { PIECE_COLORS, type PieceType } from '../core/pieces';
 import type { SpinKind } from '../core/spin';
@@ -105,7 +105,7 @@ export class GameView {
   private toast!: HTMLElement;
   private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
   private fieldPanel!: HTMLElement;
-  private b2bTag!: HTMLElement;
+  private b2bTag!: ChainBubble;
   private b2b = 0;
   private maxB2b = 0;
   private holdBox!: HTMLElement;
@@ -311,8 +311,7 @@ export class GameView {
     row.className = 'field-row';
     const strip = document.createElement('div');
     strip.className = 'board-strip';
-    this.b2bTag = document.createElement('div');
-    this.b2bTag.className = 'b2b-tag';
+    this.b2bTag = new ChainBubble();
     // incoming-garbage meter (only fills when a drill opponent is on)
     const meter = document.createElement('div');
     meter.className = 'gmeter';
@@ -321,7 +320,7 @@ export class GameView {
     this.gmActive = document.createElement('div');
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
-    strip.append(this.b2bTag, meter);
+    strip.append(meter);
     row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
     this.chip = document.createElement('div');
@@ -338,7 +337,7 @@ export class GameView {
     right.style.width = colW;
     this.rightCol = right;
     this.queueBox = panel('Next');
-    right.appendChild(this.queueBox);
+    right.append(this.b2bTag.el, this.queueBox);
 
     // docked alternatives panel
     this.pathsDock = document.createElement('aside');
@@ -441,13 +440,13 @@ export class GameView {
       this.lastLockAt = 0;
     }
     this.b2b = 0;
-    this.b2bTag.textContent = '';
+    this.b2bTag.reset();
     // all-spin is a keep-the-chain drill: start mid-B2B so every clear must be
     // a spin/quad, and warm the Cold Clear worker so the first grade is quick
     if (this.mode === 'allspin') {
       this.b2b = 1;
       this.maxB2b = Math.max(this.maxB2b, 1);
-      this.b2bTag.textContent = 'B2B ×1';
+      this.b2bTag.set('B2B', 1);
       if (!this.cc2) this.cc2 = new ColdClearClient();
     }
     this.setupOpponent(end === 'restart');
@@ -479,7 +478,7 @@ export class GameView {
       while (this.comboHistory.length > this.game.pieceIndex) {
         this.combo = this.comboHistory.pop() ?? 0;
       }
-      if (this.mode === 'fourwide') this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
+      if (this.mode === 'fourwide') this.b2bTag.set('COMBO', this.combo);
       this.lastLock = null;
       this.preview = null;
       this.hideFeedback();
@@ -715,7 +714,7 @@ export class GameView {
       this.combo = ev.linesCleared > 0 ? this.combo + 1 : 0;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       refillWalls(this.game.board);
-      this.b2bTag.textContent = this.combo >= 1 ? `Combo ×${this.combo}` : '';
+      this.b2bTag.set('COMBO', this.combo, this.combo >= 10);
       if (ev.linesCleared > 0 && settings.soundFx) {
         clearSound(ev.linesCleared, false, this.combo, false);
         // escalating jingle from the second consecutive clear, like tetr.io
@@ -754,7 +753,7 @@ export class GameView {
         b2bSound(this.b2b); // rising jingle, climbs with the chain
       }
     }
-    this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
+    this.b2bTag.set('B2B', this.b2b, this.b2b >= BIG_SEND_MIN);
     this.fxOnLock(ev, this.b2b, 0);
     this.lastLock = ev;
     this.session.pieces++;

@@ -16,9 +16,12 @@
 //    cancel grants +3m).
 //  - Attack: spins 2·lines, quads 4, all-clear +3 attack & +2 B2B, surge on
 //    B2B break = B2B−3, windup split for attacks ≥8 lines.
-//  - Garbage: favor 33−3·floorNo (edge well low, cheese high), messiness
-//    X=0.03·floorNo within an attack / Y=2.5X between attacks, wait time
-//    5.0s (F1) → 0.5s (F10).
+//  - Garbage: favor 33−3·floorNo weighting a dig-difficulty ranking of the
+//    columns (one semi-consistent well low, cheese high), center-gathering
+//    on floors 1–5, messiness X=0.03·floorNo within an attack / Y=2.5X
+//    between attacks — both scaled down at spawn by Targeting Grace (a
+//    point per received line, cap 18, draining 4.8s→0.2s per point:
+//    X ×(1−1.5%·g), Y ×(1−3.75%·g)) — wait time 5.0s (F1) → 0.5s (F10).
 //
 // Not modeled (solo sim, no mods/multiplayer): the 9 mods + reversed mods,
 // targeting factor/grace vs. other players, cancel-streak bag injection.
@@ -93,19 +96,33 @@ export function speedCap(altitude: number): number {
   return Math.max(0, Math.min(1, t / 5 - 0.2));
 }
 
+// Targeting Grace release interval per floor (reference TargetingGrace
+// table, seconds → ms): 1 banked point drains every this often after the
+// last received attack, so grace lingers on low floors and evaporates high.
+const GRACE_RELEASE_MS = [4800, 3900, 2100, 1400, 1300, 900, 600, 400, 300, 200];
+
 // --- garbage column placement (io_qp2_rule engine) -------------------------
-// tetr.io picks where a fresh well/hole lands from a "garbage favor" that is
-// high on low floors (a clean one-column well hugging the edge) and flattens
-// toward the top (cheese sprays across the board). favor = 33 − 3·floorNo,
-// with floorNo 1-based (idx+1) exactly as the reference loop computes it.
+// tetr.io does NOT draw the hole from a fixed distribution over columns: it
+// scores every column by "dig difficulty" — stack height, +5 per column of
+// distance from the SHALLOWEST (topmost) garbage row's hole (the one being
+// dug into), with totally empty columns scoring ~0 — sorts columns easiest-
+// first, and then weights those RANKS by the garbage favor (33 − 3·floorNo,
+// 1-based). High favor (low floors) piles the weight on the easiest ranks,
+// and since the open well is by construction the easiest column, fresh holes
+// keep landing in or right next to it: one semi-consistent column. Because
+// the anchor lags (new rows enter BELOW the pile), a break relocating the
+// well degrades into genuinely messy cheese — old pile pulling one way, new
+// rows the other — until the old pile is dug out. As favor melts toward the
+// top the rank weights flatten and the picks turn into proper cheese.
+// A re-pick may land on the same column (messiness_nosame is off in QP).
 
 export function garbageFavor(floorIdx: number): number {
   return 33 - 3 * (floorIdx + 1);
 }
 
-/** Per-column weight for a fresh hole: w[i] = max(0, 10 + favor +
- * i·((20 − 2·(10+favor))/9)). Steeply biased to low columns at high favor,
- * flat at low favor — the reference engine's column distribution. */
+/** Weight for the i-th easiest-to-dig column: w[i] = max(0, 10 + favor +
+ * i·((20 − 2·(10+favor))/9)). Front-loaded onto the easy ranks at high
+ * favor, flat at favor 0 — the reference engine's rank distribution. */
 export function columnWeights(favor: number): number[] {
   const slope = (20 - 2 * (10 + favor)) / 9;
   const w = new Array<number>(BOARD_W);
@@ -113,16 +130,50 @@ export function columnWeights(favor: number): number[] {
   return w;
 }
 
-function weightedPick(weights: number[], rng: () => number): number {
-  let sum = 0;
-  for (const w of weights) sum += w;
-  if (sum <= 0) return Math.floor(rng() * weights.length);
-  let r = rng() * sum;
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i];
-    if (r < 0) return i;
+/** What the hole picker needs to know about the receiving board. */
+export interface BoardView {
+  /** per-column stack heights (0 = column completely empty) */
+  heights: number[];
+  /** hole column of the shallowest (topmost) garbage row — the one being
+   * dug into — or −1 when no garbage is on the board */
+  garbageAnchor: number;
+}
+
+/** The reference `getHolePosition()`: rank columns by dig difficulty and do a
+ * favor-weighted pick over the ranks. `centerOnly` is tetr.io's "garbage
+ * gathering" (floors 1–5): the hole never lands on the two outermost columns
+ * of either side. Without a view (empty board) the ranking is pure jitter,
+ * i.e. a favor-weighted pick over a random column order. */
+export function pickHoleColumn(
+  favor: number,
+  view: BoardView | undefined,
+  centerOnly: boolean,
+  rng: () => number,
+): number {
+  if (favor === 0) return Math.floor(rng() * BOARD_W); // flat favor: plain uniform (TL rule)
+  const anchor = view?.garbageAnchor ?? -1;
+  const order: { x: number; s: number }[] = [];
+  for (let x = 0; x < BOARD_W; x++) {
+    const h = view?.heights[x] ?? 0;
+    // reference: height + 5·|x − anchor| + 0.1·rand; empty columns are free
+    const s = h === 0 ? 0.1 * rng() : h + (anchor >= 0 ? 5 * Math.abs(x - anchor) : 0) + 0.1 * rng();
+    order.push({ x, s });
   }
-  return weights.length - 1;
+  order.sort((a, b) => a.s - b.s);
+  const w = columnWeights(favor);
+  let sum = 0;
+  const cum = new Array<number>(BOARD_W);
+  for (let i = 0; i < BOARD_W; i++) {
+    const wi = centerOnly && (order[i].x < 2 || order[i].x >= BOARD_W - 2) ? 0 : w[i];
+    sum += wi;
+    cum[i] = sum;
+  }
+  if (sum <= 0) return order[0].x; // reference fallback
+  const r = rng() * sum;
+  for (let i = 0; i < BOARD_W; i++) {
+    if (cum[i] > 0 && r <= cum[i]) return order[i].x;
+  }
+  return order[0].x;
 }
 
 /** Lines sent by a clear (guideline attack table; B2B/surge handled by the
@@ -204,17 +255,34 @@ export class ZenithRun {
   private rateMult = 1;
   private holeCol: number;
   private rng: () => number;
+  // Targeting Grace (reference): every received garbage line banks a point
+  // (cap 18); each point scales messiness down at spawn time — X ×(1−1.5%·g),
+  // Y ×(1−3.75%·g), at most −27%/−67.5% — so eating garbage calms the well
+  // without ever fully canceling a high floor's raw messiness.
+  private grace = 0;
+  private lastAtkMs = 0;
 
   constructor(startAltitude: number, private pressure: Pressure, gravityMod = false, rng: () => number = Math.random) {
     this.altitude = startAltitude;
     this.gravityMod = gravityMod;
     this.rng = rng;
-    this.holeCol = weightedPick(columnWeights(garbageFavor(floorIndexAt(startAltitude))), rng);
+    this.holeCol = pickHoleColumn(garbageFavor(floorIndexAt(startAltitude)), undefined, this.centerGather(), rng);
     this.nextAttackAtMs = this.gapMs() * (0.6 + 0.8 * this.rng());
+  }
+
+  /** tetr.io "garbage gathering": on floors 1–5 (while messiness ≤ 15%) the
+   * hole never lands on the two leftmost or rightmost columns. */
+  private centerGather(): boolean {
+    return this.floor().messiness <= 0.15 && floorIndexAt(this.altitude) <= 4;
   }
 
   floor(): FloorDef {
     return floorAt(this.altitude);
+  }
+
+  /** current Targeting Grace points (0..18) — visible for tests/HUD */
+  targetingGrace(): number {
+    return this.grace;
   }
 
   /** cells per second the active piece falls. Base mode ramps with time
@@ -254,6 +322,10 @@ export class ZenithRun {
    * Attacks of 8+ lines are wound up into staggered segments instead. */
   private queueAttack(lines: number): void {
     if (lines <= 0) return;
+    // being attacked banks Targeting Grace (+= received lines, cap 18) and
+    // marks the "last attacked" moment the release timer counts from
+    this.grace = Math.min(18, this.grace + lines);
+    this.lastAtkMs = this.timeMs;
     const delay = 5000 - 500 * floorIndexAt(this.altitude);
     if (lines >= 8) {
       // windup: a ~1s warning, then segments enter the queue 0.5s apart
@@ -319,6 +391,13 @@ export class ZenithRun {
       this.fatigueStep++;
     }
 
+    // Targeting Grace releases 1 point every GRACE_RELEASE_MS[floor] after
+    // the last attack; each release refreshes the timer (reference Loop)
+    if (this.grace > 0 && this.timeMs >= this.lastAtkMs + GRACE_RELEASE_MS[floorIndexAt(this.altitude)]) {
+      this.grace--;
+      this.lastAtkMs = this.timeMs;
+    }
+
     // schedule incoming attacks
     if (this.timeMs >= this.nextAttackAtMs) {
       const f = this.floor();
@@ -335,37 +414,56 @@ export class ZenithRun {
    * the queue — telegraphed or active — stays cancelable until this moment,
    * exactly like tetr.io.
    */
-  riseGarbage(cap: number): number[] {
+  riseGarbage(cap: number, view?: BoardView): number[] {
     const holes: number[] = [];
-    const m = this.floor().messiness;
+    // messiness "calculated when finally spawns": Targeting Grace scales the
+    // floor's raw rates down — X ×(1 − 1.5%·grace), Y ×(1 − 3.75%·grace),
+    // i.e. at the 18-point cap "at most −27% and −67.5%" (reference wording)
+    const raw = this.floor().messiness;
+    const mX = raw * Math.max(0, 1 - 0.015 * this.grace);
+    const mY = raw * 2.5 * Math.max(0, 1 - 0.0375 * this.grace);
+    // live copies: every inserted row changes the heights the next re-pick
+    // sees. The anchor is the SHALLOWEST garbage row's hole, so fresh rows
+    // entering underneath an existing pile never move it — it only gets set
+    // when the board had no garbage at all (the first row of this batch is
+    // then the top of the new pile).
+    const heights = view ? view.heights.slice() : new Array<number>(BOARD_W).fill(0);
+    let anchor = view?.garbageAnchor ?? -1;
+    const insert = () => {
+      holes.push(this.holeCol);
+      for (let x = 0; x < BOARD_W; x++) {
+        if (x !== this.holeCol) heights[x]++;
+        else if (heights[x] > 0) heights[x]++;
+      }
+      if (anchor === -1) anchor = this.holeCol;
+    };
+    const repick = () => {
+      this.holeCol = pickHoleColumn(
+        garbageFavor(floorIndexAt(this.altitude)),
+        { heights, garbageAnchor: anchor },
+        this.centerGather(),
+        this.rng,
+      );
+    };
     while (holes.length < cap && this.incoming.length > 0 && this.incoming[0].entersAtMs <= this.timeMs) {
       const atk = this.incoming[0];
-      // the well column is persistent: it only has a CHANCE to move — per
-      // row with the floor's messiness X, ×2.5 (Y) between separate attacks
+      // the well column is persistent: it only has a CHANCE to re-pick — per
+      // row with the floor's messiness X, ×2.5 (Y) between separate attacks —
+      // and a re-pick lands back in/near the well most of the time anyway
+      // (dig-difficulty ranking), so low floors keep one semi-consistent well
       if (!atk.rising) {
         atk.rising = true;
-        if (this.rng() < Math.min(1, m * 2.5)) this.moveHole();
-      } else if (this.rng() < m) {
-        this.moveHole();
+        if (this.rng() < Math.min(1, mY)) repick();
       }
       while (atk.lines > 0 && holes.length < cap) {
-        holes.push(this.holeCol);
+        insert();
         atk.lines--;
-        if (atk.lines > 0 && this.rng() < m) this.moveHole();
+        if (atk.lines > 0 && this.rng() < mX) repick();
       }
       if (atk.lines === 0) this.incoming.shift();
     }
     this.garbageTaken += holes.length;
     return holes;
-  }
-
-  /** Move the well to a different column (a re-roll never stays put). The new
-   * column is drawn from the floor's garbage-favor distribution, so re-rolls
-   * on low floors still hug the edge and high floors scatter. */
-  private moveHole(): void {
-    const w = columnWeights(garbageFavor(floorIndexAt(this.altitude)));
-    w[this.holeCol] = 0; // a re-roll never stays put
-    this.holeCol = weightedPick(w, this.rng);
   }
 
   /** Player cleared lines: cancel incoming garbage first, rest is altitude. */

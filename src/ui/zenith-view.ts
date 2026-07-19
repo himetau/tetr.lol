@@ -4,10 +4,11 @@
 // No grading here: this mode is for feeling out the speed, not the loop.
 
 import { Game, type LockEvent } from '../core/game';
-import { VISIBLE_H } from '../core/board';
+import { VISIBLE_H, BOARD_W } from '../core/board';
 import { cellsAt } from '../core/pieces';
 import { InputHandler, keyDescriptor, type Keybinds } from '../core/handling';
 import { FieldRenderer, renderPieceTile } from './board-canvas';
+import { ZenithAltimeter } from './zenith-altimeter';
 import { settings, onSettingsChange } from './settings';
 import { ZenithRun, FLOORS, floorIndexAt, type Pressure } from '../core/zenith';
 import {
@@ -17,7 +18,7 @@ import {
   surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
-import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
 import { PIECE_COLORS } from '../core/pieces';
 
 export class ZenithView {
@@ -57,9 +58,10 @@ export class ZenithView {
   private deathWarn!: HTMLElement; // pulsing "!" when the queue would kill you
   private warner = new GarbageWarner();
   private overlay!: HTMLElement;
-  private b2bTag!: HTMLElement;
+  private b2bTag!: ChainBubble;
   private gmActive!: HTMLElement;
   private gmQueued!: HTMLElement;
+  private altimeter!: ZenithAltimeter;
   private toastTimer = 0;
   private lastIncoming = 0;
   // countdown before the run goes live (input + clock held until "go")
@@ -101,6 +103,7 @@ export class ZenithView {
       this.input.settings = settings.handling;
       this.input.binds = settings.binds;
       this.renderer.setCellSize(this.cellSize());
+      this.altimeter.setWidth(BOARD_W * this.cellSize());
     });
     this.showLaunch();
     document.addEventListener('keydown', this.keydown);
@@ -154,8 +157,9 @@ export class ZenithView {
     row.className = 'field-row';
     const strip = document.createElement('div');
     strip.className = 'board-strip';
-    this.b2bTag = document.createElement('div');
-    this.b2bTag.className = 'b2b-tag';
+    // B2B chain bubble (slot above the Next queue): heats gold→red as the
+    // chain charges (it holds the pending surge, B2B−3)
+    this.b2bTag = new ChainBubble();
     const meter = document.createElement('div');
     meter.className = 'gmeter';
     this.gmQueued = document.createElement('div');
@@ -163,9 +167,13 @@ export class ZenithView {
     this.gmActive = document.createElement('div');
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
-    strip.append(this.b2bTag, meter);
+    strip.append(meter);
     row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
+    // the run readout lives on a canvas along the board's bottom edge —
+    // altitude count, floor progress, climb-speed meter, surge sparks
+    this.altimeter = new ZenithAltimeter(BOARD_W * this.cellSize());
+    this.fieldPanel.appendChild(this.altimeter.el);
     this.toast = document.createElement('div');
     this.toast.className = 'reason-toast';
     this.overlay = document.createElement('div');
@@ -179,7 +187,7 @@ export class ZenithView {
     right.className = 'side-col';
     right.style.width = colW;
     this.queueBox = panel('Next');
-    right.appendChild(this.queueBox);
+    right.append(this.b2bTag.el, this.queueBox);
 
     wrap.append(left, this.fieldPanel, right);
     return wrap;
@@ -274,7 +282,7 @@ export class ZenithView {
     box.appendChild(start);
 
     this.overlay.appendChild(box);
-    this.hud.innerHTML = `<div class="alt">—</div>`;
+    this.hud.innerHTML = `<div class="meta">—</div>`;
   }
 
   private showResults(): void {
@@ -312,11 +320,12 @@ export class ZenithView {
     this.tsds = 0;
     this.tsses = 0;
     this.lastIncoming = 0;
-    this.b2bTag.textContent = '';
+    this.b2bTag.reset();
     this.gmActive.style.height = '0px';
     this.gmQueued.style.height = '0px';
     this.lastFloor = floorIndexAt(this.startAltitude);
     this.inDanger = false;
+    this.altimeter.reset(this.startAltitude);
     // PB jingle only when there is a real record to chase from below
     this.bestAltitude = Math.max(0, ...stats.sessions.filter((s) => s.mode === 'quick').map((s) => s.altitude ?? 0));
     this.pbPlayed = this.bestAltitude < Math.max(50, this.startAltitude + 10);
@@ -466,16 +475,18 @@ export class ZenithView {
               .filter(Boolean).join('   ');
             actionText(this.fieldPanel, label.main, sub, label.kind);
           }
-          if (out.surged > 0) actionText(this.fieldPanel, 'SURGE', `${out.surged + out.sent + out.canceled} LINES`, 'surge');
+          if (out.surged > 0) actionText(this.fieldPanel, 'SURGE', `${out.surged + out.sent + out.canceled} LINES`, 'surge', 'low');
         }
-        if (out.surged > 0) this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
-        else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
+        if (out.surged > 0) {
+          this.altimeter.surge(out.surged + out.sent);
+          this.showToast(`SURGE — ${out.surged + out.sent + out.canceled} lines`);
+        } else if (out.canceled > 0) this.showToast(`blocked ${out.canceled}${out.sent > 0 ? ` · +${out.sent} sent` : ''}`);
       } else {
         // combo (>=2 consecutive clears) just ended without a clear
         if (settings.soundFx && r.combo >= 1) comboBreakSound();
         r.onLockNoClear();
         // garbage rises while you are not clearing (cancelable until here)
-        const rows = r.riseGarbage(8);
+        const rows = r.riseGarbage(8, this.game.garbageBoardView());
         if (rows.length > 0) {
           this.game.addGarbage(rows);
           this.lastIncoming = r.incomingLines();
@@ -577,6 +588,7 @@ export class ZenithView {
     } else {
       this.renderer.danger = 0;
     }
+    this.altimeter.frame(this.run, dt);
     this.renderer.render(this.game);
   }
 
@@ -620,12 +632,14 @@ export class ZenithView {
     const queued = Math.min(incoming - r.activeLines(), 20 - active);
     this.gmActive.style.height = `${active * cell}px`;
     this.gmQueued.style.height = `${queued * cell}px`;
-    this.b2bTag.textContent = r.b2b >= 1 ? `B2B ×${r.b2b}` : '';
 
+    // glows once a surge is actually banked (breaking would release B2B−3)
+    this.b2bTag.set('B2B', r.b2b, r.b2b >= 4);
+
+    // altitude/floor/climb speed live on the altimeter canvas under the
+    // board — the side panel keeps the secondary numbers
     this.hud.innerHTML =
-      `<div class="alt">${r.altitude.toFixed(1)}<small>m</small></div>` +
-      `<div class="floor">F${fi + 1} · ${FLOORS[fi].name}</div>` +
-      `<div class="meta">climb <b>${r.climbRank}</b> · ${fmtTime(r.timeMs)}</div>` +
+      `<div class="meta">time <b>${fmtTime(r.timeMs)}</b></div>` +
       `<div class="meta">sent <b>${r.linesSent}</b> · taken <b>${r.garbageTaken}</b></div>` +
       (incoming > 0 ? `<div class="incoming">▼ ${incoming} incoming</div>` : `<div class="meta">&nbsp;</div>`);
   }

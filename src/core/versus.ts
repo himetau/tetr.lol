@@ -5,15 +5,18 @@
 //  - attacks TELEGRAPH first (delayMs), then become ACTIVE; both states are
 //    cancelable by your own clears until the rows actually rise
 //  - garbage rises only on a non-clearing lock, up to a per-lock cap
-//  - the hole column is persistent, with a messiness chance to move per row
-//    (higher between separate attacks), like the Zenith simulator
+//  - every NEW attack re-rolls the hole column uniformly (tetr.io TL:
+//    "change on attack" = 100%; the re-roll may land on the same column,
+//    ~10%, so back-to-back same-column chunks happen); within one attack
+//    the hole only moves with the messiness chance (TL: 0% — each attack
+//    is one clean chunk of cheese)
 //
 // All knobs live in GarbageConfig so the settings screen / launch overlay
 // can tune them.
 
 export interface GarbageConfig {
   delayMs: number;     // telegraph before an attack can rise
-  messiness: number;   // 0..1 chance a garbage row moves the hole column
+  messiness: number;   // 0..1 chance each row WITHIN an attack re-rolls the hole (tetr.io TL: 0)
   cap: number;         // max rows that rise on one non-clearing lock
   /** allowed hole columns (4-wide restricts holes to the well) */
   holeMin: number;
@@ -22,7 +25,7 @@ export interface GarbageConfig {
 
 export const DEFAULT_GARBAGE: GarbageConfig = {
   delayMs: 2000,
-  messiness: 0.15,
+  messiness: 0,
   cap: 8,
   holeMin: 0,
   holeMax: 9,
@@ -91,17 +94,11 @@ export class GarbageQueue {
     this.holeCol = this.randomHole();
   }
 
+  /** Uniform re-roll over the allowed columns — may land on the same one,
+   * exactly like tetr.io (no `messiness_nosame` in standard rules). */
   private randomHole(): number {
     const span = this.cfg.holeMax - this.cfg.holeMin + 1;
     return this.cfg.holeMin + Math.floor(this.rng() * span);
-  }
-
-  /** Move the hole to a different allowed column (a re-roll never stays put). */
-  private moveHole(): void {
-    const span = this.cfg.holeMax - this.cfg.holeMin + 1;
-    if (span <= 1) return;
-    const step = 1 + Math.floor(this.rng() * (span - 1));
-    this.holeCol = this.cfg.holeMin + ((this.holeCol - this.cfg.holeMin + step) % span);
   }
 
   /** An opponent attack lands in the queue; it telegraphs before activating. */
@@ -142,16 +139,16 @@ export class GarbageQueue {
     const m = this.cfg.messiness;
     while (holes.length < this.cfg.cap && this.incoming.length > 0 && this.incoming[0].entersAtMs <= nowMs) {
       const atk = this.incoming[0];
+      // every fresh attack re-rolls the hole (tetr.io TL "change on attack"
+      // = 100%); within the attack it only moves with the messiness chance
       if (!atk.rising) {
         atk.rising = true;
-        if (this.rng() < Math.min(1, m * 2.5)) this.moveHole();
-      } else if (this.rng() < m) {
-        this.moveHole();
+        this.holeCol = this.randomHole();
       }
       while (atk.lines > 0 && holes.length < this.cfg.cap) {
         holes.push(this.holeCol);
         atk.lines--;
-        if (atk.lines > 0 && this.rng() < m) this.moveHole();
+        if (atk.lines > 0 && this.rng() < m) this.holeCol = this.randomHole();
       }
       if (atk.lines === 0) this.incoming.shift();
     }

@@ -17,7 +17,7 @@ import {
   personalBestSound, gameOverSound, topoutSound, lockSound, surgeSound, bigSendSound, BIG_SEND_MIN,
 } from './sound';
 import { stats, saveStats, recordSession } from './stats';
-import { actionText, sentNumber, lockActionLabel, clearedRowsOf } from './fx';
+import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from './fx';
 import { PIECE_COLORS, cellsAt } from '../core/pieces';
 
 export class VersusView {
@@ -66,7 +66,7 @@ export class VersusView {
   private botHud!: HTMLElement;
   private toast!: HTMLElement;
   private overlay!: HTMLElement;
-  private b2bTag!: HTMLElement;
+  private b2bTag!: ChainBubble;
   private gmActive!: HTMLElement;
   private gmQueued!: HTMLElement;
   private botGm!: HTMLElement;
@@ -167,8 +167,7 @@ export class VersusView {
     row.className = 'field-row';
     const strip = document.createElement('div');
     strip.className = 'board-strip';
-    this.b2bTag = document.createElement('div');
-    this.b2bTag.className = 'b2b-tag';
+    this.b2bTag = new ChainBubble();
     const meter = document.createElement('div');
     meter.className = 'gmeter';
     this.gmQueued = document.createElement('div');
@@ -177,7 +176,7 @@ export class VersusView {
     this.gmActive.className = 'gm-active';
     meter.append(this.gmQueued, this.gmActive);
     this.playerMeter = meter;
-    strip.append(this.b2bTag, meter);
+    strip.append(meter);
     row.append(strip, this.renderer.el);
     this.fieldPanel.appendChild(row);
     this.toast = document.createElement('div');
@@ -193,7 +192,7 @@ export class VersusView {
     right.className = 'side-col';
     right.style.width = colW;
     this.queueBox = panel('Next');
-    right.appendChild(this.queueBox);
+    right.append(this.b2bTag.el, this.queueBox);
 
     // the opponent's board, live
     const botCol = document.createElement('div');
@@ -384,7 +383,7 @@ export class VersusView {
     this.lastPending = 0;
     this.warner.reset();
     this.deathWarn.classList.remove('show');
-    this.b2bTag.textContent = '';
+    this.b2bTag.reset();
     this.gmActive.style.height = '0px';
     this.gmQueued.style.height = '0px';
     this.botGm.style.height = '0px';
@@ -649,7 +648,7 @@ export class VersusView {
           this.renderer.fxGarbageIn(rows.length);
         }
       }
-      this.b2bTag.textContent = this.b2b >= 1 ? `B2B ×${this.b2b}` : '';
+      this.b2bTag.set('B2B', this.b2b, this.b2b >= BIG_SEND_MIN);
     }
 
     if (this.game.topOut) {

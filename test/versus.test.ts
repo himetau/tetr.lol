@@ -91,12 +91,22 @@ describe('garbage queue', () => {
     }
   });
 
-  it('zero messiness keeps one persistent hole column', () => {
+  it('zero messiness keeps one hole column within each attack (tetr.io TL)', () => {
     const q = new GarbageQueue(cfg({ delayMs: 0, messiness: 0, cap: 12 }), mulberry32(5));
     q.queue(6, 0);
     q.queue(6, 0);
     const rows = q.rise(0);
-    expect(new Set(rows).size).toBe(1);
+    expect(rows).toHaveLength(12);
+    expect(new Set(rows.slice(0, 6)).size).toBe(1); // one clean chunk
+    expect(new Set(rows.slice(6)).size).toBe(1);    // second chunk, own column
+  });
+
+  it('each new attack re-rolls the hole column', () => {
+    const q = new GarbageQueue(cfg({ delayMs: 0, messiness: 0, cap: 40 }), mulberry32(9));
+    for (let i = 0; i < 12; i++) q.queue(1, 0);
+    const rows = q.rise(0);
+    // uniform re-roll per attack: many different columns across 12 chunks
+    expect(new Set(rows).size).toBeGreaterThan(3);
   });
 
   it('full messiness moves the hole between rows', () => {
@@ -104,7 +114,6 @@ describe('garbage queue', () => {
     q.queue(12, 0);
     const rows = q.rise(0);
     expect(new Set(rows).size).toBeGreaterThan(1);
-    for (let i = 1; i < rows.length; i++) expect(rows[i]).not.toBe(rows[i - 1]); // a re-roll never stays put
   });
 });
 

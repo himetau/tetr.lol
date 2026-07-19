@@ -7,8 +7,63 @@ import type { LockEvent } from '../core/game';
 
 export type ActionKind = 'plain' | 'spin' | 'quad' | 'allclear' | 'surge' | 'floor' | 'combo';
 
-/** Pop a floating action label over the field. Stacks briefly, cleans itself up. */
-export function actionText(host: HTMLElement, main: string, sub = '', kind: ActionKind = 'plain'): void {
+/** Chain bubble in a reserved slot above the Next queue: the chain label
+ * ("B2B" / "COMBO") sits above a drifting bubble that heats gold → deep red
+ * as the count grows, pops on every extension and glows while `charged`.
+ * Shows B2B in quick play / free / all-spin / 1v1 and the combo chain in
+ * 4-wide. Insert `el` into the right side column before the queue panel. */
+export class ChainBubble {
+  readonly el: HTMLElement;
+  private labelEl: HTMLElement;
+  private bubbleEl: HTMLElement;
+  private last = 0;
+
+  constructor() {
+    this.el = document.createElement('div');
+    this.el.className = 'chain-slot';
+    // label + bubble share one floating wrapper so they drift in lockstep
+    // (the bubble's pop animation can restart without desyncing the label)
+    const float = document.createElement('div');
+    float.className = 'chain-float';
+    this.labelEl = document.createElement('div');
+    this.labelEl.className = 'chain-label';
+    this.bubbleEl = document.createElement('div');
+    this.bubbleEl.className = 'b2b-bubble';
+    float.append(this.labelEl, this.bubbleEl);
+    this.el.append(float);
+  }
+
+  /** Show `label ×count`; hidden while count < 1. */
+  set(label: string, count: number, charged = false): void {
+    if (count >= 1) {
+      this.labelEl.textContent = label;
+      this.bubbleEl.textContent = `×${count}`;
+      const hue = Math.max(5, 50 - (count - 1) * 6);
+      this.el.style.setProperty('--b2b-col', `hsl(${hue}, 90%, 55%)`);
+      this.el.classList.add('show');
+      this.bubbleEl.classList.toggle('charged', charged);
+      if (count > this.last) {
+        this.bubbleEl.classList.remove('pop');
+        void this.bubbleEl.offsetWidth; // restart the pop animation
+        this.bubbleEl.classList.add('pop');
+      }
+    } else {
+      this.el.classList.remove('show');
+      this.bubbleEl.classList.remove('charged', 'pop');
+    }
+    this.last = count;
+  }
+
+  reset(): void {
+    this.set('', 0);
+  }
+}
+
+/** Pop a floating action label over the field. Stacks briefly, cleans itself
+ * up. `place: 'low'` anchors it in the bottom third instead of the usual
+ * spot, so a popup firing on the same lock as a clear label (SURGE lands
+ * together with SINGLE/QUAD/…) doesn't stamp over it. */
+export function actionText(host: HTMLElement, main: string, sub = '', kind: ActionKind = 'plain', place: 'mid' | 'low' = 'mid'): void {
   let layer = host.querySelector<HTMLElement>(':scope > .action-layer');
   if (!layer) {
     layer = document.createElement('div');
@@ -16,7 +71,7 @@ export function actionText(host: HTMLElement, main: string, sub = '', kind: Acti
     host.appendChild(layer);
   }
   const el = document.createElement('div');
-  el.className = `action-text at-${kind}`;
+  el.className = `action-text at-${kind}${place === 'low' ? ' at-low' : ''}`;
   const m = document.createElement('div');
   m.className = 'at-main';
   m.textContent = main;
