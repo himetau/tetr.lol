@@ -50,8 +50,8 @@
   --field-bg: #11111b;
   --field-grid: #22222f;
   --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-  --radius: 6px;
-  --radius-sm: 4px;
+  --radius: 7px;
+  --radius-sm: 5px;
 }
 
 * {
@@ -799,8 +799,8 @@ details.card:not([open]) .card-head .chevron {
   content: "";
   position: absolute;
   top: 0;
-  left: var(--radius); /* stop short of the chamfers */
-  right: var(--radius);
+  left: calc(var(--radius) - 1px); /* stop short of the chamfers */
+  right: calc(var(--radius) - 1px);
   height: 1px;
   background: color-mix(in srgb, #fff 12%, transparent);
   pointer-events: none;
