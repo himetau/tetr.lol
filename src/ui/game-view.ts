@@ -1904,7 +1904,7 @@ export class GameView {
     if (evalOn) {
       cells.push(
         ["errors", String(s.mistakes), s.mistakes > 0 ? "bad" : undefined],
-        ["acc", `${(acc * 100).toFixed(0)}%`, "accent"],
+        ["acc", `${(acc * 100).toFixed(0)}%`, "warn"],
       );
     }
     const body = cells
