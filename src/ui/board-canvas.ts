@@ -168,6 +168,12 @@ export class FieldRenderer {
   /** 0..1 stack-danger level - red vignette pulses in from the top */
   danger = 0;
 
+  /** 40 Lines finish marker (tetr.io style): the number of lines still to clear.
+   * A bright line is drawn that many rows above the floor, so it descends one
+   * row per clear and reaches the floor as the run finishes. Only shown once the
+   * remaining count fits inside the visible field. null = no marker. */
+  finishLine: number | null = null;
+
   /** column bitmask of "infinite" wall columns (4-wide drill) whose locked
    * cells are clipped to the visible field instead of spilling into the
    * buffer rows above it */
@@ -680,6 +686,32 @@ export class FieldRenderer {
     }
 
     this.drawFx();
+
+    // 40 Lines finish marker: a bright line `finishLine` rows above the floor,
+    // descending one row per clear so the goal visibly approaches the stack
+    const rem = this.finishLine;
+    if (rem !== null && rem > 0 && rem <= VISIBLE_H) {
+      const ly = h - rem * this.cell; // rem rows above the floor
+      const accent = css("--series-free") || "#e8b34c";
+      // soft glow beneath the line
+      const glow = ctx.createLinearGradient(0, ly - this.cell * 0.6, 0, ly + this.cell * 0.6);
+      glow.addColorStop(0, "rgba(0,0,0,0)");
+      glow.addColorStop(0.5, accent);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, ly - this.cell * 0.6, w, this.cell * 1.2);
+      // crisp line, snapped to a device pixel
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      const sy = Math.round(ly * this.dpr) / this.dpr + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, sy);
+      ctx.lineTo(w, sy);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     // danger vignette: red bleed from the field's top edge as the stack climbs
     if (this.danger > 0) {

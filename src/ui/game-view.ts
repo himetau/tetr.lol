@@ -1962,6 +1962,10 @@ export class GameView {
       this.renderer.renderStatic(this.preview.board, this.preview.colors);
     } else {
       this.renderer.highlight = null;
+      // 40 Lines: show the tetr.io-style finish marker descending toward the
+      // floor as lines clear (only once the run has started and isn't done)
+      this.renderer.finishLine =
+        this.mode === "free" && this.sprintMs === null ? 40 - this.session.lines : null;
       this.renderer.render(this.game);
     }
   }
