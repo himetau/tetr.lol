@@ -37,7 +37,10 @@ import { enumeratePlacements, placementKey } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
 import { lstTier } from "../engine/lst-tier";
 import LST_RUNS from "../data/lst-runs.json";
-import LST_QUAD_RUNS from "../data/lst-quad-runs.json";
+// the quad pool (?quad=1) is large and only needed for that mode, so it's loaded
+// on demand in the constructor - see `quadPool` - to keep it out of the default
+// drill's initial bundle.
+type QuadPool = typeof import("../data/lst-quad-runs.json");
 import { CC2_LST_LOOP_JSON } from "../engine/cc2-weights";
 import { buildFourwideStart, refillWalls, wallMask, WELL_X, WELL_W } from "../engine/fourwide";
 import { genAllspin } from "../engine/allspin-gen";
@@ -204,6 +207,8 @@ export class GameView {
   // pool; the goal allows well quads (I clearing 4) and its target is the
   // seed's verified clear count (TSDs + quads), not a flat 20
   private quadMode = false;
+  // lazily imported when quadMode (kept out of the initial bundle otherwise)
+  private quadPool: QuadPool | null = null;
   private lstQuads = 0;
   private lstGoalTarget = LST_GOAL_TSDS;
   // re-solve on deviation: when the player goes off the verified line, re-plan
@@ -258,7 +263,18 @@ export class GameView {
     this.engine.onResult = (r) => this.onGrade(r);
     this.engine.onSolved = (moves) => this.adoptResolvedPlan(moves);
     this.unsubSettings = onSettingsChange(() => this.applySettings());
-    this.resetDrill();
+    // quadMode is fixed for the session (URL flag); when set, fetch the large
+    // quad pool on demand before the first drill starts. The normal drill path
+    // is unchanged (resetDrill runs synchronously as before).
+    this.quadMode = mode === "lst" && new URLSearchParams(location.search).get("quad") === "1";
+    if (this.quadMode) {
+      void import("../data/lst-quad-runs.json").then((m) => {
+        this.quadPool = (m as { default: QuadPool }).default;
+        this.resetDrill();
+      });
+    } else {
+      this.resetDrill();
+    }
     document.addEventListener("keydown", this.keydown);
     document.addEventListener("keyup", this.keyup);
     this.loop(performance.now());
@@ -560,8 +576,7 @@ export class GameView {
     // spawn ceiling, so the demo only deals winnable hands.
     const params = new URLSearchParams(location.search);
     const seedParam = params.get("seed");
-    this.quadMode = this.mode === "lst" && params.get("quad") === "1";
-    const runPool = this.quadMode ? LST_QUAD_RUNS.runs : LST_RUNS.runs;
+    const runPool = this.quadMode ? (this.quadPool?.runs ?? {}) : LST_RUNS.runs;
     const lstSeeds = this.mode === "lst" ? Object.keys(runPool) : [];
     const seed = seedParam
       ? Number(seedParam)
@@ -894,7 +909,10 @@ export class GameView {
     if (this.mode !== "lst" || seed === undefined) {
       return;
     }
-    const pool = this.quadMode ? LST_QUAD_RUNS : LST_RUNS;
+    if (this.quadMode && !this.quadPool) {
+      return; // pool still loading; resetDrill re-runs once it lands
+    }
+    const pool = this.quadMode ? this.quadPool! : LST_RUNS;
     const run = (
       pool.runs as unknown as Record<
         string,
@@ -907,7 +925,7 @@ export class GameView {
     if (this.quadMode) {
       // goal target is this seed's verified clear count (TSDs + quads)
       const stat = (
-        LST_QUAD_RUNS.stats as unknown as Record<string, { clears: number }>
+        this.quadPool!.stats as unknown as Record<string, { clears: number }>
       )[String(seed)];
       this.lstGoalTarget = stat?.clears ?? LST_GOAL_TSDS;
     }
