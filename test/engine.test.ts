@@ -1,7 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { Board } from "../src/core/board";
 import { enumeratePlacements } from "../src/engine/enumerate";
-import { evaluateBoard, findTSlots, findLstSite } from "../src/engine/eval";
+import {
+  evaluateBoard,
+  findTSlots,
+  findLstSite,
+  oFlanksWell,
+  isLstState,
+  lstOverhangHeights,
+} from "../src/engine/eval";
+import { searchBestLine } from "../src/engine/search";
 import { gradePlacement } from "../src/engine/grade";
 import type { PieceType } from "../src/core/pieces";
 
@@ -96,6 +104,60 @@ describe("findLstSite (loop viability)", () => {
   it("any filled cell in the spin column kills the loop", () => {
     const b = Board.fromStrings(["_______X__", "X_XXX_XXXX"]);
     expect(findLstSite(b)).toBeNull();
+  });
+});
+
+describe("LST residue quality (bad vs clean)", () => {
+  // A common BAD residue: an S/Z blob on the fill side buries cells (holes),
+  // the surface is jagged, and the only surviving col-2 slot is shoved up
+  // above the mess with many cells still missing - technically "alive" but
+  // impractical.
+  const bad = Board.fromStrings(["X__XX_____", "X___XX____", "X___XX____", "XX_XX_X___"]);
+  // A clean LST residue: L on the wall, an open col-2 well, a single flat lid
+  // over the slot (one covered notch cell, no stacked S/Z diagonal), fill
+  // packed flush on the right.
+  const clean = Board.fromStrings(["___XXX____", "X___XXX___", "XX_XXXX___"]);
+
+  it("the clean residue scores well above the buried-hole residue", () => {
+    const badScore = evaluateBoard(bad, true).score;
+    const cleanScore = evaluateBoard(clean, true).score;
+    expect(cleanScore).toBeGreaterThan(badScore + 300);
+  });
+
+  it("the bad residue is holey with its slot buried; the clean one is hole-free and low", () => {
+    const badEval = evaluateBoard(bad, true);
+    const cleanEval = evaluateBoard(clean, true);
+    expect(badEval.b.holes).toBeGreaterThan(0);
+    expect(cleanEval.b.holes).toBe(0);
+    // clean slot sits at the floor, ready; the bad one (if alive) is pushed up
+    expect(findLstSite(clean)?.y).toBe(0);
+    expect(findLstSite(bad)?.y ?? 99).toBeGreaterThan(0);
+  });
+});
+
+describe("O beside the well is a bad LST pattern", () => {
+  // The spin region (cols 1-3 around the col-2 well) is where the LST slot
+  // and its overhang live; an O there rigidly flat-tops the notch flank. O
+  // must go on the fill side, never into the notch.
+  it("oFlanksWell flags an O in a notch column but not a fill-side O", () => {
+    // O at cols 0-1 (touches left notch col 1) and cols 3-4 (right notch col 3)
+    expect(oFlanksWell([[0, 0], [1, 0], [0, 1], [1, 1]])).toBe(true);
+    expect(oFlanksWell([[3, 0], [4, 0], [3, 1], [4, 1]])).toBe(true);
+    // O parked out on the fill side is fine
+    expect(oFlanksWell([[5, 0], [6, 0], [5, 1], [6, 1]])).toBe(false);
+  });
+
+  it("the engine keeps its O off the notch when the fill side has room", () => {
+    const base = Board.fromStrings(["XX_XXX____"]);
+    const line = searchBestLine(base, ["O", "L", "J", "S", "Z"], 0, null, true, {
+      depth: 4,
+      beamWidth: 14,
+      lstBias: true,
+    });
+    const o = line.placements.find((p) => p.type === "O");
+    // the engine either parks the O or drops it on the fill side, never beside
+    // the well
+    expect(o && oFlanksWell(o.cells)).toBeFalsy();
   });
 });
 
@@ -306,5 +368,62 @@ describe("gradePlacement", () => {
     });
     const dt = performance.now() - t0;
     expect(dt).toBeLessThan(450); // worker budget incl. verify pass; UI shows result async
+  });
+});
+
+describe("LST shape validator (kzl isLST_state)", () => {
+  // well = col 2 (fully empty); walls are cols 1 and 3. Boards are top-down.
+  const valid = Board.fromStrings([
+    "X...XXXXXX", // y5: col1 void (top), col3 void
+    "XX.XXXXXXX", // y4: col1 fill, col3 fill
+    "X...XXXXXX", // y3: col1 void (slot), col3 void (slot)
+    "XX.XXXXXXX", // y2
+    "XX.XXXXXXX", // y1
+    "X...XXXXXX", // y0
+  ]);
+
+  it("reports the overhang heights up each wall", () => {
+    // col1 bottom-up: . X X . X .  -> runs of 2 then 1
+    expect(lstOverhangHeights(valid, 1, valid.maxHeight())).toEqual([2, 1]);
+    expect(lstOverhangHeights(valid, 3, valid.maxHeight())).toEqual([2, 1]);
+  });
+
+  it("accepts an alternating 2-1 LST wall", () => {
+    expect(isLstState(valid)).toBe(true);
+  });
+
+  it("accepts a double-up (a '2' built as '4' keeps even parity, still alternating)", () => {
+    // col1 bottom-up: . X X X X . X .  -> runs 4 then 1: the lower overhang is a
+    // Z/Z double-up (2+2), the upper an L/J lid (1). 4 (even), 1 (odd) alternate.
+    const doubleUp = Board.fromStrings([
+      "X...XXXXXX", // col1 void top
+      "XX.XXXXXXX", // 1-run
+      "X...XXXXXX", // void (slot)
+      "XX.XXXXXXX", // 4-run body
+      "XX.XXXXXXX",
+      "XX.XXXXXXX",
+      "XX.XXXXXXX",
+      "X...XXXXXX", // bottom void
+    ]);
+    expect(lstOverhangHeights(doubleUp, 1, doubleUp.maxHeight())).toEqual([4, 1]);
+    expect(isLstState(doubleUp)).toBe(true);
+  });
+
+  it("rejects ST stacking (2 then 2: two even overhangs in a row)", () => {
+    const st = Board.fromStrings([
+      "X...XXXXXX", // col1 void top
+      "XX.XXXXXXX", // fill
+      "XX.XXXXXXX", // fill  (second height-2 run)
+      "X...XXXXXX", // void
+      "XX.XXXXXXX", // fill
+      "XX.XXXXXXX", // fill  (first height-2 run)
+      "X...XXXXXX", // void bottom
+    ]);
+    expect(lstOverhangHeights(st, 1, st.maxHeight())).toEqual([2, 2]);
+    expect(isLstState(st)).toBe(false);
+  });
+
+  it("rejects a board with no clear well", () => {
+    expect(isLstState(Board.fromStrings(["XXXXXXXXXX", "XXXXXXXXXX"]))).toBe(false);
   });
 });

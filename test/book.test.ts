@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { Board } from "../src/core/board";
+import { Board, BOARD_H } from "../src/core/board";
 import type { PieceType } from "../src/core/pieces";
 import { bookAdvice, matchesBookMove } from "../src/engine/book";
 import { enumeratePlacements } from "../src/engine/enumerate";
@@ -77,6 +77,42 @@ describe("lst cover book", () => {
       }
     }
     expect(optimistic).toBeLessThan(SAMPLE * 0.15);
+  });
+
+  it("matches the same pattern raised up a rising loop (height-invariant)", () => {
+    // the flat-top LST loop drifts upward with volume; the cover book must
+    // recognise the same shape whether it sits on the floor or higher, else it
+    // hard-quits mid-loop (the old maxHeight>8 / fixed-row-mask behaviour)
+    const order = bag2Group.solutions[0].placements.map((p) => p.piece) as PieceType[];
+    const queue = [...order, "T"].slice(0, 6) as PieceType[];
+
+    const floor = boardFrom(bag2Group.start);
+    const floorAdv = bookAdvice(floor, queue, null);
+    expect(floorAdv.onBook).toBe(true);
+    expect(floorAdv.sustainable).toBe(true);
+
+    // lift the exact same shape up by dy rows with empty rows beneath it
+    for (const dy of [3, 6, 10]) {
+      const raised = new Board();
+      for (let y = 0; y < BOARD_H - dy; y++) {
+        raised.rows[y + dy] = floor.rows[y];
+      }
+      const adv = bookAdvice(raised, queue, null);
+      expect(adv.onBook, `dy=${dy}`).toBe(true);
+      expect(adv.sustainable, `dy=${dy}`).toBe(true);
+      // any concrete advice sits in the raised band, never the old floor rows
+      for (const m of adv.moves) {
+        for (const [, y] of m.cells) {
+          expect(y, `dy=${dy} move cell row`).toBeGreaterThanOrEqual(dy);
+        }
+      }
+    }
+    // above the ceiling the book still bails cleanly (no vertical room)
+    const tooHigh = new Board();
+    for (let y = 0; y < BOARD_H - 3; y++) {
+      tooHigh.rows[y] = floor.rows[Math.max(0, y - (BOARD_H - 3))] || 0b1111111111;
+    }
+    expect(bookAdvice(tooHigh, queue, null).onBook).toBe(false);
   });
 
   it("chains from a four.lol TKI opener into the bag-2 book", () => {

@@ -4,7 +4,7 @@
 // generate human explanations ("this created a hole", "this killed your
 // T-slot", ...).
 
-import { Board, BOARD_W } from "../core/board";
+import { Board, BOARD_W, BOARD_H } from "../core/board";
 import { cellsAt } from "../core/pieces";
 import { detectSpin } from "../core/spin";
 import type { SpinKind } from "../core/spin";
@@ -61,6 +61,35 @@ export const WEIGHTS = {
   lstSiteAlive: 120,
   lstMissingCell: -13, // per unfilled completion cell at the site
   lstRoofReady: 45,
+  // Overhang handedness: the loop's roof can be a flat 1-high L/J lid ("J-L"
+  // form) or a 2-high S/Z diagonal ("J-Z" form). Both are legal and the
+  // canon alternates them, but the flat lid is the more practical build, so
+  // the diagonal pays a soft toll per extra stacked notch void. Soft on
+  // purpose: when the queue forces the double (no flat continuation) every
+  // candidate pays it equally and structure still decides - the loop is
+  // never blocked, only nudged toward the L/J shape.
+  lstDiagonalOverhang: -40, // per notch void beyond the first flat lid
+  // Volume theory (swng / Kixenon): the fill side outgrows the well by ~0.7
+  // rows/bag, so a double-up (the 2-high S/Z overhang) is *due on a cadence*
+  // to move that volume back - it is scheduled by the stack/well imbalance,
+  // not a last resort. So the diagonal toll above only applies while the
+  // stack is balanced; once the fill has over-risen above the slot, a
+  // double-up is the correct move and is rewarded instead.
+  lstDoubleupDue: 55, // per notch void when the stack is over-risen
+  // Parity theory (Feltheshovel): checkerboard imbalance (CI, ±1 per filled
+  // cell) must stay small - good LST parity keeps |CI| <= 1 and cycles
+  // 0,+1,0,-1 with the TSD count; drift to ±2 quietly dooms the loop a few
+  // bags later, which a short-horizon player cannot otherwise see.
+  lstParity: -55, // per unit of |CI| beyond 1
+  // Fill has risen this far above the slot roof -> the well is behind and a
+  // double-up should catch it up (volume theory's over-stack trigger).
+  lstOverstackThreshold: 2,
+  // Direct volume-imbalance penalty: the fill side towering above the well is
+  // how the loop dies (the fill buries the slot before a double-up can bring
+  // the well up). Penalizing the gap itself forces the player to keep the
+  // well level with the fill - i.e. to schedule double-ups early instead of
+  // over-stacking into an unrecoverable position.
+  lstOverstack: -45, // per row the fill sits above the slot roof
 };
 
 /** Find structural T-slots: positions where a T (pointing down) fits as a
@@ -226,6 +255,212 @@ function computeLstSite(board: Board): LstSite | null {
   return null;
 }
 
+/**
+ * Extra stacked notch voids beside the well at the live site - the signature
+ * of the 2-high S/Z diagonal overhang (the "J-Z" form). A flat 1-high L/J
+ * lid leaves exactly one covered void per notch column (the T's arm under
+ * the lid); the diagonal stacks a second (a double-up stacks more). Returns
+ * the count of voids beyond that first flat lid, summed over cols 1 and 3 -
+ * zero for a clean J-L build. Voids below the site base are permanent
+ * garbage handled elsewhere (lstLoopDead / hole counting), so they are
+ * excluded here.
+ */
+function diagonalOverhangs(board: Board, site: LstSite | null): number {
+  if (!site) {
+    return 0;
+  }
+  let extra = 0;
+  for (const c of [LST_SPIN_COL - 1, LST_SPIN_COL + 1]) {
+    const h = board.columnHeight(c);
+    let covered = 0;
+    for (let y = site.y; y < h; y++) {
+      if (!board.filled(c, y)) {
+        covered++;
+      }
+    }
+    if (covered > 1) {
+      extra += covered - 1;
+    }
+  }
+  return extra;
+}
+
+/** True when a placement drops an O immediately beside the well (a cell in
+ * notch column 1 or 3). An O there rigidly fills that notch column two rows
+ * high - it cannot touch the well - which flat-tops the flank and destroys
+ * the overhang flexibility the LST slot needs. The notch walls must be
+ * filled, but by pieces that keep a workable lid; O is the wrong tool, so
+ * only O placements consult this (callers gate on piece === "O"). */
+export function oFlanksWell(cells: readonly (readonly [number, number])[]): boolean {
+  for (const [x] of cells) {
+    if (x === LST_SPIN_COL - 1 || x === LST_SPIN_COL + 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The overhang heights up one wall of the well: the filled runs that sit
+ * between successive covered voids (T-spin slots) in column `col`, bottom to
+ * top, over rows [0, top]. A height-2 run is an S/Z overhang, height-1 an L/J
+ * lid, height-4 a Z/Z double-up, etc. The unfinished top run (no void above
+ * it yet) is not reported. Used to validate LST shape and to detect double-ups.
+ */
+export function lstOverhangHeights(board: Board, col: number, top: number): number[] {
+  const heights: number[] = [];
+  let lastVoid = -1;
+  for (let y = 0; y <= top; y++) {
+    if (!board.filled(col, y)) {
+      if (lastVoid >= 0) {
+        const h = y - lastVoid - 1;
+        if (h > 0) {
+          heights.push(h);
+        }
+      }
+      lastVoid = y;
+    }
+  }
+  return heights;
+}
+
+/**
+ * Covered empty cells outside the LST spin region (cols 1-3) and the well - the
+ * "real holes" a clean build must never make. The left wall (col 0) and the
+ * fill side (cols 4-9) are solid in a clean LST stack, so any empty cell with a
+ * filled cell above it there is a hole; the spin columns 1/2/3 legitimately
+ * hold the open well and the covered T-slot voids and are excluded. Zero = the
+ * clean, flush stacking the solver produces; the live beam's soft hole penalty
+ * lets this drift, so the planner uses it as a hard no-new-holes constraint.
+ */
+export function lstHoles(board: Board): number {
+  let holes = 0;
+  const top = board.maxHeight();
+  for (let x = 0; x < BOARD_W; x++) {
+    if (x >= LST_SPIN_COL - 1 && x <= LST_SPIN_COL + 1) {
+      continue; // spin region: well (col 2) + notch slot voids (cols 1, 3)
+    }
+    let roof = false;
+    for (let y = top - 1; y >= 0; y--) {
+      if (board.filled(x, y)) {
+        roof = true;
+      } else if (roof) {
+        holes++;
+      }
+    }
+  }
+  return holes;
+}
+
+/**
+ * Community shape-based LST legality check (kzl's `isLST_state`, adapted to the
+ * engine's bottom-up bitboard). A board is a legal LST state when the well is
+ * an unobstructed column and, on each wall of it, the overhang heights alternate
+ * in parity going up - the "2 1 2 1" pattern, generalized so double-/n-ups
+ * (+2 rows) keep an overhang in its own parity class (2->4 stays even, 1->3
+ * stays odd). Two same-parity overhangs in a row (e.g. 2 then 2 = ST stacking)
+ * are excluded. The topmost, still-unfinished overhang is not constrained.
+ *
+ * This is the leaderboard's definition of "still LST", independent of the
+ * engine's own col-2 site machinery (findLstSite), and is the correctness
+ * oracle for generated double-up cover states.
+ */
+export function isLstState(board: Board): boolean {
+  const top = board.maxHeight();
+  if (top === 0) {
+    return true; // empty board is trivially loop-legal
+  }
+  // the well is the unobstructed empty interior column
+  let wellCol = -1;
+  for (let x = 1; x < BOARD_W - 1; x++) {
+    let open = true;
+    for (let y = 0; y < top; y++) {
+      if (board.filled(x, y)) {
+        open = false;
+        break;
+      }
+    }
+    if (open) {
+      wellCol = x;
+      break;
+    }
+  }
+  if (wellCol < 0) {
+    return false; // no clear well
+  }
+  const parityAlternates = (hs: number[]): boolean => {
+    for (let i = 1; i < hs.length; i++) {
+      if ((hs[i] & 1) === (hs[i - 1] & 1)) {
+        return false; // two same-parity overhangs in a row: not LST
+      }
+    }
+    return true;
+  };
+  return (
+    parityAlternates(lstOverhangHeights(board, wellCol - 1, top)) &&
+    parityAlternates(lstOverhangHeights(board, wellCol + 1, top))
+  );
+}
+
+/** Checkerboard imbalance (Feltheshovel parity theory): overlay ±1 on the
+ * board with (0,0) = +1, sum over filled cells. CI = 0 is perfectly flat
+ * stacking; good LST parity keeps |CI| small (<= 1). Only the T is
+ * parity-odd, so a drifting CI means T's are being spent into bad parity and
+ * the loop will die a few bags out - a signal a short horizon can't see. */
+export function checkerImbalance(board: Board): number {
+  let ci = 0;
+  const rows = board.rows;
+  const h = board.maxHeight();
+  for (let y = 0; y < h; y++) {
+    const r = rows[y];
+    for (let x = 0; x < BOARD_W; x++) {
+      if ((r >>> x) & 1) {
+        ci += ((x + y) & 1) === 0 ? 1 : -1;
+      }
+    }
+  }
+  return ci;
+}
+
+/** How far the fill side has risen above the current TSD slot's roof - the
+ * volume imbalance (swng / Kixenon). Positive means the flat fill has
+ * out-grown the well and a double-up is due to move that volume into the
+ * well; <= 0 means the well is keeping pace and flat lids are correct. Uses
+ * the fill columns right of the notch (cols LST_SPIN_COL+2 .. 9). */
+/**
+ * How deep a clean quad is set up in the well: the number of consecutive rows
+ * from the floor that are complete except the well column (col 2), with the
+ * well itself empty there. An I dropped into the well clears exactly this many
+ * rows, so depth >= 4 means a tetris (quad) is available - real LST's volume
+ * drain (TSDs net +8 cells/bag, a quad clears 40, so periodic quads let the
+ * loop run past the ~20 TSD ceiling). Below 4 it's the progress toward one.
+ */
+export function quadWellDepth(board: Board): number {
+  const FULL_ROW = (1 << BOARD_W) - 1;
+  let depth = 0;
+  for (let y = 0; y < BOARD_H; y++) {
+    if (board.filled(LST_SPIN_COL, y)) {
+      break; // well plugged here - not a clean quad well
+    }
+    if ((board.rows[y] | (1 << LST_SPIN_COL)) !== FULL_ROW) {
+      break; // this row isn't complete-except-the-well
+    }
+    depth++;
+  }
+  return depth;
+}
+
+export function volumeGap(board: Board, siteY: number): number {
+  let sum = 0;
+  let n = 0;
+  for (let x = LST_SPIN_COL + 2; x < BOARD_W; x++) {
+    sum += board.columnHeight(x);
+    n++;
+  }
+  const fillAvg = n > 0 ? sum / n : 0;
+  return fillAvg - (siteY + 2);
+}
+
 type TSlot = { x: number; y: number; clears2: boolean };
 
 function tslotCellSet(slots: TSlot[]): Set<number> {
@@ -357,6 +592,21 @@ export function evaluateBoard(board: Board, lstBias = false): EvalResult {
       if (site.roofReady) {
         lstScore += WEIGHTS.lstRoofReady;
       }
+      // volume-gated overhang: prefer the flat L/J lid while the stack is
+      // balanced, but once the fill has over-risen above the slot a double-up
+      // is due and the 2-high S/Z void is rewarded, not penalized (volume
+      // theory's scheduled double-up instead of a "last resort" one).
+      const gap = volumeGap(board, site.y);
+      const diag = diagonalOverhangs(board, site);
+      if (diag > 0) {
+        const overstacked = gap >= WEIGHTS.lstOverstackThreshold;
+        lstScore += (overstacked ? WEIGHTS.lstDoubleupDue : WEIGHTS.lstDiagonalOverhang) * diag;
+      }
+      // volume: penalize the fill towering above the well (forces early
+      // double-ups instead of over-stacking the slot into oblivion)
+      lstScore += WEIGHTS.lstOverstack * Math.max(0, gap);
+      // keep good checkerboard parity - |CI| beyond 1 is the loop dying slow
+      lstScore += WEIGHTS.lstParity * Math.max(0, Math.abs(checkerImbalance(board)) - 1);
     } else {
       lstScore += WEIGHTS.lstLoopDead;
     }

@@ -26,7 +26,7 @@ import {
   botNodesOf,
   type OpponentKind,
 } from "./settings";
-import { EngineClient } from "./engine-client";
+import { EngineClient, type SolvedLineMove } from "./engine-client";
 import { ColdClearClient, pairsOf, type CC2Move } from "./cc2-client";
 import { GarbageQueue, ScheduledAttacker, versusAttack, scaleAttack } from "../core/versus";
 import { BotPlayer } from "./bot-player";
@@ -36,6 +36,7 @@ import { bookAdvice } from "../engine/book";
 import { enumeratePlacements, placementKey } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
 import LST_RUNS from "../data/lst-runs.json";
+import LST_QUAD_RUNS from "../data/lst-quad-runs.json";
 import { CC2_LST_LOOP_JSON } from "../engine/cc2-weights";
 import { buildFourwideStart, refillWalls, wallMask, WELL_X, WELL_W } from "../engine/fourwide";
 import { genAllspin } from "../engine/allspin-gen";
@@ -198,6 +199,17 @@ export class GameView {
   private lstPlanConsumed = new Set<number>();
   private lstPlanHist: { cursor: number; consumed: number[] }[] = [];
   private lastLockOnPlan = false;
+  // quad drill (?quad=1): deal from the LST+quad pool instead of the 20-TSD
+  // pool; the goal allows well quads (I clearing 4) and its target is the
+  // seed's verified clear count (TSDs + quads), not a flat 20
+  private quadMode = false;
+  private lstQuads = 0;
+  private lstGoalTarget = LST_GOAL_TSDS;
+  // re-solve on deviation: when the player goes off the verified line, re-plan
+  // the road ahead from the current position off-thread and adopt it, so the
+  // drill keeps guiding on the player's own line instead of nagging them back
+  private resolving = false;
+  private resolveFromRows: number[] | null = null;
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -243,6 +255,7 @@ export class GameView {
     this.root = this.build();
     this.game.onLock = (ev) => this.onLock(ev);
     this.engine.onResult = (r) => this.onGrade(r);
+    this.engine.onSolved = (moves) => this.adoptResolvedPlan(moves);
     this.unsubSettings = onSettingsChange(() => this.applySettings());
     this.resetDrill();
     document.addEventListener("keydown", this.keydown);
@@ -544,8 +557,11 @@ export class GameView {
     // its random seeds from the verified-run pool: the goal's volume math
     // makes some bag orders provably unable to fit 20 clean TSDs under the
     // spawn ceiling, so the demo only deals winnable hands.
-    const seedParam = new URLSearchParams(location.search).get("seed");
-    const lstSeeds = this.mode === "lst" ? Object.keys(LST_RUNS.runs) : [];
+    const params = new URLSearchParams(location.search);
+    const seedParam = params.get("seed");
+    this.quadMode = this.mode === "lst" && params.get("quad") === "1";
+    const runPool = this.quadMode ? LST_QUAD_RUNS.runs : LST_RUNS.runs;
+    const lstSeeds = this.mode === "lst" ? Object.keys(runPool) : [];
     const seed = seedParam
       ? Number(seedParam)
       : this.mode === "allspin"
@@ -600,6 +616,10 @@ export class GameView {
     this.openerHistory = [];
     this.goalFail = null;
     this.goalDone = false;
+    this.lstQuads = 0;
+    this.resolving = false;
+    this.resolveFromRows = null;
+    this.engine.cancelSolve();
     this.lastLock = null;
     this.preview = null;
     this.paused = false;
@@ -733,6 +753,62 @@ export class GameView {
     }
   }
 
+  /** After a lock that left the verified line, re-plan the road ahead from the
+   * current position on the worker (the solver takes seconds). One at a time;
+   * the fresh line is adopted in adoptResolvedPlan when it returns. This is why
+   * deviating no longer strands the drill on the reactive fallback. */
+  private maybeResolveOnDeviation(): void {
+    if (this.mode !== "lst" || this.openerPhase || !this.lstPlan) {
+      return;
+    }
+    if (this.lastLockOnPlan || this.resolving || this.goalDone || this.goalFail) {
+      return;
+    }
+    if (!this.game.active) {
+      return;
+    }
+    const remaining = this.lstGoalTarget - (this.session.tsds + this.lstQuads);
+    if (remaining <= 0) {
+      return;
+    }
+    const rows = Array.from(this.game.board.rows);
+    const queue = [this.game.active.type, ...this.game.peekQueue(remaining * 9 + 20)];
+    this.resolving = true;
+    this.resolveFromRows = rows;
+    this.engine.solve(rows, queue, this.game.hold, remaining, 3000, this.quadMode);
+  }
+
+  /** Adopt a freshly re-solved continuation as the drill's plan, anchored at
+   * the board it was solved from. Empty = no clean continuation exists (the
+   * deviation may have hurt the loop); the health grader still guides moves. */
+  private adoptResolvedPlan(moves: SolvedLineMove[]): void {
+    this.resolving = false;
+    const startRows = this.resolveFromRows;
+    this.resolveFromRows = null;
+    if (this.mode !== "lst" || !startRows || moves.length === 0) {
+      return;
+    }
+    const scratch = new Board();
+    for (let i = 0; i < startRows.length && i < scratch.rows.length; i++) {
+      scratch.rows[i] = startRows[i];
+    }
+    this.lstPlan = moves.map((m) => ({
+      piece: m.piece,
+      cells: m.cells.map(([a, b]) => [a, b] as [number, number]),
+      spin: m.spin,
+    }));
+    this.lstPlanKeys = [];
+    this.lstPlanCursor = 0;
+    this.lstPlanConsumed.clear();
+    this.lstPlanHist = [];
+    for (const mv of this.lstPlan) {
+      this.lstPlanKeys.push(scratch.key());
+      scratch.place(mv.cells);
+      scratch.clearLines();
+    }
+    this.refreshAll();
+  }
+
   /** Grader options that make the paths dock follow the verified run: the
    * plan's move for this decision leads the alternatives (both opener and
    * loop), with its continuation as the hovered path. `idx` is the decision
@@ -813,17 +889,26 @@ export class GameView {
     this.lstPlanConsumed.clear();
     this.lstPlanHist = [];
     this.lastLockOnPlan = false;
+    this.lstGoalTarget = LST_GOAL_TSDS;
     if (this.mode !== "lst" || seed === undefined) {
       return;
     }
+    const pool = this.quadMode ? LST_QUAD_RUNS : LST_RUNS;
     const run = (
-      LST_RUNS.runs as unknown as Record<
+      pool.runs as unknown as Record<
         string,
         { piece: string; cells: [number, number][]; spin: string }[]
       >
     )[String(seed)];
     if (!run) {
       return;
+    }
+    if (this.quadMode) {
+      // goal target is this seed's verified clear count (TSDs + quads)
+      const stat = (
+        LST_QUAD_RUNS.stats as unknown as Record<string, { clears: number }>
+      )[String(seed)];
+      this.lstGoalTarget = stat?.clears ?? LST_GOAL_TSDS;
     }
     const scratch = new Board();
     this.lstPlan = run.map((m) => ({
@@ -845,6 +930,10 @@ export class GameView {
     }
     if (this.game.undo()) {
       this.engine.cancel();
+      // drop any in-flight re-solve: it was planned from a now-undone board
+      this.engine.cancelSolve();
+      this.resolving = false;
+      this.resolveFromRows = null;
       // opener history entries correspond 1:1 to opener-phase piece indices;
       // only truncate when the undone piece was one of them
       while (this.openerHistory.length > this.game.pieceIndex) {
@@ -1264,6 +1353,8 @@ export class GameView {
       this.session.tsds++;
     } else if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared === 1) {
       this.session.tsses++;
+    } else if (this.quadMode && ev.piece === "I" && ev.linesCleared === 4) {
+      this.lstQuads++; // the well quad: real LST's volume drain, allowed in quad mode
     }
     // the plan's expected move for THIS decision - captured before
     // trackLstPlan advances the cursor past it, so the paths dock grades this
@@ -1272,6 +1363,7 @@ export class GameView {
     if (this.mode === "lst") {
       this.trackLstGoal(ev);
       this.trackLstPlan(ev);
+      this.maybeResolveOnDeviation();
     }
 
     if (this.openerPhase) {
@@ -1498,17 +1590,32 @@ export class GameView {
       } else if (ev.linesCleared > 0 && ev.linesCleared < 4 && ev.spin === "none") {
         this.goalFail = "B2B ✗";
         this.showToast("Goal lost - broke back-to-back · R for a fresh 20-TSD run");
-      } else if (ev.piece === "I" && ev.linesCleared > 0) {
+      } else if (
+        ev.piece === "I" &&
+        ev.linesCleared > 0 &&
+        // in quad mode the well quad (I clearing 4) is the volume drain, allowed;
+        // a 1-3 line I clear is still a wasted I in both modes
+        (!this.quadMode || ev.linesCleared < 4)
+      ) {
         this.goalFail = "I spent ✗";
-        this.showToast("Goal lost - spent the I on a clear · R for a fresh 20-TSD run");
+        this.showToast(
+          this.quadMode
+            ? "Goal lost - the I must clear a full quad (or stay filler) · R to restart"
+            : "Goal lost - spent the I on a clear · R for a fresh 20-TSD run",
+        );
       }
     }
-    if (this.goalFail === null && this.session.tsds >= LST_GOAL_TSDS) {
+    const clears = this.session.tsds + this.lstQuads;
+    if (this.goalFail === null && clears >= this.lstGoalTarget) {
       this.goalDone = true;
       if (settings.soundFx) {
         personalBestSound();
       }
-      this.showToast(`Goal reached - ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`);
+      this.showToast(
+        this.quadMode
+          ? `Goal reached - ${clears} clears (${this.session.tsds} TSD + ${this.lstQuads} quad), B2B intact ✓`
+          : `Goal reached - ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`,
+      );
     }
   }
 

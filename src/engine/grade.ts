@@ -12,6 +12,8 @@ import {
   findTSlots,
   findLstSite,
   LST_SPIN_COL,
+  lstHoles,
+  isLstState,
   type EvalBreakdown,
 } from "./eval";
 import {
@@ -620,6 +622,53 @@ export function gradePlacement(
     grade = "best";
     reasons.length = 0;
     reasons.push("On the verified line");
+  }
+
+  // Health-based grading for alternative paths: an LST run has many valid lines,
+  // not one. A move OFF the verified line that still keeps a clean, continuable
+  // LST state - no buried cell, the loop still buildable (a live TSD site, a
+  // valid double-up shape, or a loop clear that resets it), the T not wasted,
+  // back-to-back intact - is a legitimate alternative, NOT a mistake. So it gets
+  // floored to at least "good" (a loop clear to "best"), and the "you should
+  // have played X" nagging is dropped - only genuine structural damage
+  // (holes, killed well, wasted T) is still scolded, above, on unhealthy moves.
+  if (bias && userCand && !req.userOnPlan) {
+    const after = userCand.placement.after;
+    const loopClear =
+      (req.userSpin === "full" && req.userLines >= 2) || req.userLines === 4;
+    const wastedT = req.userPiece === "T" && !(req.userSpin === "full" && req.userLines >= 2);
+    const wastedI = req.userPiece === "I" && req.userLines > 0 && req.userLines < 4;
+    const healthy =
+      !wastedT &&
+      !wastedI &&
+      !breaksB2b(req.userLines, req.userSpin) &&
+      lstHoles(after) <= lstHoles(board) &&
+      // loop stays alive: a clear resets it, else a live col-2 TSD site, else a
+      // valid double-up shape with the spin column (col 2) still open - never a
+      // shape that only "works" by treating some other column as the well.
+      (loopClear ||
+        findLstSite(after) !== null ||
+        (after.columnHeight(LST_SPIN_COL) === 0 && isLstState(after)));
+    if (healthy) {
+      if (loopClear) {
+        grade = "best";
+      } else if (GRADE_RANK[grade] > GRADE_RANK.good) {
+        grade = "good";
+      }
+      // keep genuine book context; drop the alternative-nagging hints
+      const kept = reasons.filter((r) => r.startsWith("Book") && !r.startsWith("Book plays"));
+      reasons.length = 0;
+      reasons.push(...kept);
+      if (reasons.length === 0) {
+        reasons.push(
+          req.userSpin === "full" && req.userLines >= 2
+            ? "TSD on a valid alternative line - the loop stays alive"
+            : req.userLines === 4
+              ? "Quad - drains the well, the LST loop stays healthy"
+              : "Valid alternative - clean stack, the next TSD is still buildable",
+        );
+      }
+    }
   }
 
   const toAlt = (c: Candidate): AltInfo => ({

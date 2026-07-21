@@ -5,26 +5,91 @@ import type { PieceType } from "../core/pieces";
 import type { SpinKind } from "../core/spin";
 import type { GradeRequest, GradeResult } from "../engine/grade";
 
+export interface SolvedLineMove {
+  piece: PieceType;
+  cells: [number, number][];
+  spin: SpinKind;
+}
+
+const SOLVE_CACHE_KEY = "lst-solve-cache";
+
 export class EngineClient {
   private worker: Worker;
   private nextId = 1;
   private latestWanted = 0;
+  private nextSolveId = 1;
+  private latestSolve = 0;
   onResult: ((r: GradeResult) => void) | null = null;
+  /** a background LST re-solve finished (the road ahead from a deviation) */
+  onSolved: ((moves: SolvedLineMove[], solved: boolean) => void) | null = null;
 
   constructor() {
     this.worker = new Worker(new URL("../engine/worker.ts", import.meta.url), { type: "module" });
     this.worker.onmessage = (
-      e: MessageEvent<{ kind: string; id: number; result: GradeResult }>,
+      e: MessageEvent<{
+        kind: string;
+        id: number;
+        result?: GradeResult;
+        moves?: SolvedLineMove[];
+        solved?: boolean;
+        json?: string;
+      }>,
     ) => {
-      if (e.data.kind !== "grade") {
-        return;
+      if (e.data.kind === "grade") {
+        if (e.data.id !== this.latestWanted) {
+          return; // superseded (e.g. after undo)
+        }
+        this.onResult?.(e.data.result!);
+      } else if (e.data.kind === "solve") {
+        if (e.data.id !== this.latestSolve) {
+          return; // superseded by a newer re-solve
+        }
+        this.onSolved?.(e.data.moves ?? [], e.data.solved ?? false);
+      } else if (e.data.kind === "cacheDump" && e.data.json) {
+        this.persistCache(e.data.json);
       }
-      // superseded (e.g. after undo)
-      if (e.data.id !== this.latestWanted) {
-        return;
-      }
-      this.onResult?.(e.data.result);
     };
+    // seed the worker's solve cache from a prior session so repeats stay instant
+    try {
+      const saved = localStorage.getItem(SOLVE_CACHE_KEY);
+      if (saved) {
+        this.worker.postMessage({ kind: "loadCache", json: saved });
+      }
+    } catch {
+      /* storage unavailable (private mode / SSR) - fine, in-memory still helps */
+    }
+  }
+
+  /** Best-effort persist the solve cache; skip silently if it's over quota. */
+  private persistCache(json: string): void {
+    // localStorage is ~5MB; a big cache just isn't persisted (in-memory still works)
+    if (json.length > 4_000_000) {
+      return;
+    }
+    try {
+      localStorage.setItem(SOLVE_CACHE_KEY, json);
+    } catch {
+      /* quota exceeded or unavailable - ignore */
+    }
+  }
+
+  /** Re-plan the LST road ahead from a deviated position, off-thread. */
+  solve(
+    rows: number[],
+    queue: PieceType[],
+    hold: PieceType | null,
+    target: number,
+    budgetMs: number,
+    allowQuad: boolean,
+  ): void {
+    const id = this.nextSolveId++;
+    this.latestSolve = id;
+    this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad });
+  }
+
+  /** Drop any in-flight re-solve result. */
+  cancelSolve(): void {
+    this.latestSolve = 0;
   }
 
   gradeLock(

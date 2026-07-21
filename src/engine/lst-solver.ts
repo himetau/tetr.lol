@@ -33,7 +33,7 @@ import { cellsAt, type PieceType, type Rot } from "../core/pieces";
 import type { SpinKind } from "../core/spin";
 import { enumeratePlacements, type Placement } from "./enumerate";
 import { dropY, shape } from "./masks";
-import { findLstSite, LST_SPIN_COL } from "./eval";
+import { findLstSite, LST_SPIN_COL, quadWellDepth } from "./eval";
 
 export interface SolvedMove {
   piece: PieceType;
@@ -75,6 +75,11 @@ export interface SolveOptions {
   maxDisc?: number;
   /** rows above the site base a placement may reach (overhang band) */
   frontierBand?: number;
+  /** allow the well quad (I dropped in the well when its base is >=4 deep) as a
+   * cycle clear - real LST's volume drain, which lets `target` exceed the ~20
+   * TSD ceiling. Off by default: TSD-only solving is byte-identical. When on,
+   * `target` counts total clears (TSDs + quads). */
+  allowQuad?: boolean;
 }
 
 const DEFAULTS: Required<SolveOptions> = {
@@ -87,6 +92,24 @@ const DEFAULTS: Required<SolveOptions> = {
   debug: false,
   maxDisc: 64,
   frontierBand: 4,
+  allowQuad: false,
+};
+
+// Candidate-ranking weights (the heuristic that orders moves in the LDS). The
+// discrepancy the search needs is exponential, so a better ranking = far fewer
+// nodes; these are exposed mutably so an offline pass can tune them against
+// solve-cost. Defaults are the original hand-tuned values (identical behavior).
+export const RANK_WEIGHTS = {
+  bump: 3, // surface bumpiness (skips the well seams)
+  max: 5, // fill-side height
+  notch: 4, // covered notch voids beside the well
+  missingHi: 110, // site completion cells still empty, with a T in hand (urgent)
+  missingLo: 25, // site completion cells still empty, no T pressure
+  missingCyc: 6, // same, in the cycle-solution ranking (surfCostOf)
+  misfit: 500, // a next queue piece can't land hole-free here
+  canyon: 70, // self-inflicted 1-wide I-dependencies
+  roof: 12, // bonus (subtracted) when the slot roof is already in place
+  lag: 1500, // fill built past the wall before the O that plugs the 2-gap
 };
 
 // Stack rows the search may use. The spawn box sits at rows 18-19; volume
@@ -133,6 +156,16 @@ function isTsd(p: Placement): boolean {
   return p.type === "T" && p.spin === "full" && p.linesCleared >= 2;
 }
 
+/** The well quad: an I dropped into the well clearing its (>=4-deep) base. */
+function isQuad(p: Placement): boolean {
+  return p.type === "I" && p.linesCleared === 4;
+}
+
+/** Any cycle-ending clear (a TSD, or - when enabled - a well quad). */
+function isClear(p: Placement, allowQuad: boolean): boolean {
+  return isTsd(p) || (allowQuad && isQuad(p));
+}
+
 /** Covered empty cells outside the notch columns (1 and 3), and inside.
  * Well cells (col 2) are never covered because nothing crosses the well.
  * Placement `after` boards are immutable and shared down the search tree,
@@ -171,6 +204,37 @@ function auditHoles(board: Board): { bad: number; notch: number; notchMinY: numb
   return res;
 }
 
+// Soft preference for the flat 1-high L/J lid ("J-L" form) over the 2-high
+// S/Z diagonal ("J-Z" form): each notch void stacked beyond the first flat
+// lid pays this. It only re-ranks complete, goal-legal lines, so a seed that
+// can only reach 20 via a double-up still solves - it just loses to any
+// equivalent line that stays flat. See eval.ts WEIGHTS.lstDiagonalOverhang.
+const DIAG_OVERHANG_COST = 30;
+
+// Cost for spending an O beside the well (notch col 1 or 3) - see
+// search.ts O_NOTCH_TOLL. Soft: re-ranks lines, never blocks a solve.
+const O_NOTCH_COST = 60;
+
+/** Extra stacked notch voids beside the well at/above the site base - the
+ * 2-high S/Z diagonal signature (see eval.ts diagonalOverhangs). Zero for a
+ * clean flat-lid build. */
+function diagonalOverhangs(board: Board, siteY: number): number {
+  let extra = 0;
+  for (const c of [LST_SPIN_COL - 1, LST_SPIN_COL + 1]) {
+    const h = board.columnHeight(c);
+    let covered = 0;
+    for (let y = siteY; y < h; y++) {
+      if (((board.rows[y] >>> c) & 1) === 0) {
+        covered++;
+      }
+    }
+    if (covered > 1) {
+      extra += covered - 1;
+    }
+  }
+  return extra;
+}
+
 /** Compact exact state key: one char per row (10 bits fit a char code). */
 function boardKey(board: Board): string {
   const h = board.maxHeight();
@@ -205,8 +269,16 @@ function surfaceCost(board: Board, notchHoles: number): number {
   }
   const site = findLstSite(board);
   const missing = site ? site.missing : 20;
-  const roof = site?.roofReady ? 12 : 0;
-  return bump * 3 + max * 5 + notchHoles * 4 + missing * 25 - roof;
+  const roof = site?.roofReady ? RANK_WEIGHTS.roof : 0;
+  const diag = site ? diagonalOverhangs(board, site.y) * DIAG_OVERHANG_COST : 0;
+  return (
+    bump * RANK_WEIGHTS.bump +
+    max * RANK_WEIGHTS.max +
+    notchHoles * RANK_WEIGHTS.notch +
+    missing * RANK_WEIGHTS.missingLo -
+    roof +
+    diag
+  );
 }
 
 interface Candidate {
@@ -418,6 +490,31 @@ function solveCanonical(
       }
       return out;
     }
+    // the well quad: an I into the well whose base is >=4 deep clears four
+    // rows (real LST's volume drain). A cycle terminal like the TSD, so it is
+    // scored the same way; the structure above the base survives and drops.
+    if (opts.allowQuad && piece === "I" && quadWellDepth(b) >= 4) {
+      for (const p of enumeratePlacements(b, "I")) {
+        if (!isQuad(p) || !findLstSite(p.after)) {
+          continue;
+        }
+        const audit = auditHoles(p.after);
+        if (audit.bad > audit0.bad) {
+          continue;
+        }
+        out.push({
+          p,
+          piece,
+          rot: p.rot,
+          x: p.x,
+          y: p.y,
+          usesHold,
+          nextHold,
+          nextQi,
+          score: 1e6 - surfaceCost(p.after, audit.notch),
+        });
+      }
+    }
     // straight hard drops per (rot, x): board physics guarantees a piece
     // that avoids the well can never complete a row, so no clear check
     const rots: Rot[] =
@@ -538,15 +635,24 @@ function solveCanonical(
         // notch-only voids, mirrored solving); the alternation emerges.
         // with a T in hand the site's completion is on a deadline: the next
         // T that arrives with hold already full has nowhere to go
-        const missingW = tPressure ? 110 : 25;
+        const missingW = tPressure ? RANK_WEIGHTS.missingHi : RANK_WEIGHTS.missingLo;
+        // O spent beside the well (into notch col 1 or 3) rigidly flat-tops
+        // the flank - the wrong piece for the spin region; keep it on the
+        // fill side. x is the piece's min col, and O can't touch the well,
+        // so it flanks iff it sits at cols 0-1 or 3-4.
+        const oNotch =
+          piece === "O" && (x === LST_SPIN_COL - 2 || x === LST_SPIN_COL + 1)
+            ? O_NOTCH_COST
+            : 0;
         const cost =
-          bump * 3 +
-          max * 5 +
-          notch * 4 +
+          bump * RANK_WEIGHTS.bump +
+          max * RANK_WEIGHTS.max +
+          notch * RANK_WEIGHTS.notch +
           site.missing * missingW +
-          misfit * 500 +
-          canyons * 70 -
-          (site.roofReady ? 12 : 0);
+          misfit * RANK_WEIGHTS.misfit +
+          canyons * RANK_WEIGHTS.canyon +
+          oNotch -
+          (site.roofReady ? RANK_WEIGHTS.roof : 0);
         out.push({
           p: null,
           piece,
@@ -625,17 +731,18 @@ function solveCanonical(
         }
       }
       if (!oBeforeT) {
-        lagCost += 1500;
+        lagCost += RANK_WEIGHTS.lag;
       }
     }
     return (
-      bump * 3 +
-      max * 5 +
-      audit.notch * 4 +
-      site.missing * 6 +
-      misfit * 500 +
-      canyons * 70 +
-      lagCost
+      bump * RANK_WEIGHTS.bump +
+      max * RANK_WEIGHTS.max +
+      audit.notch * RANK_WEIGHTS.notch +
+      site.missing * RANK_WEIGHTS.missingCyc +
+      misfit * RANK_WEIGHTS.misfit +
+      canyons * RANK_WEIGHTS.canyon +
+      lagCost +
+      diagonalOverhangs(b, site.y) * DIAG_OVERHANG_COST
     );
   };
 
@@ -733,7 +840,7 @@ function solveCanonical(
           c.p = p;
         }
         steps.push({ p, usesHold: c.usesHold });
-        if (isTsd(p)) {
+        if (isClear(p, opts.allowQuad)) {
           const k = boardKey(p.after) + "|" + c.nextQi + "|" + (c.nextHold ?? "-");
           if (!seenAfter.has(k)) {
             seenAfter.add(k);
@@ -818,11 +925,58 @@ function solveCanonical(
   return { moves: solved ? line : bestLine, tsds: solved ? target : bestTsds, solved, nodes };
 }
 
+// Persistent solution cache: a solved line for an exact (board, queue, hold,
+// target, quad) input is deterministic to reuse, so memoize it. This makes
+// repeated solves - re-dealing a seed, retrying, a deviation re-solve landing
+// on a shape already seen - instant, and gets "progressively faster" the more
+// it runs. Export/import let the caller persist it (a file in Node tools, or a
+// store the app carries across sessions). Time-budget variance means a fresh
+// solve *might* find a longer line than a cached partial, but a cached line is
+// always a valid line for those inputs, which is what reuse needs.
+const SOLVE_CACHE = new Map<string, SolveResult>();
+
+function solveCacheKey(
+  board: Board,
+  queue: PieceType[],
+  hold: PieceType | null,
+  target: number,
+  allowQuad: boolean,
+): string {
+  return `${board.key()}|${queue.join("")}|${hold ?? "-"}|${target}|${allowQuad ? "q" : "t"}`;
+}
+
+/** Serialize the cache (for persistence across sessions/scans). */
+export function exportSolveCache(): string {
+  return JSON.stringify(Array.from(SOLVE_CACHE.entries()));
+}
+
+/** Merge a previously-exported cache back in. Malformed input is ignored. */
+export function importSolveCache(json: string): void {
+  try {
+    for (const [k, v] of JSON.parse(json) as [string, SolveResult][]) {
+      SOLVE_CACHE.set(k, v);
+    }
+  } catch {
+    /* ignore a corrupt cache */
+  }
+}
+
+export function solveCacheSize(): number {
+  return SOLVE_CACHE.size;
+}
+
+/** Empty the cache. Required between weight-tuning trials, since RANK_WEIGHTS
+ * is not part of the cache key - a stale entry would mask the new ranking. */
+export function clearSolveCache(): void {
+  SOLVE_CACHE.clear();
+}
+
 /**
  * Solve for `target` more TSDs. Detects the loop's handedness (left col-2
  * well, or its mirror) and solves in canonical space; `queue` must be the
  * full lookahead, [active, ...upcoming]. Returns the best line found even
- * when the target wasn't reached (moves may then end short).
+ * when the target wasn't reached (moves may then end short). Results are
+ * memoized by exact input (see SOLVE_CACHE) so repeats return instantly.
  */
 export function solveLstRun(
   board: Board,
@@ -832,6 +986,11 @@ export function solveLstRun(
   options: SolveOptions = {},
 ): SolveResult | null {
   const opts = { ...DEFAULTS, ...options };
+  const ck = solveCacheKey(board, queue, hold, target, opts.allowQuad);
+  const cached = SOLVE_CACHE.get(ck);
+  if (cached) {
+    return { ...cached, moves: cached.moves };
+  }
   let mirrored = false;
   let b = board;
   let q = queue;
@@ -870,5 +1029,7 @@ export function solveLstRun(
     scratch.place(cells);
     scratch.clearLines();
   }
-  return { moves: out, tsds: res.tsds, solved: res.solved, mirrored, nodes: res.nodes };
+  const result: SolveResult = { moves: out, tsds: res.tsds, solved: res.solved, mirrored, nodes: res.nodes };
+  SOLVE_CACHE.set(ck, result);
+  return result;
 }

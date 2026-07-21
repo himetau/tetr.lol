@@ -6,7 +6,7 @@
 import { Board } from "../core/board";
 import type { PieceType } from "../core/pieces";
 import { enumerateFast, type Placement } from "./enumerate";
-import { evaluateBoard, clearReward, findLstSite } from "./eval";
+import { evaluateBoard, clearReward, findLstSite, oFlanksWell } from "./eval";
 
 // Passing through a loop-dead state costs the line permanently, even if a
 // later burn "revives" the loop - otherwise death gets laundered through
@@ -27,6 +27,13 @@ export const B2B_BREAK_TOLL = -300;
 // is unavoidable (hold full, next I incoming) every candidate pays equally,
 // so structure still decides where the filler goes.
 export const I_USE_TOLL = -140;
+
+// An O dropped beside the well (into notch col 1 or 3) rigidly flat-tops that
+// flank and kills the slot's overhang flexibility - the notch is where the
+// LST pattern lives, and O is the wrong piece to spend there. Soft, so a
+// forced O still lands (structure then decides where) but never in the notch
+// when the fill side has room.
+export const O_NOTCH_TOLL = -80;
 
 /** A clear that would break back-to-back: lines without a spin, not a quad. */
 export function breaksB2b(linesCleared: number, spin: string): boolean {
@@ -109,6 +116,9 @@ export function searchBestLine(
           }
           if (bias && p.type === "I") {
             reward += I_USE_TOLL;
+          }
+          if (bias && p.type === "O" && oFlanksWell(p.cells)) {
+            reward += O_NOTCH_TOLL;
           }
           if (bias && breaksB2b(p.linesCleared, p.spin)) {
             reward += B2B_BREAK_TOLL;

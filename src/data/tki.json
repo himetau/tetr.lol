@@ -36,6 +36,18 @@
     {
       "name": "Flat top continuation",
       "rows": ["___SZZ____", "L__SSZZ___", "LTTTSJJJOO", "LLTIIIIJOO"]
+    },
+    {
+      "name": "TKI Castle Top",
+      "rows": ["___S______", "L__SSOO_ZJ", "LTTTSOOZZJ", "LLTIIIIZJJ"]
+    },
+    {
+      "name": "TKI Castle Top",
+      "rows": ["___OOJ____", "L__OOJ__S_", "LTTTJJZZSS", "LLTIIIIZZS"]
+    },
+    {
+      "name": "TKI Flat-top (J-fill)",
+      "rows": ["_____S____", "L__ZZSSJJ_", "LTTTZZSJOO", "LLTIIIIJOO"]
     }
   ],
   "lstStart": ["_______X__", "X__XX_XXXX"]

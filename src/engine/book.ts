@@ -147,16 +147,27 @@ function solutions(): BookSolution[] {
   return (SOLUTIONS ??= loadSolutions());
 }
 
-/** Board = start + subset of whole placements? Returns the unplaced rest. */
-function matchSolution(sol: BookSolution, board: Board): BookPlacement[] | null {
+/**
+ * Board = (start + subset of whole placements) shifted up by `dy` rows? Returns
+ * the unplaced rest, already shifted into board coordinates. `dy` lets a
+ * low-row pattern match the same shape higher up a rising LST loop
+ * (height-invariant matching): everything below the shifted start must be
+ * empty, and every board cell at/above it must belong to the pattern.
+ */
+function matchSolutionAt(sol: BookSolution, board: Board, dy: number): BookPlacement[] | null {
   let extraCells = 0;
   for (let y = 0; y < BOARD_H; y++) {
     const row = board.rows[y];
+    const startRow = y - dy >= 0 ? sol.start[y - dy] : 0;
     // a missing start cell means this is not that solution's build
-    if ((row & sol.start[y]) !== sol.start[y]) {
+    if ((row & startRow) !== startRow) {
       return null;
     }
-    let extra = row & ~sol.start[y];
+    // cells below the shifted pattern base can't be part of this build
+    if (y < dy && row !== 0) {
+      return null;
+    }
+    let extra = row & ~startRow;
     while (extra) {
       extraCells += extra & 1;
       extra >>>= 1;
@@ -166,15 +177,26 @@ function matchSolution(sol: BookSolution, board: Board): BookPlacement[] | null 
   let placedCells = 0;
   for (const p of sol.placements) {
     let present = 0;
+    let inRange = true;
+    for (const [y] of p.masks) {
+      if (y + dy >= BOARD_H) {
+        inRange = false;
+        break;
+      }
+    }
+    if (!inRange) {
+      return null;
+    }
     for (const [y, mask] of p.masks) {
-      if ((board.rows[y] & mask) === mask) {
+      if ((board.rows[y + dy] & mask) === mask) {
         present++;
       }
     }
     if (present === p.masks.size && !p.finisher) {
       placedCells += p.cells.length;
     } else {
-      remaining.push(p);
+      // shift the placement's cells/masks into board coordinates
+      remaining.push(dy === 0 ? p : shiftPlacement(p, dy));
     }
   }
   // every extra cell must be accounted for by whole placements; overlapping
@@ -183,6 +205,33 @@ function matchSolution(sol: BookSolution, board: Board): BookPlacement[] | null 
     return null;
   }
   return remaining;
+}
+
+function shiftPlacement(p: BookPlacement, dy: number): BookPlacement {
+  const cells = p.cells.map(([x, y]) => [x, y + dy] as [number, number]);
+  const masks = new Map<number, number>();
+  for (const [y, mask] of p.masks) {
+    masks.set(y + dy, mask);
+  }
+  return { piece: p.piece, cells, masks, finisher: p.finisher, key: placementKey(p.piece, cells) };
+}
+
+/**
+ * Try to match `sol` against `board` at any vertical offset, lowest first.
+ * Returns the remaining placements (in board coordinates) and the offset used.
+ */
+function matchSolution(
+  sol: BookSolution,
+  board: Board,
+): { remaining: BookPlacement[]; dy: number } | null {
+  const maxDy = Math.max(0, board.maxHeight() - 1);
+  for (let dy = 0; dy <= maxDy; dy++) {
+    const remaining = matchSolutionAt(sol, board, dy);
+    if (remaining !== null) {
+      return { remaining, dy };
+    }
+  }
+  return null;
 }
 
 const HOLD_SLOTS: (PieceType | null)[] = [null, "I", "O", "T", "S", "Z", "J", "L"];
@@ -304,8 +353,9 @@ function searchSolution(
  * Cheap when the board is off-book (bitmask rejection per solution).
  */
 export function bookAdvice(board: Board, queue: PieceType[], hold: PieceType | null): BookAdvice {
-  // book fields are at most 6 rows tall mid-build; skip tall/burned stacks fast
-  if (board.maxHeight() > 8) {
+  // a rising LST loop can carry the pattern up near the spawn ceiling; only bail
+  // when there's no vertical room left to seat even a low pattern band
+  if (board.maxHeight() > BOARD_H - 4) {
     return OFF_BOOK;
   }
   const moves = new Map<string, BookMove>();
@@ -314,10 +364,11 @@ export function bookAdvice(board: Board, queue: PieceType[], hold: PieceType | n
   const consistent: string[] = [];
   const reachCache = new Map<string, Set<string>>(); // shared: solutions revisit the same boards
   for (const sol of solutions()) {
-    const remaining = matchSolution(sol, board);
-    if (remaining === null) {
+    const matched = matchSolution(sol, board);
+    if (matched === null) {
       continue;
     }
+    const remaining = matched.remaining;
     // build finished; the next stage matches instead
     if (remaining.length === 0) {
       continue;
