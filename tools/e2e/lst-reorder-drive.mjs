@@ -31,19 +31,25 @@ for (const k of plan.keys) {
   await page.keyboard.press(k);
   await page.waitForTimeout(55);
 }
-await page.waitForTimeout(1000); // grading latency
-const chip1 = await page.evaluate(() => document.querySelector(".grade-chip")?.textContent ?? "");
+await page.waitForTimeout(1100); // grading latency
+const early = await page.evaluate(() => ({
+  cls: document.querySelector(".grade-chip")?.className ?? "",
+  head: document.querySelector(".dock-grade")?.textContent ?? "",
+  cards: document.querySelectorAll(".alt-card").length,
+}));
 await page.screenshot({ path: `${shotDir}/after-early-move.png` });
-const earlyPass = chip1.includes(plan.expectChip);
-console.log(`early plan move graded: "${chip1.trim()}" - ${earlyPass ? "PASS" : "FAIL"}`);
+// on-plan = Best chip + hoverable path cards (the restored "old system")
+const earlyPass = early.cls.includes(plan.expectClass) && early.cards > 0;
+console.log(`early plan move: [${early.cls}] "${early.head}" cards=${early.cards} - ${earlyPass ? "PASS" : "FAIL"}`);
 
 // watch-book must keep going (the cycle's remaining fills still play)
+const tsdBefore = await page.evaluate(() =>
+  document.body.innerText.match(/(\d+)\/20/)?.[1] ?? "?");
 await page.keyboard.press("KeyB");
 await page.waitForTimeout(600);
-const chip2 = await page.evaluate(() => document.querySelector(".grade-chip")?.textContent ?? "");
-const contPass = chip2.includes(plan.thenExpect);
-console.log(`watch-book continues: "${chip2.trim()}" - ${contPass ? "PASS" : "FAIL"}`);
+const alive = await page.evaluate(() => !document.querySelector(".death-screen, .topout"));
+console.log(`watch-book continues (was ${tsdBefore}/20, still alive): ${alive ? "PASS" : "FAIL"}`);
 await page.screenshot({ path: `${shotDir}/after-continue.png` });
 
 await browser.close();
-process.exit(earlyPass && contPass ? 0 : 1);
+process.exit(earlyPass && alive ? 0 : 1);

@@ -1,6 +1,8 @@
 // Main-thread client for the analysis worker.
 
 import type { LockEvent } from "../core/game";
+import type { PieceType } from "../core/pieces";
+import type { SpinKind } from "../core/spin";
 import type { GradeRequest, GradeResult } from "../engine/grade";
 
 export class EngineClient {
@@ -33,13 +35,32 @@ export class EngineClient {
       fourwide?: boolean;
       depth?: number;
       beamWidth?: number;
+      planActive?: boolean;
+      userOnPlan?: boolean;
+      planMove?: { piece: PieceType; cells: [number, number][] } | null;
+      planPv?: { piece: PieceType; cells: [number, number][]; spin: SpinKind; lines: number }[];
     } = {},
   ): void {
-    const { lstBias = false, neural = true, fourwide = false, depth = 4, beamWidth = 14 } = opts;
+    const {
+      lstBias = false,
+      neural = true,
+      fourwide = false,
+      depth = 4,
+      beamWidth = 14,
+      planActive = false,
+      userOnPlan = false,
+      planMove = null,
+      planPv,
+    } = opts;
     const req: GradeRequest = {
       lstBias,
       neural,
       fourwide,
+      planActive,
+      userOnPlan,
+      planMovePiece: planMove?.piece,
+      planMoveCells: planMove?.cells,
+      planPv,
       rows: Array.from(ev.boardBefore.rows),
       queue: ev.queueBefore,
       hold: ev.holdBefore,

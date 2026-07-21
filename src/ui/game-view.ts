@@ -703,8 +703,20 @@ export class GameView {
       return;
     }
     const k = placementKey(ev.piece, ev.cells);
+    const foot = this.colFootprint(ev.cells);
+    // Orientation-lenient match: a filler (non-T, no line clear) that lands
+    // flush in the same columns as a plan move is the same building block
+    // however it's turned, so we don't nag the player for flipping an
+    // S/Z/L/J/I. "Flush" (no gap under its own cells) is required so a
+    // hole-leaving placement that only shares columns isn't waved through.
+    // The T spin still has to be placed exactly - that's the whole payoff.
+    const lenient =
+      ev.piece !== "T" && ev.linesCleared === 0 && ev.spin === "none" && this.isFlush(ev);
+    const matches = (mv: { piece: PieceType; cells: [number, number][] }): boolean =>
+      placementKey(mv.piece, mv.cells) === k ||
+      (lenient && mv.piece === ev.piece && this.colFootprint(mv.cells) === foot);
     const at = plan[this.lstPlanCursor];
-    if (placementKey(at.piece, at.cells) === k) {
+    if (matches(at)) {
       this.lstPlanCursor++;
       this.lstPlanAdvance();
       this.lastLockOnPlan = true;
@@ -713,12 +725,83 @@ export class GameView {
     // early play: any later non-T move of the current cycle is the same line
     const end = this.lstPlanSegEnd();
     for (let i = this.lstPlanCursor + 1; i < end; i++) {
-      if (!this.lstPlanConsumed.has(i) && placementKey(plan[i].piece, plan[i].cells) === k) {
+      if (!this.lstPlanConsumed.has(i) && matches(plan[i])) {
         this.lstPlanConsumed.add(i);
         this.lastLockOnPlan = true;
         return;
       }
     }
+  }
+
+  /** Grader options that make the paths dock follow the verified run: the
+   * plan's move for this decision leads the alternatives (both opener and
+   * loop), with its continuation as the hovered path. `idx` is the decision
+   * captured before trackLstPlan advanced the cursor. */
+  private planGradeOpts(idx: number): {
+    planActive: boolean;
+    userOnPlan: boolean;
+    planMove: { piece: PieceType; cells: [number, number][] } | null;
+    planPv: { piece: PieceType; cells: [number, number][]; spin: SpinKind; lines: number }[] | undefined;
+  } {
+    const planMove =
+      this.lstPlan && idx >= 0 && idx < this.lstPlan.length ? this.lstPlan[idx] : null;
+    return {
+      planActive: this.mode === "lst" && !!this.lstPlan,
+      userOnPlan: this.lastLockOnPlan,
+      planMove: planMove ? { piece: planMove.piece, cells: planMove.cells } : null,
+      planPv: planMove ? this.lstPlanPvFrom(idx) : undefined,
+    };
+  }
+
+  /** The plan cursor with already-consumed (out-of-order) moves skipped -
+   * the index of the move the plan expects next, without mutating state
+   * (mirrors lstPlanAdvance). This is the decision the current lock answers. */
+  private effectivePlanCursor(): number {
+    let c = this.lstPlanCursor;
+    while (this.lstPlanConsumed.has(c)) {
+      c++;
+    }
+    return c;
+  }
+
+  /** The verified line's continuation from move `idx`+1 up to and including
+   * the next TSD - the plan card's principal variation, so hovering the top
+   * path traces the engine's actual road to the next payoff. */
+  private lstPlanPvFrom(idx: number): {
+    piece: PieceType;
+    cells: [number, number][];
+    spin: SpinKind;
+    lines: number;
+  }[] {
+    const plan = this.lstPlan;
+    if (!plan) {
+      return [];
+    }
+    const pv: { piece: PieceType; cells: [number, number][]; spin: SpinKind; lines: number }[] = [];
+    for (let i = idx + 1; i < plan.length; i++) {
+      const mv = plan[i];
+      const isTsd = mv.piece === "T" && mv.spin === "full";
+      pv.push({ piece: mv.piece, cells: mv.cells, spin: mv.spin, lines: isTsd ? 2 : 0 });
+      if (isTsd) {
+        break;
+      }
+    }
+    return pv;
+  }
+
+  /** Columns a placement occupies, sorted - the orientation-independent
+   * footprint used to accept a filler turned a different way. */
+  private colFootprint(cells: readonly (readonly [number, number])[]): string {
+    return [...new Set(cells.map(([x]) => x))].sort((a, b) => a - b).join(",");
+  }
+
+  /** True when every cell of the placement is supported (board below or a
+   * cell of the piece itself) - i.e. it leaves no gap underneath. */
+  private isFlush(ev: LockEvent): boolean {
+    const own = new Set(ev.cells.map(([x, y]) => x * 32 + y));
+    return ev.cells.every(
+      ([x, y]) => y === 0 || own.has(x * 32 + (y - 1)) || ev.boardBefore.filled(x, y - 1),
+    );
   }
 
   /** Load this seed's verified 20-TSD line (if one is shipped) and stamp
@@ -1182,6 +1265,10 @@ export class GameView {
     } else if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared === 1) {
       this.session.tsses++;
     }
+    // the plan's expected move for THIS decision - captured before
+    // trackLstPlan advances the cursor past it, so the paths dock grades this
+    // lock against the right plan move (not the next piece's)
+    const planDecisionIdx = this.mode === "lst" && this.lstPlan ? this.effectivePlanCursor() : -1;
     if (this.mode === "lst") {
       this.trackLstGoal(ev);
       this.trackLstPlan(ev);
@@ -1234,8 +1321,14 @@ export class GameView {
         this.refreshAll();
         return;
       }
-      // off-book: fall through to engine grading, flagged
-      this.engine.gradeLock(ev, { lstBias: false, neural: settings.neuralEval });
+      // off-book: fall through to engine grading, but still hand it the plan
+      // so the paths show the verified opener move (what watch-book plays),
+      // not a beam guess - the early stages have to match the engine too
+      this.engine.gradeLock(ev, {
+        lstBias: false,
+        neural: settings.neuralEval,
+        ...this.planGradeOpts(planDecisionIdx),
+      });
       this.refreshAll();
       return;
     }
@@ -1249,15 +1342,15 @@ export class GameView {
     } else if (this.botMoving) {
       this.botMoveFeedback(ev);
     } else if (this.evalOn()) {
-      if (this.mode === "lst" && this.lastLockOnPlan) {
-        // the placement is in the plan's current cycle - playing it a few
-        // pieces ahead of schedule is the same line, not an inaccuracy
-        this.showChip("best", "Plan · queued in this bag");
-        this.recordGrade("best");
-        this.dockNote("plan move ✓ - the book plays this within the cycle");
-      } else {
-        this.engine.gradeLock(ev, { lstBias: this.mode === "lst", neural: settings.neuralEval });
-      }
+      // LST loop and free play both go through the paths dock so the hoverable
+      // alternatives always appear. When a verified run drives the LST drill,
+      // hand the grader the plan so its verdict and hint follow the watch-book
+      // (which the cover book, on its own, contradicts).
+      this.engine.gradeLock(ev, {
+        lstBias: this.mode === "lst",
+        neural: settings.neuralEval,
+        ...this.planGradeOpts(planDecisionIdx),
+      });
     }
     this.trackThunder(ev, b2bBefore);
     this.versusLock(ev, b2bBefore, this.combo - 1);
@@ -1536,8 +1629,12 @@ export class GameView {
 
     const head = document.createElement("div");
     head.className = `dock-grade ${GRADE_CLASS[grade]}`;
-    const rankNote =
-      r.userRank === 0 && grade !== "best" && grade !== "good"
+    // on the verified line the beam's own ranking isn't the authority - don't
+    // show a "#9" that contradicts the Best chip
+    const onPlan = r.reasons[0] === "On the verified line";
+    const rankNote = onPlan
+      ? "on the verified line"
+      : r.userRank === 0 && grade !== "best" && grade !== "good"
         ? this.mode === "fourwide"
           ? "breaks the combo book"
           : "breaks LST structure"
@@ -1545,7 +1642,8 @@ export class GameView {
     head.textContent = `${this.gradeLabel(grade)} · ${rankNote}`;
     this.pathsBody.appendChild(head);
 
-    for (const reason of r.reasons) {
+    // the header already says "on the verified line"; don't repeat it as a row
+    for (const reason of onPlan ? [] : r.reasons) {
       const li = document.createElement("div");
       li.className = "dock-reason";
       li.textContent = reason;

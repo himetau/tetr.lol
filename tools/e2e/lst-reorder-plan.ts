@@ -109,8 +109,9 @@ for (let i = 0; i < moves.length - 1; i++) {
             pressB: i,
             skipIndex: i + 1,
             keys: keysFor(game.board, p, useHold),
-            expectChip: "Plan · queued",
-            thenExpect: "Plan",
+            // on-plan moves now grade through the paths dock: a Best chip and
+            // the "on the verified line" header, with hover cards
+            expectClass: "g-best",
           }),
         );
         process.exit(0);

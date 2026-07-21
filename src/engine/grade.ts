@@ -47,6 +47,21 @@ export interface GradeRequest {
   neural?: boolean;
   /** grade against the center 4-wide combo book instead (engine/fourwide.ts) */
   fourwide?: boolean;
+  /** a verified solver run is driving this drill: it, not the cover book, is
+   * the authority, so the cover book is silenced to stop it contradicting the
+   * line the watch-book actually plays. */
+  planActive?: boolean;
+  /** the placement matched the verified plan (exact, or an orientation-lenient
+   * fill of the same cycle) - graded best with no scolding. */
+  userOnPlan?: boolean;
+  /** the plan's move at this decision, for the "Better:" hint and to flag its
+   * card in the paths view. */
+  planMovePiece?: PieceType;
+  planMoveCells?: [number, number][];
+  /** the verified line's continuation from here (this decision's move first),
+   * shown as the plan card's principal variation so the hovered path is the
+   * engine's actual road to the next TSD, not a beam guess. */
+  planPv?: { piece: PieceType; cells: [number, number][]; spin: SpinKind; lines: number }[];
 }
 
 export interface AltInfo {
@@ -254,8 +269,15 @@ export function gradePlacement(
 
   const hadReadySlot = findTSlots(board).some((s) => s.clears2);
   const userTsd = req.userPiece === "T" && req.userSpin === "full" && req.userLines >= 2;
-  const book = bias ? bookAdvice(board, req.queue, req.hold) : OFF_BOOK;
+  // When a verified run drives the drill it is the sole authority: silence the
+  // cover book so it can't second-guess the line the watch-book plays.
+  const planActive = req.planActive ?? false;
+  const book = bias && !planActive ? bookAdvice(board, req.queue, req.hold) : OFF_BOOK;
   const userOnBookMove = book.onBook && matchesBookMove(book, req.userPiece, req.userCells);
+  const planKey =
+    planActive && req.planMovePiece && req.planMoveCells
+      ? placementKey(req.planMovePiece, req.planMoveCells)
+      : null;
 
   const candidates = collectCandidates(board, active, preview, req.hold, bias, hadReadySlot);
 
@@ -270,11 +292,21 @@ export function gradePlacement(
     (c) => placementKey(c.placement.type, c.placement.cells) === userKey,
   );
 
-  // prune, always keeping the user's move
+  // the plan's move for this piece - the verified line's placement. It leads
+  // the paths list so the top path is always what the engine plays here.
+  const planCand =
+    planKey !== null
+      ? candidates.find((c) => placementKey(c.placement.type, c.placement.cells) === planKey)
+      : null;
+
+  // prune, always keeping the user's move (and the plan's)
   candidates.sort((a, b) => b.immediateScore - a.immediateScore);
   const pruned = candidates.slice(0, PRUNE_TOP);
   if (userCand && !pruned.includes(userCand)) {
     pruned.push(userCand);
+  }
+  if (planCand && !pruned.includes(planCand)) {
+    pruned.push(planCand);
   }
 
   for (const c of pruned) {
@@ -294,6 +326,9 @@ export function gradePlacement(
   const verify = new Set(pruned.slice(0, VERIFY_TOP));
   if (userCand) {
     verify.add(userCand);
+  }
+  if (planCand) {
+    verify.add(planCand);
   }
   if (verify.size > 1) {
     const deeper: SearchOptions = { ...opts, depth: opts.depth + 2, beamWidth: opts.beamWidth + 4 };
@@ -416,6 +451,7 @@ export function gradePlacement(
   // the col-2 heuristic otherwise mis-grades mirrored loops here
   const tsdBook =
     bias &&
+    !planActive &&
     !userOnBookMove &&
     userCand &&
     req.userPiece === "T" &&
@@ -552,18 +588,20 @@ export function gradePlacement(
     GRADE_RANK[grade] >= GRADE_RANK.inaccuracy &&
     !bookHinted
   ) {
-    const xs = best.placement.cells.map(([cx]) => cx);
+    // With a verified plan loaded the hint names what the plan plays here, not
+    // the beam's pick - so the tip always points back to the watch-book line.
+    const hintPiece = planActive && req.planMoveCells ? req.planMovePiece! : best.placement.type;
+    const hintCells = planActive && req.planMoveCells ? req.planMoveCells : best.placement.cells;
+    const hintSpin = planActive && req.planMoveCells ? "none" : best.placement.spin;
+    const hintLines = planActive && req.planMoveCells ? 0 : best.placement.linesCleared;
+    const hintHold = planActive && req.planMoveCells ? false : best.usesHold;
+    const xs = hintCells.map(([cx]) => cx);
     const lo = Math.min(...xs) + 1;
     const hi = Math.max(...xs) + 1;
-    const spinNote =
-      best.placement.spin === "full"
-        ? best.placement.linesCleared >= 2
-          ? " (TSD)"
-          : " (T-spin)"
-        : "";
-    const holdNote = best.usesHold ? " after holding" : "";
+    const spinNote = hintSpin === "full" ? (hintLines >= 2 ? " (TSD)" : " (T-spin)") : "";
+    const holdNote = hintHold ? " after holding" : "";
     reasons.push(
-      `Better: ${best.placement.type}${holdNote} on column${lo === hi ? "" : "s"} ${lo}${lo === hi ? "" : `–${hi}`}${spinNote}`,
+      `${planActive ? "Book plays" : "Better:"} ${hintPiece}${holdNote} on column${lo === hi ? "" : "s"} ${lo}${lo === hi ? "" : `–${hi}`}${spinNote}`,
     );
   }
 
@@ -576,6 +614,14 @@ export function gradePlacement(
     reasons.push(...kept);
   }
 
+  // The verified run overrides the heuristic in both directions: the watch-book
+  // plays this exact line, so a move on it is best and carries no scolding.
+  if (planActive && req.userOnPlan && userCand) {
+    grade = "best";
+    reasons.length = 0;
+    reasons.push("On the verified line");
+  }
+
   const toAlt = (c: Candidate): AltInfo => ({
     piece: c.placement.type,
     rot: c.placement.rot,
@@ -585,15 +631,27 @@ export function gradePlacement(
     spin: c.placement.spin,
     linesCleared: c.placement.linesCleared,
     usesHold: c.usesHold,
-    isBook: book.onBook && matchesBookMove(book, c.placement.type, c.placement.cells),
+    isBook:
+      (book.onBook && matchesBookMove(book, c.placement.type, c.placement.cells)) ||
+      (planKey !== null && placementKey(c.placement.type, c.placement.cells) === planKey),
     total: c.total ?? 0,
     afterRows: Array.from(c.placement.after.rows),
-    pv: (c.pv ?? []).map((p) => ({
-      piece: p.type,
-      cells: p.cells.map(([a, b]) => [a, b] as [number, number]),
-      spin: p.spin,
-      lines: p.linesCleared,
-    })),
+    // the plan card shows the verified continuation (the road to the next
+    // TSD), not the beam's lookahead - so the hovered path is the engine's
+    pv:
+      c === planCand && req.planPv
+        ? req.planPv.map((p) => ({
+            piece: p.piece,
+            cells: p.cells.map(([a, b]) => [a, b] as [number, number]),
+            spin: p.spin,
+            lines: p.lines,
+          }))
+        : (c.pv ?? []).map((p) => ({
+            piece: p.type,
+            cells: p.cells.map(([a, b]) => [a, b] as [number, number]),
+            spin: p.spin,
+            lines: p.linesCleared,
+          })),
     isUser: c === userCand,
     path: c.placement.path,
   });
@@ -602,13 +660,21 @@ export function gradePlacement(
   if (userCand && !shown.includes(userCand)) {
     shown.push(userCand);
   }
+  if (planCand && !shown.includes(planCand)) {
+    shown.push(planCand);
+  }
+  // the engine's move leads the list: the #1 path is always what the verified
+  // run plays here, whatever the beam's own ranking said
+  const ordered = planCand ? [planCand, ...shown.filter((c) => c !== planCand)] : shown;
+  // report the rank as shown (the plan lead may have shifted the user's card)
+  const shownUserRank = userCand ? ordered.indexOf(userCand) : ordered.length;
 
   return {
     grade,
     gap,
     reasons,
-    alts: shown.map(toAlt),
-    userRank,
+    alts: ordered.map(toAlt),
+    userRank: shownUserRank >= 0 ? shownUserRank : userRank,
     pieceIndex: req.pieceIndex,
     elapsedMs: performance.now() - t0,
     book:
