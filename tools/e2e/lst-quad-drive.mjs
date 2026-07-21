@@ -40,14 +40,14 @@ await page.screenshot({ path: `${shotDir}/final.png` });
 // toast has faded, so assert on body text like the non-quad driver does
 const text = await page.evaluate(() => document.body.innerText);
 const gotDone = text.includes("done ✓");
-// the quad drill loaded the pool at all iff it dealt this seed's line: the goal
-// counter should read the seed's TSD total
-const gotTsds = text.includes(`${stat.tsds}/`);
+// quad HUD shows clears toward the seed's real target (not TSDs/20): at the goal
+// the "clears" cell reads target/target
+const gotClears = text.includes(`${stat.clears}/${stat.clears}`);
 console.log(`goal done ✓: ${gotDone ? "PASS" : "FAIL"}`);
-if (!gotDone) {
-  const m = text.match(/\d+\/\d+ TSDs?/g);
-  console.log("panel TSD readings:", m?.join(", ") ?? "none found");
-  console.log("dealt the seed (pool loaded):", gotTsds ? "yes" : "NO - lazy load may have failed");
+console.log(`clears HUD ${stat.clears}/${stat.clears}: ${gotClears ? "PASS" : "FAIL"}`);
+if (!gotDone || !gotClears) {
+  const m = text.match(/\d+\/\d+/g);
+  console.log("panel readings:", m?.join(", ") ?? "none found");
 }
 await browser.close();
-process.exit(gotDone ? 0 : 1);
+process.exit(gotDone && gotClears ? 0 : 1);

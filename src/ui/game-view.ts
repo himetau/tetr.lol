@@ -1543,7 +1543,11 @@ export class GameView {
     box.className = "zenith-box";
     const bits: string[] = [];
     if (this.mode === "lst") {
-      bits.push(`${s.tsds}/${LST_GOAL_TSDS} TSDs`);
+      bits.push(
+        this.quadMode
+          ? `${s.tsds + this.lstQuads}/${this.lstGoalTarget} clears`
+          : `${s.tsds}/${LST_GOAL_TSDS} TSDs`,
+      );
     }
     if (this.mode === "free") {
       bits.push(`${Math.min(s.lines, 40)}/40 lines`);
@@ -2332,7 +2336,9 @@ export class GameView {
     if (this.mode === "lst") {
       cells.push(
         ["phase", this.openerPhase ? "TKI" : "LST loop", "accent"],
-        ["TSDs", `${s.tsds}/${LST_GOAL_TSDS}`],
+        this.quadMode
+          ? ["clears", `${s.tsds + this.lstQuads}/${this.lstGoalTarget}`]
+          : ["TSDs", `${s.tsds}/${LST_GOAL_TSDS}`],
         [
           "goal",
           this.goalDone ? "done ✓" : (this.goalFail ?? "on track"),
