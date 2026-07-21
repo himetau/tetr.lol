@@ -17,7 +17,7 @@
 //
 // Run: npx tsx tools/gen-lst-runs.ts [maxSeeds] [firstSeed] [lastSeed]
 
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { Game } from "../src/core/game";
@@ -35,9 +35,31 @@ interface RunMove {
   spin: string;
 }
 
-const runs: Record<string, RunMove[]> = {};
+const here = dirname(fileURLToPath(import.meta.url));
+const outPath = join(here, "..", "src", "data", "lst-runs.json");
+
+// merge into the existing pool so interrupted scans lose nothing and the
+// range can be extended without re-solving verified seeds
+const runs: Record<string, RunMove[]> = existsSync(outPath)
+  ? (JSON.parse(readFileSync(outPath, "utf8")).runs ?? {})
+  : {};
+
+/** Written after every verified seed so long scans can be stopped anytime. */
+function save(): void {
+  writeFileSync(
+    outPath,
+    JSON.stringify({
+      target: TARGET,
+      note: "Verified 20-TSD watch-book lines per seed (tools/gen-lst-runs.ts); every move replays goal-legally from a fresh Game(seed).",
+      runs,
+    }),
+  );
+}
 
 for (let seed = first; seed <= last && Object.keys(runs).length < maxSeeds; seed++) {
+  if (runs[String(seed)]) {
+    continue; // already verified in a previous scan
+  }
   const game = new Game(seed);
   const plan = planOpener([game.active!.type, ...game.peekQueue(9)]);
   if (!plan) {
@@ -66,7 +88,7 @@ for (let seed = first; seed <= last && Object.keys(runs).length < maxSeeds; seed
   const queue = [game.active!.type, ...game.peekQueue(TARGET * 8 + 14)];
   const t0 = Date.now();
   const res = solveLstRun(game.board, queue, game.hold, TARGET - tsds, {
-    budgetMs: 90000,
+    budgetMs: 30000,
     nodeBudget: 40_000_000,
     tailFree: 3,
   });
@@ -114,16 +136,9 @@ for (let seed = first; seed <= last && Object.keys(runs).length < maxSeeds; seed
     continue;
   }
   runs[String(seed)] = line;
+  save();
   console.log(`seed ${seed}: VERIFIED ${tsds} TSDs, ${line.length} moves, ${ms}ms`);
 }
 
-const here = dirname(fileURLToPath(import.meta.url));
-writeFileSync(
-  join(here, "..", "src", "data", "lst-runs.json"),
-  JSON.stringify({
-    target: TARGET,
-    note: "Verified 20-TSD watch-book lines per seed (tools/gen-lst-runs.ts); every move replays goal-legally from a fresh Game(seed).",
-    runs,
-  }),
-);
+save();
 console.log(`\nwrote ${Object.keys(runs).length} verified runs to src/data/lst-runs.json`);

@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:lst-db": "tsx tools/gen-lst-db.ts",
+    "gen:lst-runs": "tsx tools/gen-lst-runs.ts",
     "gen:lst-cover": "tsx tools/gen-lst-cover.ts",
     "gen:fourwide-db": "tsx tools/gen-fourwide-db.ts"
   },

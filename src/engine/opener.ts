@@ -91,8 +91,10 @@ export interface OpenerPlan {
  * or stash the active and play the next). The old move-at-a-time heuristic
  * dead-ends whenever the bag order wants a support piece before the piece
  * in hand (e.g. S before its I foundation) while hold is already full; a
- * 7-piece lookahead never has to guess. The T is the finisher and must fire
- * the TSD (clear 2), which physically forces it last.
+ * 7-piece lookahead never has to guess. The T fires the TSD (its placement
+ * must clear 2 as a full spin) but need not come last: pieces whose target
+ * cells sit entirely above the cleared pair simply shift down two rows,
+ * which rescues bag orders that deliver the leftovers after the T.
  */
 export function planOpener(queue: PieceType[]): OpenerPlan | null {
   const targets = [...TKI_TARGETS].sort(
@@ -107,11 +109,30 @@ export function planOpener(queue: PieceType[]): OpenerPlan | null {
     const placedMask = { v: 0 };
     const idx = new Map(letters.map((p, i) => [p, i] as const));
 
+    // diagram coords -> live board coords once the TSD's rows are gone
+    const shifted = (
+      want: readonly (readonly [number, number])[],
+      cleared: number[],
+    ): [number, number][] | null => {
+      const out: [number, number][] = [];
+      for (const [x, y] of want) {
+        if (cleared.includes(y)) {
+          return null; // this piece lived in the cleared rows: had to be earlier
+        }
+        out.push([x, y - cleared.filter((r) => r < y).length]);
+      }
+      return out;
+    };
+
     const reachableNow = (
       board: Board,
       piece: PieceType,
+      cleared: number[],
     ): { cells: [number, number][]; spin: SpinKind } | null => {
-      const want = target.pieces[piece]!;
+      const want = shifted(target.pieces[piece]!, cleared);
+      if (!want) {
+        return null;
+      }
       const hit = enumeratePlacements(board, piece).find(
         (pl) =>
           sameCells(pl.cells, want) &&
@@ -123,7 +144,7 @@ export function planOpener(queue: PieceType[]): OpenerPlan | null {
         : null;
     };
 
-    const dfs = (board: Board, qi: number, hold: PieceType | null): boolean => {
+    const dfs = (board: Board, qi: number, hold: PieceType | null, cleared: number[]): boolean => {
       if (placedMask.v === (1 << letters.length) - 1) {
         return true;
       }
@@ -135,20 +156,20 @@ export function planOpener(queue: PieceType[]): OpenerPlan | null {
         if (i === undefined || (placedMask.v >>> i) & 1) {
           return false;
         }
-        // the T is the TSD payoff: only allowed as the finisher
-        if (piece === "T" && placedMask.v !== (((1 << letters.length) - 1) & ~(1 << i))) {
-          return false;
-        }
-        const hit = reachableNow(board, piece);
+        const hit = reachableNow(board, piece, cleared);
         if (!hit) {
           return false;
         }
         const after = board.clone();
         after.place(hit.cells);
-        after.clearLines();
+        const clearedNow = after.clearLines();
+        // one clear event (the TSD) is all the shift bookkeeping supports
+        if (clearedNow.length > 0 && cleared.length > 0) {
+          return false;
+        }
         placedMask.v |= 1 << i;
         moves.push({ piece, cells: hit.cells, spin: hit.spin });
-        if (dfs(after, nextQi, nextHold)) {
+        if (dfs(after, nextQi, nextHold, clearedNow.length > 0 ? clearedNow : cleared)) {
           return true;
         }
         moves.pop();
@@ -166,13 +187,13 @@ export function planOpener(queue: PieceType[]): OpenerPlan | null {
         return true;
       }
       // pure park: stash the active piece and move on
-      if (!hold && dfs(board, qi + 1, cur)) {
+      if (!hold && dfs(board, qi + 1, cur, cleared)) {
         return true;
       }
       return false;
     };
 
-    if (dfs(new Board(), 0, null)) {
+    if (dfs(new Board(), 0, null, [])) {
       return { target, moves };
     }
   }

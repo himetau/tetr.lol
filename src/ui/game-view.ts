@@ -35,6 +35,7 @@ import { matchOpener, chainsToLoop, type OpenerPlacement } from "../engine/opene
 import { bookAdvice } from "../engine/book";
 import { enumeratePlacements } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
+import LST_RUNS from "../data/lst-runs.json";
 import { CC2_LST_LOOP_JSON } from "../engine/cc2-weights";
 import { buildFourwideStart, refillWalls, wallMask, WELL_X, WELL_W } from "../engine/fourwide";
 import { genAllspin } from "../engine/allspin-gen";
@@ -54,6 +55,8 @@ import {
   surgeSound,
   bigSendSound,
   BIG_SEND_MIN,
+  ThunderStreak,
+  thunderSound,
 } from "./sound";
 import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from "./fx";
 import { SceneBackground, MODE_HUE, hotHue } from "./scene-background";
@@ -113,6 +116,10 @@ export class GameView {
   // 4-wide: best combo across all recorded sessions, for the PB jingle
   private comboRecord = 0;
   private pbPlayed = false;
+  // rolling-thunder streak: two or more big sends in a row crack the thunder,
+  // fed each clearing lock's would-be attack so it fires in every mode (even
+  // solo, where there is no opponent to actually receive the lines)
+  private thunder = new ThunderStreak();
   // 40 lines sprint (free mode): clock starts on the first game input,
   // sprintMs is set once the run reaches 40 lines (frozen final time)
   private sprintStart = 0;
@@ -172,9 +179,17 @@ export class GameView {
   private goalFail: string | null = null;
   private goalDone = false;
 
-  // who played the last assisted move in the LST drill: the cover book, the
-  // goal-legal loop player, the plain engine fallback, or Cold Clear 2
-  private assistWho: "Book" | "Loop" | "Engine" | "Cold Clear" = "Book";
+  // who played the last assisted move in the LST drill: the verified run
+  // plan, the cover book, the goal-legal loop player, the plain engine
+  // fallback, or Cold Clear 2
+  private assistWho: "Plan" | "Book" | "Loop" | "Engine" | "Cold Clear" = "Book";
+
+  // verified 20-TSD run playback (watch book): the full goal-legal move
+  // line for this seed from lst-runs.json, with the board key expected
+  // before each move so playback resyncs across undo and drops out the
+  // moment the user deviates
+  private lstPlan: { piece: PieceType; cells: [number, number][]; spin: SpinKind }[] | null = null;
+  private lstPlanKeys: string[] = [];
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -517,13 +532,19 @@ export class GameView {
       }
     }
     // ?seed=N pins the bag order (practice/testing); all-spin picks a fresh
-    // random board each drill unless a seed is pinned
+    // random board each drill unless a seed is pinned. The LST drill draws
+    // its random seeds from the verified-run pool: the goal's volume math
+    // makes some bag orders provably unable to fit 20 clean TSDs under the
+    // spawn ceiling, so the demo only deals winnable hands.
     const seedParam = new URLSearchParams(location.search).get("seed");
+    const lstSeeds = this.mode === "lst" ? Object.keys(LST_RUNS.runs) : [];
     const seed = seedParam
       ? Number(seedParam)
       : this.mode === "allspin"
         ? (Math.random() * 2 ** 31) | 0
-        : undefined;
+        : this.mode === "lst" && lstSeeds.length > 0
+          ? Number(lstSeeds[(Math.random() * lstSeeds.length) | 0])
+          : undefined;
     if (this.mode === "fourwide") {
       this.game.reset(buildFourwideStart(seed).board, seed);
     } else if (this.mode === "allspin") {
@@ -532,9 +553,11 @@ export class GameView {
     } else {
       this.game.reset(undefined, seed);
     }
+    this.loadLstPlan(seed);
     this.openerPhase = this.mode === "lst";
     this.combo = 0;
     this.maxCombo = 0;
+    this.thunder.reset();
     this.comboHistory = [];
     this.comboRecord =
       this.mode === "fourwide"
@@ -582,6 +605,36 @@ export class GameView {
     this.refreshSession();
     if (note) {
       this.showToast(note);
+    }
+  }
+
+  /** Load this seed's verified 20-TSD line (if one is shipped) and stamp
+   * the board key expected before each move for playback matching. */
+  private loadLstPlan(seed: number | undefined): void {
+    this.lstPlan = null;
+    this.lstPlanKeys = [];
+    if (this.mode !== "lst" || seed === undefined) {
+      return;
+    }
+    const run = (
+      LST_RUNS.runs as unknown as Record<
+        string,
+        { piece: string; cells: [number, number][]; spin: string }[]
+      >
+    )[String(seed)];
+    if (!run) {
+      return;
+    }
+    const scratch = new Board();
+    this.lstPlan = run.map((m) => ({
+      piece: m.piece as PieceType,
+      cells: m.cells.map(([a, b]) => [a, b] as [number, number]),
+      spin: m.spin as SpinKind,
+    }));
+    for (const mv of this.lstPlan) {
+      this.lstPlanKeys.push(scratch.key());
+      scratch.place(mv.cells);
+      scratch.clearLines();
     }
   }
 
@@ -818,6 +871,23 @@ export class GameView {
     this.vsLastPending = o.queue.pending();
   }
 
+  /** Feed a lock to the rolling-thunder streak (8 lines cleared in one combo,
+   * cashing out a long B2B, or an all clear crack the thunder). EVERY lock is
+   * fed, not just clears: a non-clearing placement breaks the combo. Runs in
+   * every mode - including solo. `b2bBefore` is the chain length going in. */
+  private trackThunder(ev: LockEvent, b2bBefore: number): void {
+    const keepsB2b = ev.linesCleared > 0 && (ev.spin !== "none" || ev.linesCleared === 4);
+    const intensity = this.thunder.hit(
+      ev.linesCleared,
+      keepsB2b,
+      ev.boardAfter.isEmpty(),
+      b2bBefore,
+    );
+    if (intensity > 0 && settings.soundFx) {
+      thunderSound(intensity);
+    }
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     const desc = keyDescriptor(e);
     const b: Keybinds = this.input.binds;
@@ -950,6 +1020,7 @@ export class GameView {
       if (this.evalOn()) {
         this.engine.gradeLock(ev, { fourwide: true });
       }
+      this.trackThunder(ev, 0); // 4-wide is a combo drill, no back-to-back
       this.versusLock(ev, 0, this.combo - 1);
       this.handleTopOut();
       this.refreshAll();
@@ -1055,6 +1126,7 @@ export class GameView {
     } else if (this.evalOn()) {
       this.engine.gradeLock(ev, { lstBias: this.mode === "lst", neural: settings.neuralEval });
     }
+    this.trackThunder(ev, b2bBefore);
     this.versusLock(ev, b2bBefore, this.combo - 1);
     if (
       this.mode === "free" &&
@@ -1407,6 +1479,25 @@ export class GameView {
     }
     if (this.paused) {
       this.resume();
+    }
+    // verified 20-TSD line for this seed: play it move for move. Matching
+    // by board key means undo resyncs automatically and a user deviation
+    // simply falls through to the live assists below.
+    if (this.lstPlan) {
+      const idx = this.lstPlanKeys.indexOf(this.game.board.key());
+      if (idx >= 0 && idx < this.lstPlan.length) {
+        const mv = this.lstPlan[idx];
+        this.assistWho = "Plan";
+        this.taintSession("Plan assist");
+        this.botMoving = true;
+        const ev = this.game.applyMove(mv.piece, mv.cells, mv.spin);
+        this.botMoving = false;
+        if (ev) {
+          this.handleTopOut();
+          this.refreshAll();
+          return;
+        }
+      }
     }
     const queue = [this.game.active.type, ...this.game.preview()];
     let found = this.lstBookMove();

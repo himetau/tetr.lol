@@ -531,6 +531,11 @@ function solveCanonical(
             canyons += depth - 1;
           }
         }
+        // NOTE: a scored bonus for the tutorial's canonical lids (2-high S/Z,
+        // 1-high L/J overhangs) was tried here and made solves *worse* -
+        // rewarding early roofing derails the fill discipline. The canon is
+        // enforced by the hard rules instead (well untouched by non-T,
+        // notch-only voids, mirrored solving); the alternation emerges.
         // with a T in hand the site's completion is on a deadline: the next
         // T that arrives with hold already full has nowhere to go
         const missingW = tPressure ? 110 : 25;
