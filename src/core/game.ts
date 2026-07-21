@@ -109,6 +109,17 @@ export class Game {
     return this.queue.slice(0, PREVIEW_N);
   }
 
+  /** Upcoming pieces beyond the preview window (the LST solver plans whole
+   * runs against the drill's deterministic bag). Extends the internal queue;
+   * harmless for undo because bag draws are deterministic and snapshots
+   * capture both queue and bag state. */
+  peekQueue(n: number): PieceType[] {
+    while (this.queue.length < n) {
+      this.queue.push(this.bag.next());
+    }
+    return this.queue.slice(0, n);
+  }
+
   /** Board + current piece + queue snapshot for the analysis engine. */
   analysisState() {
     return {
