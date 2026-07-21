@@ -33,7 +33,7 @@ import { BotPlayer } from "./bot-player";
 import { bestMove, type GradeResult, type Grade, type AltInfo } from "../engine/grade";
 import { matchOpener, chainsToLoop, type OpenerPlacement } from "../engine/opener";
 import { bookAdvice } from "../engine/book";
-import { enumeratePlacements } from "../engine/enumerate";
+import { enumeratePlacements, placementKey } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
 import LST_RUNS from "../data/lst-runs.json";
 import { CC2_LST_LOOP_JSON } from "../engine/cc2-weights";
@@ -190,6 +190,14 @@ export class GameView {
   // moment the user deviates
   private lstPlan: { piece: PieceType; cells: [number, number][]; spin: SpinKind }[] | null = null;
   private lstPlanKeys: string[] = [];
+  // plan cursor: moves confirmed played in order, plus moves the user played
+  // early. Between two TSDs nothing clears, so fill placements within a
+  // cycle commute - playing the plan's move a few pieces ahead of schedule
+  // is the same line, and gets graded (and resumed) as such.
+  private lstPlanCursor = 0;
+  private lstPlanConsumed = new Set<number>();
+  private lstPlanHist: { cursor: number; consumed: number[] }[] = [];
+  private lastLockOnPlan = false;
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -608,11 +616,120 @@ export class GameView {
     }
   }
 
+  /** Index one past the last move of the current plan cycle: the next T in
+   * the plan (exclusive). Only fills before the TSD commute - the clear
+   * shifts every later move's coordinates. */
+  private lstPlanSegEnd(): number {
+    const plan = this.lstPlan!;
+    let i = this.lstPlanCursor;
+    while (i < plan.length && plan[i].piece !== "T") {
+      i++;
+    }
+    return i;
+  }
+
+  /** Advance the cursor over moves already consumed out of order. */
+  private lstPlanAdvance(): void {
+    while (this.lstPlanConsumed.has(this.lstPlanCursor)) {
+      this.lstPlanConsumed.delete(this.lstPlanCursor);
+      this.lstPlanCursor++;
+    }
+  }
+
+  /** Next plan move that can be played right now: the cursor move if its
+   * cells fit the live board, else a later fill of the current cycle (the
+   * user may have played the cursor's move early). The TSD itself never
+   * plays out of order - it needs its cycle complete. Availability is
+   * checked before touching the game so a miss has no side effects. */
+  private lstPlanNextPlayable(): {
+    piece: PieceType;
+    cells: [number, number][];
+    spin: SpinKind;
+  } | null {
+    const plan = this.lstPlan;
+    const active = this.game.active;
+    if (!plan || !active) {
+      return null;
+    }
+    const board = this.game.board;
+    const fits = (cells: [number, number][]): boolean => {
+      let grounded = false;
+      for (const [x, y] of cells) {
+        if (board.filled(x, y)) {
+          return false;
+        }
+        if (y === 0 || board.filled(x, y - 1)) {
+          grounded = true;
+        }
+      }
+      return grounded;
+    };
+    const available = (piece: PieceType): boolean =>
+      piece === active.type ||
+      (this.game.canHold &&
+        (piece === this.game.hold || (this.game.hold === null && piece === this.game.preview()[0])));
+    const end = this.lstPlanSegEnd();
+    const last = Math.min(end, plan.length - 1); // include the cycle's TSD
+    for (let i = this.lstPlanCursor; i <= last; i++) {
+      if (this.lstPlanConsumed.has(i)) {
+        continue;
+      }
+      const mv = plan[i];
+      if (i > this.lstPlanCursor && mv.piece === "T") {
+        break;
+      }
+      if (available(mv.piece) && fits(mv.cells)) {
+        return mv;
+      }
+    }
+    return null;
+  }
+
+  /** Per-lock plan bookkeeping: match the locked placement against the plan
+   * (in order, or early within the current cycle) and remember whether this
+   * lock was a plan move - the grader treats those as best by definition. */
+  private trackLstPlan(ev: LockEvent): void {
+    this.lastLockOnPlan = false;
+    if (!this.lstPlan) {
+      return;
+    }
+    this.lstPlanHist.push({
+      cursor: this.lstPlanCursor,
+      consumed: [...this.lstPlanConsumed],
+    });
+    this.lstPlanAdvance();
+    const plan = this.lstPlan;
+    if (this.lstPlanCursor >= plan.length) {
+      return;
+    }
+    const k = placementKey(ev.piece, ev.cells);
+    const at = plan[this.lstPlanCursor];
+    if (placementKey(at.piece, at.cells) === k) {
+      this.lstPlanCursor++;
+      this.lstPlanAdvance();
+      this.lastLockOnPlan = true;
+      return;
+    }
+    // early play: any later non-T move of the current cycle is the same line
+    const end = this.lstPlanSegEnd();
+    for (let i = this.lstPlanCursor + 1; i < end; i++) {
+      if (!this.lstPlanConsumed.has(i) && placementKey(plan[i].piece, plan[i].cells) === k) {
+        this.lstPlanConsumed.add(i);
+        this.lastLockOnPlan = true;
+        return;
+      }
+    }
+  }
+
   /** Load this seed's verified 20-TSD line (if one is shipped) and stamp
    * the board key expected before each move for playback matching. */
   private loadLstPlan(seed: number | undefined): void {
     this.lstPlan = null;
     this.lstPlanKeys = [];
+    this.lstPlanCursor = 0;
+    this.lstPlanConsumed.clear();
+    this.lstPlanHist = [];
+    this.lastLockOnPlan = false;
     if (this.mode !== "lst" || seed === undefined) {
       return;
     }
@@ -655,6 +772,13 @@ export class GameView {
       }
       while (this.comboHistory.length > this.game.pieceIndex) {
         this.combo = this.comboHistory.pop() ?? 0;
+      }
+      while (this.lstPlanHist.length > this.game.pieceIndex) {
+        const snap = this.lstPlanHist.pop();
+        if (snap) {
+          this.lstPlanCursor = snap.cursor;
+          this.lstPlanConsumed = new Set(snap.consumed);
+        }
       }
       if (this.mode === "fourwide") {
         this.b2bTag.set("COMBO", this.combo);
@@ -1060,6 +1184,7 @@ export class GameView {
     }
     if (this.mode === "lst") {
       this.trackLstGoal(ev);
+      this.trackLstPlan(ev);
     }
 
     if (this.openerPhase) {
@@ -1124,7 +1249,15 @@ export class GameView {
     } else if (this.botMoving) {
       this.botMoveFeedback(ev);
     } else if (this.evalOn()) {
-      this.engine.gradeLock(ev, { lstBias: this.mode === "lst", neural: settings.neuralEval });
+      if (this.mode === "lst" && this.lastLockOnPlan) {
+        // the placement is in the plan's current cycle - playing it a few
+        // pieces ahead of schedule is the same line, not an inaccuracy
+        this.showChip("best", "Plan · queued in this bag");
+        this.recordGrade("best");
+        this.dockNote("plan move ✓ - the book plays this within the cycle");
+      } else {
+        this.engine.gradeLock(ev, { lstBias: this.mode === "lst", neural: settings.neuralEval });
+      }
     }
     this.trackThunder(ev, b2bBefore);
     this.versusLock(ev, b2bBefore, this.combo - 1);
@@ -1480,13 +1613,22 @@ export class GameView {
     if (this.paused) {
       this.resume();
     }
-    // verified 20-TSD line for this seed: play it move for move. Matching
-    // by board key means undo resyncs automatically and a user deviation
-    // simply falls through to the live assists below.
+    // verified 20-TSD line for this seed: play it move for move. An exact
+    // board-key match re-anchors the cursor (e.g. across undo); when the
+    // user played some of the cycle's fills early the boards differ until
+    // the TSD reconverges them, so fall back to the first still-unplayed
+    // move of the cycle that fits. A real deviation falls through to the
+    // live assists below.
     if (this.lstPlan) {
-      const idx = this.lstPlanKeys.indexOf(this.game.board.key());
-      if (idx >= 0 && idx < this.lstPlan.length) {
-        const mv = this.lstPlan[idx];
+      const exact = this.lstPlanKeys.indexOf(this.game.board.key());
+      if (exact >= 0 && exact < this.lstPlan.length) {
+        this.lstPlanCursor = exact;
+        this.lstPlanConsumed.clear();
+      } else {
+        this.lstPlanAdvance();
+      }
+      const mv = this.lstPlanNextPlayable();
+      if (mv) {
         this.assistWho = "Plan";
         this.taintSession("Plan assist");
         this.botMoving = true;
