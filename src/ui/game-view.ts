@@ -35,6 +35,7 @@ import { matchOpener, chainsToLoop, type OpenerPlacement } from "../engine/opene
 import { bookAdvice } from "../engine/book";
 import { enumeratePlacements, placementKey } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
+import { lstTier } from "../engine/lst-tier";
 import LST_RUNS from "../data/lst-runs.json";
 import LST_QUAD_RUNS from "../data/lst-quad-runs.json";
 import { CC2_LST_LOOP_JSON } from "../engine/cc2-weights";
@@ -1613,7 +1614,7 @@ export class GameView {
       }
       this.showToast(
         this.quadMode
-          ? `Goal reached - ${clears} clears (${this.session.tsds} TSD + ${this.lstQuads} quad), B2B intact ✓`
+          ? `Goal reached - ${lstTier(clears).name}: ${clears} clears (${this.session.tsds} TSD + ${this.lstQuads} quad), B2B intact ✓`
           : `Goal reached - ${LST_GOAL_TSDS} TSDs, B2B intact, no T or I wasted ✓`,
       );
     }
