@@ -577,7 +577,17 @@ export class GameView {
     const params = new URLSearchParams(location.search);
     const seedParam = params.get("seed");
     const runPool = this.quadMode ? (this.quadPool?.runs ?? {}) : LST_RUNS.runs;
-    const lstSeeds = this.mode === "lst" ? Object.keys(runPool) : [];
+    let lstSeeds = this.mode === "lst" ? Object.keys(runPool) : [];
+    // ?tier=<warmup|standard|long|showcase> narrows the quad drill to that
+    // difficulty bucket (falls back to the whole pool if the tier is empty)
+    const tierParam = params.get("tier");
+    if (this.quadMode && this.quadPool && tierParam) {
+      const stats = this.quadPool.stats as unknown as Record<string, { clears: number }>;
+      const inTier = lstSeeds.filter((s) => lstTier(stats[s].clears).name === tierParam);
+      if (inTier.length > 0) {
+        lstSeeds = inTier;
+      }
+    }
     const seed = seedParam
       ? Number(seedParam)
       : this.mode === "allspin"
