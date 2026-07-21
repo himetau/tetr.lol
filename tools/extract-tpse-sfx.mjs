@@ -48,6 +48,13 @@ const WANTED = [
   "clutch",
   "applause",
   "hyperalert",
+  // rolling-thunder spike cues for big sends (the "nuke")
+  "thunder1",
+  "thunder2",
+  "thunder3",
+  "thunder4",
+  "thunder5",
+  "thunder6",
   "countdown1",
   "countdown2",
   "countdown3",

@@ -40,6 +40,12 @@ export type SfxName =
   | "clutch"
   | "applause"
   | "hyperalert"
+  | "thunder1"
+  | "thunder2"
+  | "thunder3"
+  | "thunder4"
+  | "thunder5"
+  | "thunder6"
   | "countdown1"
   | "countdown2"
   | "countdown3"
@@ -199,16 +205,88 @@ export function surgeSound(lines: number): void {
 /** A big attack was sent - an escalating slam that hits harder and pitches up
  * the more lines went out (`lines`), for the "spike" feel. */
 export function bigSendSound(lines: number): void {
-  const t = Math.min(1, (lines - BIG_SEND_MIN) / 12); // 0 at threshold → 1 at +12
-  sfx("garbagesmash", 0.4 + 0.25 * t, "clear", 1 + 0.18 * t);
-  if (lines >= 12) {
-    sfx("applause", 0.35, "clear");
+  const t = Math.min(1, (lines - BIG_SEND_MIN) / 8); // 0 at threshold → 1 at +8
+  sfx("garbagesmash", 0.4 + 0.25 * t, "clear", 1 + 0.15 * t);
+}
+
+/** Rolling thunder for a spike run: the crack climbs through thunder1..thunder6
+ * with the `intensity` handed back by ThunderStreak. Kept fairly quiet - it
+ * layers on top of the clear/slam sounds, so it's a rumble, not a blast. */
+export function thunderSound(intensity: number): void {
+  sfx(thunderCue(intensity), 0.55, "clear");
+}
+
+/** Thunder sample for a given intensity (1..6), clamped. Pure, so the mapping
+ * can be unit-tested. */
+export function thunderCue(intensity: number): SfxName {
+  return `thunder${Math.max(1, Math.min(6, Math.round(intensity)))}` as SfxName;
+}
+
+/**
+ * Sums the lines cleared across a single COMBO - consecutive clearing placements
+ * with no gap - and cracks the thunder once that total reaches COMBO_NUKE_LINES
+ * (two tetrises' worth). Works like a combo counter, but counting lines cleared
+ * instead of clears.
+ *
+ * Feed it EVERY lock. A placement that clears nothing breaks the combo and
+ * resets the count, so the clears must be strictly back-to-back: "tetris, a
+ * build piece, tetris" is NOT 8 lines in a row - the build resets it, and a lone
+ * tetris (4 lines) never reaches 8 on its own. It fires just once per combo (a
+ * long combo doesn't re-crack on every further clear). The thunder also cracks
+ * two other ways: cashing out (breaking) a back-to-back chain of B2B_BREAK_NUKE+
+ * specials, and any all clear (perfect clear). Returns the thunder intensity to
+ * play now (>=1), or 0 for silence.
+ */
+export class ThunderStreak {
+  private comboLines = 0; // lines cleared in the current unbroken combo
+  private comboFired = false; // latch: this combo already cracked once
+
+  /**
+   * Feed one lock. `linesCleared` this placement cleared; `keepsB2b` whether it
+   * continued the back-to-back chain (a spin or a quad); `allClear` whether it
+   * wiped the board (perfect clear); `b2bBefore` the back-to-back chain length
+   * going into it (so a chain-breaking clear can cash it out). Returns the
+   * thunder intensity to play now (0 = silent).
+   */
+  hit(linesCleared: number, keepsB2b: boolean, allClear = false, b2bBefore = 0): number {
+    let intensity = 0;
+    if (linesCleared > 0) {
+      this.comboLines += linesCleared; // the combo continues, add this clear
+      if (this.comboLines >= COMBO_NUKE_LINES && !this.comboFired) {
+        intensity = 4; // two tetrises' worth cleared in a row → one crack
+        this.comboFired = true;
+      }
+      // cashing out (breaking) a long back-to-back chain also cracks thunder
+      if (!keepsB2b && b2bBefore >= B2B_BREAK_NUKE) {
+        intensity = Math.max(intensity, 3 + Math.floor((b2bBefore - B2B_BREAK_NUKE) / 2));
+      }
+    } else {
+      this.reset(); // a placement that cleared nothing breaks the combo
+    }
+    if (allClear) {
+      // a perfect clear cracks on its own, at least a solid tier
+      intensity = Math.max(intensity, 4);
+    }
+    return intensity > 0 ? Math.min(6, intensity) : 0;
+  }
+
+  /** Clear the combo (call on a fresh run / retry / top-out). */
+  reset(): void {
+    this.comboLines = 0;
+    this.comboFired = false;
   }
 }
 
 /** Attack size at which the "big send" sound + shaking number kick in (a full
  * clear's worth). Tune to taste to match tetr.io's spike feel. */
 export const BIG_SEND_MIN = 4;
+
+/** Lines cleared across one unbroken combo that crack the thunder (two tetrises'
+ * worth). A non-clearing placement breaks the combo and resets the count. */
+export const COMBO_NUKE_LINES = 8;
+
+/** Back-to-back chain length whose break (cash-out) cracks the thunder. */
+export const B2B_BREAK_NUKE = 4;
 
 /** A piece was spun into place (T-spin or all-spin), clear or not. */
 export function spinSound(): void {

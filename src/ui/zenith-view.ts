@@ -40,6 +40,8 @@ import {
   surgeSound,
   bigSendSound,
   BIG_SEND_MIN,
+  ThunderStreak,
+  thunderSound,
 } from "./sound";
 import { stats, saveStats, recordSession, fmtSprint } from "./stats";
 import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from "./fx";
@@ -59,6 +61,8 @@ export class ZenithView {
   private unsubSettings: () => void;
 
   private run: ZenithRun | null = null;
+  // rolling thunder: two big sends in a row crack the storm (see ThunderStreak)
+  private thunder = new ThunderStreak();
   private gravAcc = 0;
   private lockTimerMs = 0;
   // guideline Extended Placement Lock Down: the timer resets on successful
@@ -378,6 +382,7 @@ export class ZenithView {
     this.tsds = 0;
     this.tsses = 0;
     this.lastIncoming = 0;
+    this.thunder.reset();
     this.b2bTag.reset();
     this.gmActive.style.height = "0px";
     this.gmQueued.style.height = "0px";
@@ -527,6 +532,7 @@ export class ZenithView {
     }
 
     if (r) {
+      const thunderB2bBefore = r.b2b; // chain length before this lock mutates it
       if (ev.linesCleared > 0) {
         const b2bBefore = r.b2b;
         const out = r.onClear(ev.linesCleared, ev.spin, ev.boardAfter.isEmpty());
@@ -603,6 +609,20 @@ export class ZenithView {
           }
           this.renderer.fxGarbage(rows.length);
           this.renderer.fxGarbageIn(rows.length);
+        }
+      }
+      // rolling thunder - fed EVERY lock (a non-clearing placement breaks the
+      // combo): 8 lines cleared in one combo, a big B2B cash-out, or an all clear
+      if (settings.soundFx) {
+        const keepsB2b = ev.linesCleared > 0 && (ev.spin !== "none" || ev.linesCleared === 4);
+        const thunder = this.thunder.hit(
+          ev.linesCleared,
+          keepsB2b,
+          ev.boardAfter.isEmpty(),
+          thunderB2bBefore,
+        );
+        if (thunder > 0) {
+          thunderSound(thunder);
         }
       }
     }

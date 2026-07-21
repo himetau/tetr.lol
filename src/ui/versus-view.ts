@@ -45,6 +45,8 @@ import {
   surgeSound,
   bigSendSound,
   BIG_SEND_MIN,
+  ThunderStreak,
+  thunderSound,
 } from "./sound";
 import { stats, saveStats, recordSession, fmtSprint } from "./stats";
 import { actionText, sentNumber, lockActionLabel, clearedRowsOf, ChainBubble } from "./fx";
@@ -72,6 +74,8 @@ export class VersusView {
   private matchMs = 0; // all rounds so far + current
   private b2b = 0;
   private combo = -1;
+  // rolling thunder: two big sends in a row crack the storm (see ThunderStreak)
+  private thunder = new ThunderStreak();
   private score = { me: 0, cc: 0 };
   private round = 0;
   private sent = 0;
@@ -579,6 +583,7 @@ export class VersusView {
     this.clock = 0;
     this.b2b = 0;
     this.combo = -1;
+    this.thunder.reset();
     this.background.reset();
     this.lastPending = 0;
     this.warner.reset();
@@ -834,6 +839,7 @@ export class VersusView {
     }
 
     if (this.roundLive && this.incoming) {
+      const thunderB2bBefore = this.b2b; // chain length before this lock mutates it
       if (ev.linesCleared > 0) {
         this.combo++;
         const b2bBefore = this.b2b;
@@ -929,6 +935,20 @@ export class VersusView {
           }
           this.renderer.fxGarbage(rows.length);
           this.renderer.fxGarbageIn(rows.length);
+        }
+      }
+      // rolling thunder - fed EVERY lock (a non-clearing placement breaks the
+      // combo): 8 lines cleared in one combo, a big B2B cash-out, or an all clear
+      if (settings.soundFx) {
+        const keepsB2b = ev.linesCleared > 0 && (ev.spin !== "none" || ev.linesCleared === 4);
+        const thunder = this.thunder.hit(
+          ev.linesCleared,
+          keepsB2b,
+          ev.boardAfter.isEmpty(),
+          thunderB2bBefore,
+        );
+        if (thunder > 0) {
+          thunderSound(thunder);
         }
       }
       this.b2bTag.set("B2B", this.b2b, this.b2b >= BIG_SEND_MIN);
