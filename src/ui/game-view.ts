@@ -825,11 +825,18 @@ export class GameView {
     if (remaining <= 0) {
       return;
     }
+    // Solve a bounded rolling WINDOW, not the whole remaining line. A full
+    // ~18-TSD solve can't finish in the budget, so it returned nothing and the
+    // drill dropped to the lawless reactive beam. A short window solves reliably
+    // (measured: ~10 TSDs in ~1s); when it depletes, the next off-plan lock
+    // (cursor past the plan end) re-triggers this for the following window - so
+    // live play stays on the solver's clean LST instead of the beam.
+    const window = Math.min(remaining, 10);
     const rows = Array.from(this.game.board.rows);
-    const queue = [this.game.active.type, ...this.game.peekQueue(remaining * 9 + 20)];
+    const queue = [this.game.active.type, ...this.game.peekQueue(window * 9 + 20)];
     this.resolving = true;
     this.resolveFromRows = rows;
-    this.engine.solve(rows, queue, this.game.hold, remaining, 3000, this.quadMode);
+    this.engine.solve(rows, queue, this.game.hold, window, 4000, this.quadMode);
   }
 
   /** Adopt a freshly re-solved continuation as the drill's plan, anchored at
