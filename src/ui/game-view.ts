@@ -31,7 +31,7 @@ import { ColdClearClient, pairsOf, type CC2Move } from "./cc2-client";
 import { GarbageQueue, ScheduledAttacker, versusAttack, scaleAttack } from "../core/versus";
 import { BotPlayer } from "./bot-player";
 import { bestMove, type GradeResult, type Grade, type AltInfo } from "../engine/grade";
-import { matchOpener, chainsToLoop, type OpenerPlacement } from "../engine/opener";
+import { matchOpener, chainsToLoop, planOpener, type OpenerPlacement } from "../engine/opener";
 import { bookAdvice } from "../engine/book";
 import { enumeratePlacements, placementKey } from "../engine/enumerate";
 import { lstLoopMove } from "../engine/lst-loop";
@@ -209,6 +209,10 @@ export class GameView {
   private quadMode = false;
   // ?quad=1 forces quad mode on regardless of the setting (shareable practice link)
   private quadParam = false;
+  // ?unpooled=1 (testing): deal a RANDOM seed with no shipped line - plan the
+  // opener live and let the bounded-window re-solve drive the loop, so you can
+  // watch the live solver handle a position that isn't in the verified pool
+  private unpooled = false;
   // lazily imported when quadMode (kept out of the initial bundle otherwise)
   private quadPool: QuadPool | null = null;
   private lstQuads = 0;
@@ -268,7 +272,9 @@ export class GameView {
     // quad mode comes from the "Quad loop" setting or ?quad=1 (a shareable link
     // that forces it on). When on, fetch the large quad pool on demand before the
     // first drill starts; the normal drill path runs synchronously as before.
-    this.quadParam = new URLSearchParams(location.search).get("quad") === "1";
+    const urlParams = new URLSearchParams(location.search);
+    this.quadParam = urlParams.get("quad") === "1";
+    this.unpooled = mode === "lst" && urlParams.get("unpooled") === "1";
     this.quadMode = this.wantQuad();
     if (this.quadMode) {
       this.ensureQuadPool(() => this.resetDrill());
@@ -618,8 +624,8 @@ export class GameView {
     }
     const seed = seedParam
       ? Number(seedParam)
-      : this.mode === "allspin"
-        ? (Math.random() * 2 ** 31) | 0
+      : this.mode === "allspin" || (this.unpooled && this.mode === "lst")
+        ? (Math.random() * 2 ** 31) | 0 // unpooled testing: any random seed, not the pool
         : this.mode === "lst" && lstSeeds.length > 0
           ? Number(lstSeeds[(Math.random() * lstSeeds.length) | 0])
           : undefined;
@@ -952,6 +958,28 @@ export class GameView {
     this.lastLockOnPlan = false;
     this.lstGoalTarget = LST_GOAL_TSDS;
     if (this.mode !== "lst" || seed === undefined) {
+      return;
+    }
+    if (this.unpooled) {
+      // no shipped line - plan the TKI opener live so the engine can auto-play
+      // into a loop; once the opener depletes, maybeResolveOnDeviation re-solves
+      // the loop in bounded windows. planOpener finds an opener for ~70% of
+      // seeds; when it can't, the drill just starts unassisted (still testable).
+      const active = this.game.active?.type;
+      const plan = active ? planOpener([active, ...this.game.peekQueue(9)]) : null;
+      if (plan) {
+        const scratch = new Board();
+        this.lstPlan = plan.moves.map((m) => ({
+          piece: m.piece as PieceType,
+          cells: m.cells.map(([a, b]) => [a, b] as [number, number]),
+          spin: m.spin as SpinKind,
+        }));
+        for (const mv of this.lstPlan) {
+          this.lstPlanKeys.push(scratch.key());
+          scratch.place(mv.cells);
+          scratch.clearLines();
+        }
+      }
       return;
     }
     if (this.quadMode && !this.quadPool) {
