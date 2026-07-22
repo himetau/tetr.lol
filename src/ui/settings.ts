@@ -86,6 +86,9 @@ export interface AppSettings {
   /** which engine drives the LST drill's "watch book" once off the book:
    * the built-in heuristic loop player, or Cold Clear 2 (loop-tuned) */
   lstAssist: "engine" | "cc2";
+  /** LST drill deals from the quad pool: the engine loops past 20 TSDs using
+   * well quads (30-60+ clears) instead of the flat 20-TSD goal */
+  lstQuad: boolean;
   versus: VersusSettings;
 }
 
@@ -108,6 +111,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   feedbackLevel: "all",
   evalDrill: { lst: true, fourwide: true, free: true, allspin: true },
   lstAssist: "engine",
+  lstQuad: false,
   versus: {
     botPps: 1.5,
     botLevel: "normal",

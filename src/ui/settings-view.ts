@@ -137,6 +137,16 @@ export function settingsView(): HTMLElement {
       },
     ),
   );
+  trainer.appendChild(
+    toggleRow(
+      "Quad loop (LST)",
+      "loop past 20 TSDs with well quads - deals showcase seeds up to 50+ TSDs (re-deals the drill)",
+      settings.lstQuad,
+      (v) => {
+        settings.lstQuad = v;
+      },
+    ),
+  );
   const EVAL_LABEL: Record<GradedMode, [string, string]> = {
     lst: ["LST evaluation", "book + engine grading in the LST drill"],
     fourwide: ["4-wide evaluation", "combo-book grading in the 4-wide drill"],

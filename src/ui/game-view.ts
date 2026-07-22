@@ -207,6 +207,8 @@ export class GameView {
   // pool; the goal allows well quads (I clearing 4) and its target is the
   // seed's verified clear count (TSDs + quads), not a flat 20
   private quadMode = false;
+  // ?quad=1 forces quad mode on regardless of the setting (shareable practice link)
+  private quadParam = false;
   // lazily imported when quadMode (kept out of the initial bundle otherwise)
   private quadPool: QuadPool | null = null;
   private lstQuads = 0;
@@ -263,15 +265,13 @@ export class GameView {
     this.engine.onResult = (r) => this.onGrade(r);
     this.engine.onSolved = (moves) => this.adoptResolvedPlan(moves);
     this.unsubSettings = onSettingsChange(() => this.applySettings());
-    // quadMode is fixed for the session (URL flag); when set, fetch the large
-    // quad pool on demand before the first drill starts. The normal drill path
-    // is unchanged (resetDrill runs synchronously as before).
-    this.quadMode = mode === "lst" && new URLSearchParams(location.search).get("quad") === "1";
+    // quad mode comes from the "Quad loop" setting or ?quad=1 (a shareable link
+    // that forces it on). When on, fetch the large quad pool on demand before the
+    // first drill starts; the normal drill path runs synchronously as before.
+    this.quadParam = new URLSearchParams(location.search).get("quad") === "1";
+    this.quadMode = this.wantQuad();
     if (this.quadMode) {
-      void import("../data/lst-quad-runs.json").then((m) => {
-        this.quadPool = (m as { default: QuadPool }).default;
-        this.resetDrill();
-      });
+      this.ensureQuadPool(() => this.resetDrill());
     } else {
       this.resetDrill();
     }
@@ -334,6 +334,34 @@ export class GameView {
     }
     this.refreshPanes();
     this.refreshSession();
+    // a "Quad loop" toggle switches the pool and goal - re-deal, but only when
+    // it actually flips (applySettings fires on every settings change)
+    const want = this.wantQuad();
+    if (want !== this.quadMode) {
+      this.quadMode = want;
+      if (want) {
+        this.ensureQuadPool(() => this.resetDrill());
+      } else {
+        this.resetDrill();
+      }
+    }
+  }
+
+  /** Quad mode is on when the "Quad loop" setting is enabled or ?quad=1 forces it. */
+  private wantQuad(): boolean {
+    return this.mode === "lst" && (settings.lstQuad || this.quadParam);
+  }
+
+  /** Ensure the large, lazily-imported quad pool is loaded, then run cb. */
+  private ensureQuadPool(cb: () => void): void {
+    if (this.quadPool) {
+      cb();
+      return;
+    }
+    void import("../data/lst-quad-runs.json").then((m) => {
+      this.quadPool = (m as { default: QuadPool }).default;
+      cb();
+    });
   }
 
   private build(): HTMLElement {
