@@ -147,6 +147,16 @@ export function settingsView(): HTMLElement {
       },
     ),
   );
+  trainer.appendChild(
+    toggleRow(
+      "Unpooled seed (LST, testing)",
+      "deal a random off-pool seed - the opener is planned live and the loop re-solved on the fly, to test the live engine (re-deals the drill)",
+      settings.lstUnpooled,
+      (v) => {
+        settings.lstUnpooled = v;
+      },
+    ),
+  );
   const EVAL_LABEL: Record<GradedMode, [string, string]> = {
     lst: ["LST evaluation", "book + engine grading in the LST drill"],
     fourwide: ["4-wide evaluation", "combo-book grading in the 4-wide drill"],

@@ -89,6 +89,9 @@ export interface AppSettings {
   /** LST drill deals from the quad pool: the engine loops past 20 TSDs using
    * well quads (30-60+ clears) instead of the flat 20-TSD goal */
   lstQuad: boolean;
+  /** LST drill deals a RANDOM off-pool seed (testing): no shipped line, the
+   * opener is planned live and the loop is re-solved on the fly */
+  lstUnpooled: boolean;
   versus: VersusSettings;
 }
 
@@ -112,6 +115,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   evalDrill: { lst: true, fourwide: true, free: true, allspin: true },
   lstAssist: "engine",
   lstQuad: false,
+  lstUnpooled: false,
   versus: {
     botPps: 1.5,
     botLevel: "normal",

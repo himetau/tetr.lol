@@ -209,10 +209,12 @@ export class GameView {
   private quadMode = false;
   // ?quad=1 forces quad mode on regardless of the setting (shareable practice link)
   private quadParam = false;
-  // ?unpooled=1 (testing): deal a RANDOM seed with no shipped line - plan the
+  // Unpooled (testing): deal a RANDOM seed with no shipped line - plan the
   // opener live and let the bounded-window re-solve drive the loop, so you can
-  // watch the live solver handle a position that isn't in the verified pool
+  // watch the live solver handle a position that isn't in the verified pool.
+  // Driven by the "Unpooled seed" setting or ?unpooled=1.
   private unpooled = false;
+  private unpooledParam = false;
   // lazily imported when quadMode (kept out of the initial bundle otherwise)
   private quadPool: QuadPool | null = null;
   private lstQuads = 0;
@@ -274,7 +276,8 @@ export class GameView {
     // first drill starts; the normal drill path runs synchronously as before.
     const urlParams = new URLSearchParams(location.search);
     this.quadParam = urlParams.get("quad") === "1";
-    this.unpooled = mode === "lst" && urlParams.get("unpooled") === "1";
+    this.unpooledParam = urlParams.get("unpooled") === "1";
+    this.unpooled = this.wantUnpooled();
     this.quadMode = this.wantQuad();
     if (this.quadMode) {
       this.ensureQuadPool(() => this.resetDrill());
@@ -340,12 +343,15 @@ export class GameView {
     }
     this.refreshPanes();
     this.refreshSession();
-    // a "Quad loop" toggle switches the pool and goal - re-deal, but only when
-    // it actually flips (applySettings fires on every settings change)
-    const want = this.wantQuad();
-    if (want !== this.quadMode) {
-      this.quadMode = want;
-      if (want) {
+    // the "Quad loop" / "Unpooled seed" toggles switch the pool and goal -
+    // re-deal, but only when one actually flips (applySettings fires on every
+    // settings change); one resetDrill covers both
+    const wantQ = this.wantQuad();
+    const wantU = this.wantUnpooled();
+    if (wantQ !== this.quadMode || wantU !== this.unpooled) {
+      this.quadMode = wantQ;
+      this.unpooled = wantU;
+      if (wantQ && !this.quadPool) {
         this.ensureQuadPool(() => this.resetDrill());
       } else {
         this.resetDrill();
@@ -356,6 +362,11 @@ export class GameView {
   /** Quad mode is on when the "Quad loop" setting is enabled or ?quad=1 forces it. */
   private wantQuad(): boolean {
     return this.mode === "lst" && (settings.lstQuad || this.quadParam);
+  }
+
+  /** Unpooled testing is on when the setting is enabled or ?unpooled=1 forces it. */
+  private wantUnpooled(): boolean {
+    return this.mode === "lst" && (settings.lstUnpooled || this.unpooledParam);
   }
 
   /** Ensure the large, lazily-imported quad pool is loaded, then run cb. */
