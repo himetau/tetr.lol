@@ -254,11 +254,13 @@ function surfaceCost(board: Board, notchHoles: number): number {
   for (let x = 0; x < BOARD_W; x++) {
     h.push(board.columnHeight(x));
   }
+  // bumpiness over the FILL side only (cols LST_SPIN_COL+2 .. 9). The structure
+  // side (left overhang + well + notches, cols 0..LST_SPIN_COL+1) is SUPPOSED to
+  // be uneven - that's the LST shape - so penalizing its height diffs made the
+  // ranking prefer flattening the structure over building it. Fill flatness
+  // (clean, tuckable) is what bumpiness should reward.
   let bump = 0;
-  for (let x = 0; x < BOARD_W - 1; x++) {
-    if (x === LST_SPIN_COL - 1 || x === LST_SPIN_COL) {
-      continue; // seams into/out of the well
-    }
+  for (let x = LST_SPIN_COL + 2; x < BOARD_W - 1; x++) {
     bump += Math.abs(h[x] - h[x + 1]);
   }
   let max = 0;
@@ -592,13 +594,11 @@ function solveCanonical(
         if (notchMinY < site.y) {
           continue;
         }
-        // surface cost, inline (bumpiness skips the well seams)
+        // surface cost, inline (bumpiness = fill side only, cols LST_SPIN_COL+2+)
         let bump = 0;
         let max = 0;
-        for (let i = 0; i < BOARD_W - 1; i++) {
-          if (i !== LST_SPIN_COL - 1 && i !== LST_SPIN_COL) {
-            bump += Math.abs(nh[i] - nh[i + 1]);
-          }
+        for (let i = LST_SPIN_COL + 2; i < BOARD_W - 1; i++) {
+          bump += Math.abs(nh[i] - nh[i + 1]);
         }
         for (let i = 0; i < BOARD_W; i++) {
           if (i !== LST_SPIN_COL && nh[i] > max) {
@@ -684,10 +684,8 @@ function solveCanonical(
     }
     let bump = 0;
     let max = 0;
-    for (let i = 0; i < BOARD_W - 1; i++) {
-      if (i !== LST_SPIN_COL - 1 && i !== LST_SPIN_COL) {
-        bump += Math.abs(hh[i] - hh[i + 1]);
-      }
+    for (let i = LST_SPIN_COL + 2; i < BOARD_W - 1; i++) {
+      bump += Math.abs(hh[i] - hh[i + 1]);
     }
     for (let i = 0; i < BOARD_W; i++) {
       if (i !== LST_SPIN_COL && hh[i] > max) {
