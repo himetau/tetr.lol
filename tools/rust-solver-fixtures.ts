@@ -28,6 +28,7 @@ const DEFAULTS: Required<SolveOptions> = {
   allowQuad: false,
   szReserve: 0,
   partialHealth: false,
+  leftOCapHorizon: 0,
 };
 
 interface Case {

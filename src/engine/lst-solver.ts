@@ -99,6 +99,14 @@ export interface SolveOptions {
    * diagnostician showed committed partial tails are what kill the next
    * window. Default false keeps behavior byte-identical (Rust parity). */
   partialHealth?: boolean;
+  /** LST left-side rule (0 = off). The outer-left wall (cols 0-1) is reserved
+   * for the OL double-up: an O may only be placed there if an L is coming within
+   * the next N upcoming pieces (or is in hold) to cap it. A bare O with no L to
+   * cap strands the column and drops the build out of LST into general 2-7
+   * stacking - the "no lens fired" planning mistake the diagnostician flagged at
+   * solved-window tails. Hard move-gen constraint (removes the placement, so it
+   * changes node counts). Default 0 keeps behavior byte-identical (Rust parity). */
+  leftOCapHorizon?: number;
 }
 
 const DEFAULTS: Required<SolveOptions> = {
@@ -114,6 +122,7 @@ const DEFAULTS: Required<SolveOptions> = {
   allowQuad: false,
   szReserve: 0,
   partialHealth: false,
+  leftOCapHorizon: 0,
 };
 
 // Candidate-ranking weights (the heuristic that orders moves in the LDS). The
@@ -235,6 +244,27 @@ const DIAG_OVERHANG_COST = 30;
 // Cost for spending an O beside the well (notch col 1 or 3) - see
 // search.ts O_NOTCH_TOLL. Soft: re-ranks lines, never blocks a solve.
 const O_NOTCH_COST = 60;
+
+/** Is an L available to cap an O on the outer-left wall (the OL double-up) -
+ * sitting in hold now, or arriving within the next `horizon` upcoming pieces?
+ * Used by the leftOCapHorizon left-side rule. */
+function lCapAvailable(
+  queue: PieceType[],
+  nextQi: number,
+  nextHold: PieceType | null,
+  horizon: number,
+): boolean {
+  if (nextHold === "L") {
+    return true;
+  }
+  const end = Math.min(queue.length, nextQi + horizon);
+  for (let i = nextQi; i < end; i++) {
+    if (queue[i] === "L") {
+      return true;
+    }
+  }
+  return false;
+}
 
 /** Extra stacked notch voids beside the well at/above the site base - the
  * 2-high S/Z diagonal signature (see eval.ts diagonalOverhangs). Zero for a
@@ -556,6 +586,18 @@ function solveCanonical(
       for (let x = -s.minDx; x < BOARD_W - s.maxDx; x++) {
         if (x + s.minDx <= LST_SPIN_COL && x + s.maxDx >= LST_SPIN_COL) {
           continue; // nothing but the T ever touches the well
+        }
+        // LST left-side rule: the outer-left wall (cols 0-1) is reserved for the
+        // OL double-up. A bare O there is only allowed if an L is coming to cap
+        // it (in hold, or within leftOCapHorizon upcoming pieces); otherwise the
+        // O strands the column and drops the build out of LST. See SolveOptions.
+        if (
+          opts.leftOCapHorizon > 0 &&
+          piece === "O" &&
+          x + s.minDx === 0 &&
+          !lCapAvailable(queue, nextQi, nextHold, opts.leftOCapHorizon)
+        ) {
+          continue;
         }
         const y = dropY(b, piece, rot, x);
         // frontier discipline: build at the site, not above it - the loop
@@ -984,8 +1026,9 @@ function solveCacheKey(
   allowQuad: boolean,
   szReserve: number,
   partialHealth: boolean,
+  leftOCapHorizon: number,
 ): string {
-  return `${board.key()}|${queue.join("")}|${hold ?? "-"}|${target}|${allowQuad ? "q" : "t"}|${szReserve}|${partialHealth ? "h" : "-"}`;
+  return `${board.key()}|${queue.join("")}|${hold ?? "-"}|${target}|${allowQuad ? "q" : "t"}|${szReserve}|${partialHealth ? "h" : "-"}|lo${leftOCapHorizon}`;
 }
 
 /** Serialize the cache (for persistence across sessions/scans). */
@@ -1029,7 +1072,7 @@ export function solveLstRun(
   options: SolveOptions = {},
 ): SolveResult | null {
   const opts = { ...DEFAULTS, ...options };
-  const ck = solveCacheKey(board, queue, hold, target, opts.allowQuad, opts.szReserve, opts.partialHealth);
+  const ck = solveCacheKey(board, queue, hold, target, opts.allowQuad, opts.szReserve, opts.partialHealth, opts.leftOCapHorizon);
   const cached = SOLVE_CACHE.get(ck);
   if (cached) {
     return { ...cached, moves: cached.moves };

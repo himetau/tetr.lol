@@ -28,13 +28,20 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Game } from "../src/core/game";
+import { Board } from "../src/core/board";
 import { planOpener } from "../src/engine/opener";
 import { lstHoles } from "../src/engine/eval";
+import { solveLstRun } from "../src/engine/lst-solver";
 import type { PieceType } from "../src/core/pieces";
 import { initSync, solve } from "../wasm/lst_solver.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 initSync({ module: readFileSync(join(root, "wasm/lst_solver_bg.wasm")) });
+
+// SOLVER=ts uses the TS solveLstRun directly (so a not-yet-in-Rust option like
+// LEFTO=leftOCapHorizon can be A/B'd WITHOUT a wasm rebuild); default wasm.
+const SOLVER = process.env.SOLVER ?? "wasm";
+const LEFTO = Number(process.env.LEFTO ?? 0); // leftOCapHorizon (TS path only)
 
 const N = Number(process.argv[2] ?? 6);
 const POLICY = (process.argv[3] ?? "both") as "base" | "verify" | "cascade" | "both";
@@ -63,6 +70,13 @@ interface WasmResult { moves: WasmMove[]; tsds: number; solved: boolean; mirrore
 type Mv = { piece: PieceType; cells: [number, number][]; spin: "none" | "mini" | "full" };
 
 function wasmSolve(rows: number[], queue: PieceType[], hold: PieceType | null, target: number, opts: object): WasmResult | null {
+  if (SOLVER === "ts") {
+    const b = new Board();
+    for (let i = 0; i < rows.length && i < b.rows.length; i++) b.rows[i] = rows[i];
+    // TS SolvedMove already carries beforeKey/isTsd/linesCleared, so SolveResult
+    // is drop-in for WasmResult; leftOCapHorizon is the TS-only rule under test.
+    return solveLstRun(b, queue, hold, target, { ...opts, leftOCapHorizon: LEFTO }) as unknown as WasmResult | null;
+  }
   return JSON.parse(solve(JSON.stringify({ rows, queue, hold, target, opts }))) as WasmResult | null;
 }
 
@@ -262,7 +276,7 @@ function seedStream(n: number): number[] {
 
 const seeds = seedStream(N);
 const policies: ("base" | "verify" | "cascade")[] = POLICY === "both" ? ["base", "verify"] : [POLICY];
-console.log(`lst-window-driver: ${N} seeds, ${ALLOWQUAD ? "QUAD" : "TSD"} loop, target ${TARGET} clears, winNodes ${WINNODES}, probe ${PROBET} @ ${PROBENODES}, szReserve ${SZFILL}, partialHealth ${PHEALTH}\n`);
+console.log(`lst-window-driver: ${N} seeds, ${ALLOWQUAD ? "QUAD" : "TSD"} loop, target ${TARGET} clears, solver ${SOLVER}${SOLVER === "ts" ? ` leftOCap ${LEFTO}` : ""}, winNodes ${WINNODES}, probe ${PROBET} @ ${PROBENODES}, szReserve ${SZFILL}, partialHealth ${PHEALTH}\n`);
 
 const summary: Record<string, number[]> = {};
 for (const policy of policies) {
