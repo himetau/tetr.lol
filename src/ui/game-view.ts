@@ -280,6 +280,13 @@ export class GameView {
   private lstPlanGen = 0;
   private probeGen = -1;
   private probeCutLen = 0;
+  // Board key the bounded-window solver conceded on (returned no line after the
+  // escalation ladder). While off-plan in the loop the bot WAITS for the solver
+  // rather than drifting on reactive moves - the drift was why the async window
+  // result never matched the board it was solved from and the loop ran purely
+  // reactive (0 clears unpooled). Only a board the solver has given up on falls
+  // through to the reactive rungs, so the demo still moves at a true wall.
+  private resolveConcededAt: string | null = null;
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -873,6 +880,23 @@ export class GameView {
     this.issueResolve();
   }
 
+  /** Kick a bounded-window solve from the current board to drive the loop
+   * forward (bookPlay's wait-for-solver gate), independent of deviation state:
+   * the loop is solver-driven, not reactive. No-op if one is already running. */
+  private startLoopResolve(): void {
+    if (this.resolving || !this.game.active || this.goalDone || this.goalFail) {
+      return;
+    }
+    const remaining = this.lstGoalTarget - (this.session.tsds + this.lstQuads);
+    if (remaining <= 0) {
+      return;
+    }
+    this.resolving = true;
+    this.resolveWindow = Math.min(remaining, 10);
+    this.resolveEscalation = 0;
+    this.issueResolve();
+  }
+
   /** Fire one bounded-window re-solve from the CURRENT board at the current
    * escalation budget. Re-invoked by adoptResolvedPlan to climb the budget
    * ladder when a window comes back empty. */
@@ -911,6 +935,12 @@ export class GameView {
     this.resolving = false;
     this.resolveFromRows = null;
     if (this.mode !== "lst" || !startRows || moves.length === 0) {
+      // the solver gave up on this board (empty after the ladder): record it so
+      // bookPlay's wait gate lets the reactive rungs take over here instead of
+      // spinning on the same dead solve. Any board change clears this.
+      if (this.mode === "lst" && this.game.active) {
+        this.resolveConcededAt = this.game.board.key();
+      }
       return;
     }
     // partial window (target not reached): a long tail poisons the next window,
@@ -956,6 +986,7 @@ export class GameView {
     this.lstPlanConsumed.clear();
     this.lstPlanHist = [];
     this.lstPlanGen++;
+    this.resolveConcededAt = null; // a fresh plan exists - no longer conceded
     for (const mv of this.lstPlan) {
       this.lstPlanKeys.push(scratch.key());
       scratch.place(mv.cells);
@@ -2161,6 +2192,23 @@ export class GameView {
           this.refreshAll();
           return;
         }
+      }
+    }
+    // Off-plan in the loop, the bounded-window solver is the primary driver.
+    // Reaching here means no plan move fits the current board. Playing a
+    // reactive move now would drift the board out from under any in-flight solve
+    // (its line is anchored at the board it was issued from), so we WAIT: while a
+    // window is solving, do nothing this tick; when none is pending, kick one and
+    // wait. Only a board the solver has already conceded (empty after the
+    // escalation ladder) falls through to the reactive rungs below.
+    if (!this.openerPhase && !this.goalDone && !this.goalFail && settings.lstAssist !== "cc2") {
+      const remaining = this.lstGoalTarget - (this.session.tsds + this.lstQuads);
+      if (remaining > 0 && this.resolveConcededAt !== this.game.board.key()) {
+        if (this.resolving) {
+          return; // a window is solving - wait for it instead of drifting
+        }
+        this.startLoopResolve();
+        return;
       }
     }
     const queue = [this.game.active.type, ...this.game.preview()];
