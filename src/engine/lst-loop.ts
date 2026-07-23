@@ -67,6 +67,13 @@ function legal(p: Placement, allowDoubleUp: boolean, allowQuad: boolean): boolea
   if (p.type === "T" && !isTsd(p)) {
     return false;
   }
+  // Left-wall rule: a Z touching the outer-left wall (cols 0-1) is the general-
+  // 2-7 leak (a Z capping the left O instead of the L) - never part of the LST
+  // left build. Mirrors the solver's hard prune (SolveOptions.leftOCapHorizon)
+  // so the reactive fallback keeps the left wall clean too.
+  if (p.type === "Z" && Math.min(...p.cells.map(([x]) => x)) <= 1) {
+    return false;
+  }
   // I may only clear as a full quad (the volume drain); never a 1-3 line waste
   if (p.type === "I" && p.linesCleared > 0 && !(allowQuad && isQuad(p))) {
     return false;
