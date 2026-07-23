@@ -48,6 +48,12 @@ const PHEALTH = Number(process.env.PHEALTH ?? 0) > 0; // solver partialHealth ex
 const MAX_PROBES_PER_WINDOW = 4;
 const CASNODES = Number(process.env.CASNODES ?? 2_000_000); // cascade full-remaining solve nodes
 const CHUNK = Number(process.env.CHUNK ?? 1); // cascade: TSD cycles committed from a partial line
+// Phase 1 targets the UNPOOLED QUAD loop, so allow well-quads by default: a
+// "clear" (loop cycle) is a full TSD or, in quad mode, an I-quad draining the well.
+const ALLOWQUAD = Number(process.env.QUAD ?? 1) > 0;
+const countsClear = (piece: string, spin: string, lines: number): boolean =>
+  (piece === "T" && spin === "full" && lines >= 2) || (ALLOWQUAD && lines === 4);
+const isClearMove = (m: WasmMove): boolean => m.isTsd || (ALLOWQUAD && m.linesCleared === 4);
 
 interface WasmMove {
   piece: string; cells: [number, number][]; spin: string;
@@ -70,7 +76,7 @@ function replay(seed: number, moves: Mv[]): { game: Game; tsds: number } | null 
   for (const m of moves) {
     const ev = game.applyMove(m.piece, m.cells, m.spin);
     if (!ev) return null;
-    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) tsds++;
+    if (countsClear(ev.piece, ev.spin, ev.linesCleared)) tsds++;
   }
   return { game, tsds };
 }
@@ -79,7 +85,7 @@ const solveHere = (game: Game, target: number, nodes: number, sz: number) =>
   wasmSolve(
     Array.from(game.board.rows),
     [game.active!.type, ...game.peekQueue(target * 9 + 20)] as PieceType[],
-    game.hold, target, { nodeBudget: nodes, budgetMs: 120_000, szReserve: sz, partialHealth: PHEALTH },
+    game.hold, target, { nodeBudget: nodes, budgetMs: 120_000, szReserve: sz, partialHealth: PHEALTH, allowQuad: ALLOWQUAD },
   );
 
 /** Cascade policy: solve FULL remaining each step; a solved line finishes the
@@ -98,7 +104,7 @@ function driveCascade(seed: number): SeedResult {
   for (const m of opener.moves) {
     const ev = game.applyMove(m.piece, m.cells as [number, number][], m.spin);
     if (!ev) return done(0, "opener desync");
-    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) tsds++;
+    if (countsClear(ev.piece, ev.spin, ev.linesCleared)) tsds++;
   }
 
   while (tsds < TARGET) {
@@ -117,12 +123,12 @@ function driveCascade(seed: number): SeedResult {
       let cut = 0;
       let fired = 0;
       for (let i = 0; i < toPlay.length; i++) {
-        if (toPlay[i].isTsd) {
+        if (isClearMove(toPlay[i])) {
           fired++;
           if (fired >= CHUNK) { cut = i + 1; break; }
         }
       }
-      if (fired === 0) return done(tsds, "partial line fires no TSD");
+      if (fired === 0) return done(tsds, "partial line fires no clear");
       toPlay = toPlay.slice(0, cut || toPlay.length);
       stats.truncations++;
     }
@@ -132,7 +138,7 @@ function driveCascade(seed: number): SeedResult {
       if (!ev) return done(tsds, "unreachable placement");
       if (ev.piece === "T" && !(ev.spin === "full" && ev.linesCleared >= 2)) return done(tsds, "wasted T");
       if (lstHoles(game.board) > 0) return done(tsds, "hole");
-      if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) tsds++;
+      if (countsClear(ev.piece, ev.spin, ev.linesCleared)) tsds++;
       if (tsds >= TARGET) break;
     }
     if (game.board.maxHeight() >= 20) return done(tsds, "topped out");
@@ -153,7 +159,7 @@ function drive(seed: number, policy: "base" | "verify"): SeedResult {
   for (const m of committed) {
     const ev = game.applyMove(m.piece, m.cells, m.spin);
     if (!ev) return done(0, "opener desync");
-    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) tsds++;
+    if (countsClear(ev.piece, ev.spin, ev.linesCleared)) tsds++;
   }
 
   const probeAlive = (g: Game, tsdsNow: number, doubleCheck = false): boolean => {
@@ -195,7 +201,7 @@ function drive(seed: number, policy: "base" | "verify"): SeedResult {
       played++;
       if (ev.piece === "T" && !(ev.spin === "full" && ev.linesCleared >= 2)) { broke = "wasted T"; break; }
       if (lstHoles(game.board) > 0) { broke = "hole"; break; }
-      if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) {
+      if (countsClear(ev.piece, ev.spin, ev.linesCleared)) {
         tsds++;
         cuts.push({ nMoves: committed.length, tsds });
       }
@@ -256,7 +262,7 @@ function seedStream(n: number): number[] {
 
 const seeds = seedStream(N);
 const policies: ("base" | "verify" | "cascade")[] = POLICY === "both" ? ["base", "verify"] : [POLICY];
-console.log(`lst-window-driver: ${N} seeds, target ${TARGET}, winNodes ${WINNODES}, probe ${PROBET} TSD @ ${PROBENODES}, szReserve ${SZFILL}, partialHealth ${PHEALTH}\n`);
+console.log(`lst-window-driver: ${N} seeds, ${ALLOWQUAD ? "QUAD" : "TSD"} loop, target ${TARGET} clears, winNodes ${WINNODES}, probe ${PROBET} @ ${PROBENODES}, szReserve ${SZFILL}, partialHealth ${PHEALTH}\n`);
 
 const summary: Record<string, number[]> = {};
 for (const policy of policies) {
