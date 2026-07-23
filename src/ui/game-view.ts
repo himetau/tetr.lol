@@ -107,6 +107,21 @@ const RESOLVE_BUDGETS = [4000, 8000, 16000];
 // (tools/lst-mistake-diag.ts). 1 = re-solve every payoff; the least-poison rule.
 const LST_PARTIAL_COMMIT_CYCLES = 2;
 
+// "verify" probe: after a SOLVED window (that doesn't finish the goal), test
+// whether a clean continuation still exists from its end-state before playing
+// its tail. The diagnostician (tools/lst-mistake-diag.ts) showed the tail of a
+// SOLVED window is the loop-killer - it completes the last clear in a way that
+// strands the next window - and the driver's `verify` policy (probe + truncate
+// on dead) lifted the unpooled quad loop 3/8 -> 8/8 with no solver change.
+// LST_PROBE_TARGET clears deep, at a fast budget; on a dead verdict we retreat
+// to LST_PARTIAL_COMMIT_CYCLES (least-poison) so the tail is never played.
+const LST_PROBE_TARGET = 6;
+const LST_PROBE_BUDGET = 1500;
+// On a dead probe, drop this many trailing clear-cycles of the solved window
+// (the poison tail) and re-solve from the healthier midpoint with fresh
+// lookahead. Matches the driver's measured retreat (~1 boundary) with margin.
+const LST_SOLVED_DROP_CYCLES = 2;
+
 const GRADE_LABEL: Record<Grade, string> = {
   best: "★ Best",
   good: "Good",
@@ -256,6 +271,15 @@ export class GameView {
   // time before dropping to the reactive fallback. Index into RESOLVE_BUDGETS.
   private resolveWindow = 0;
   private resolveEscalation = 0;
+  // "verify" probe (tools/lst-window-driver.ts verify policy): a solved non-final
+  // window is committed whole immediately (so playback never stalls or drifts),
+  // and its end-state is probed for aliveness in parallel. If the probe returns
+  // DEAD before the bot reaches the cut, the still-unplayed poison tail is
+  // trimmed so the plan depletes at the healthy midpoint and re-solves from
+  // there. lstPlanGen guards against a stale probe trimming a newer plan.
+  private lstPlanGen = 0;
+  private probeGen = -1;
+  private probeCutLen = 0;
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -302,6 +326,7 @@ export class GameView {
     this.game.onLock = (ev) => this.onLock(ev);
     this.engine.onResult = (r) => this.onGrade(r);
     this.engine.onSolved = (moves, solved) => this.adoptResolvedPlan(moves, solved);
+    this.engine.onProbe = (solved) => this.onProbeResult(solved);
     this.unsubSettings = onSettingsChange(() => this.applySettings());
     // quad mode comes from the "Quad loop" setting or ?quad=1 (a shareable link
     // that forces it on). When on, fetch the large quad pool on demand before the
@@ -893,7 +918,30 @@ export class GameView {
     // continue from the healthier midpoint (tools/lst-mistake-diag.ts).
     if (!solved) {
       moves = this.truncateToClearCycles(moves, LST_PARTIAL_COMMIT_CYCLES);
+      this.commitResolvedPlan(moves, startRows);
+      return;
     }
+    this.commitResolvedPlan(moves, startRows);
+    // solved a LOCAL window target with more of the goal to go: the diagnostician
+    // showed the tail of a SOLVED window is the loop-killer. Probe its end-state
+    // for aliveness in parallel (the plan is already playing); a dead verdict
+    // trims the unplayed tail in onProbeResult. A window that finishes the goal
+    // (remaining <= the window it solved) has no tail to strand and is skipped.
+    const remaining = this.lstGoalTarget - (this.session.tsds + this.lstQuads);
+    const cycles = moves.filter((m) => m.piece === "T" && m.spin === "full").length;
+    if (cycles < remaining) {
+      const end = this.projectEndState(startRows, moves);
+      if (end) {
+        const keep = Math.max(LST_PARTIAL_COMMIT_CYCLES, cycles - LST_SOLVED_DROP_CYCLES);
+        this.probeGen = this.lstPlanGen;
+        this.probeCutLen = this.truncateToClearCycles(moves, keep).length;
+        this.engine.probe(end.rows, end.queue, end.hold, LST_PROBE_TARGET, LST_PROBE_BUDGET, this.quadMode, LST_WINDOW_SZ_RESERVE);
+      }
+    }
+  }
+
+  /** Build the drill's plan from a solved line anchored at `startRows`. */
+  private commitResolvedPlan(moves: SolvedLineMove[], startRows: number[]): void {
     const scratch = new Board();
     for (let i = 0; i < startRows.length && i < scratch.rows.length; i++) {
       scratch.rows[i] = startRows[i];
@@ -907,12 +955,78 @@ export class GameView {
     this.lstPlanCursor = 0;
     this.lstPlanConsumed.clear();
     this.lstPlanHist = [];
+    this.lstPlanGen++;
     for (const mv of this.lstPlan) {
       this.lstPlanKeys.push(scratch.key());
       scratch.place(mv.cells);
       scratch.clearLines();
     }
     this.refreshAll();
+  }
+
+  /** A "verify" probe finished. If the just-committed solved window's end-state
+   * is DEAD and the bot hasn't yet reached the cut, trim the unplayed poison
+   * tail so the plan depletes at the healthy midpoint and re-solves from there.
+   * Guarded by lstPlanGen so a stale probe can't truncate a newer plan. */
+  private onProbeResult(alive: boolean): void {
+    if (alive || this.mode !== "lst" || this.goalDone || this.goalFail) {
+      return;
+    }
+    if (this.lstPlanGen !== this.probeGen || !this.lstPlan) {
+      return; // the probed plan was already replaced (re-solve / undo / reset)
+    }
+    if (this.lstPlanCursor >= this.probeCutLen || this.probeCutLen >= this.lstPlan.length) {
+      return; // tail already played, or nothing to trim
+    }
+    this.lstPlan.length = this.probeCutLen;
+    this.lstPlanKeys.length = this.probeCutLen;
+    for (const i of [...this.lstPlanConsumed]) {
+      if (i >= this.probeCutLen) this.lstPlanConsumed.delete(i);
+    }
+    this.refreshAll();
+  }
+
+  /** Project the board + queue + hold after playing `moves` from `startRows`,
+   * mirroring Game.applyMove's hold/queue consumption, so a "verify" probe can
+   * test the solved window's exact end-state. null if the line's hold usage
+   * diverges from the model (rare) or the queue runs short - probe is skipped. */
+  private projectEndState(
+    startRows: number[],
+    moves: SolvedLineMove[],
+  ): { rows: number[]; queue: PieceType[]; hold: PieceType | null } | null {
+    if (!this.game.active) {
+      return null;
+    }
+    const scratch = new Board();
+    for (let i = 0; i < startRows.length && i < scratch.rows.length; i++) {
+      scratch.rows[i] = startRows[i];
+    }
+    let active: PieceType = this.game.active.type;
+    let hold = this.game.hold;
+    const upcoming = this.game.peekQueue(moves.length + LST_PROBE_TARGET * 9 + 40);
+    let qi = 0;
+    const pull = (): PieceType | null => (qi < upcoming.length ? upcoming[qi++] : null);
+    for (const m of moves) {
+      if (m.piece !== active) {
+        if (hold === null) {
+          hold = active;
+          const nx = pull();
+          if (nx === null) return null;
+          active = nx;
+        } else {
+          const t = hold;
+          hold = active;
+          active = t;
+        }
+        if (active !== m.piece) return null; // hold model diverged - skip probe
+      }
+      scratch.place(m.cells);
+      scratch.clearLines();
+      const nx = pull();
+      if (nx === null) return null;
+      active = nx;
+    }
+    return { rows: Array.from(scratch.rows), queue: [active, ...upcoming.slice(qi)], hold };
   }
 
   /** Keep only the first `cycles` TSD-cycles (up to and including each T-spin

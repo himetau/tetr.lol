@@ -81,6 +81,10 @@ export type WorkerMsg =
       allowQuad: boolean;
       szReserve: number;
       partialHealth: boolean;
+      // a "verify" probe (not a plan): same solve, but the result is routed back
+      // as kind:"probe" so the main thread can use it only to test aliveness of a
+      // solved window's end-state, without disturbing the live plan.
+      probe?: boolean;
     }
   // seed the worker's solve cache from persisted storage (workers have no
   // localStorage; the main thread relays it)
@@ -127,7 +131,7 @@ self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
       moves = res ? res.moves.map((m) => ({ piece: m.piece, cells: m.cells, spin: m.spin })) : [];
       solved = res?.solved ?? false;
     }
-    (self as unknown as Worker).postMessage({ kind: "solve", id: msg.id, moves, solved });
+    (self as unknown as Worker).postMessage({ kind: msg.probe ? "probe" : "solve", id: msg.id, moves, solved });
     // hand the updated cache back so the main thread can persist it
     (self as unknown as Worker).postMessage({ kind: "cacheDump", json: exportSolveCache() });
   } else if (msg.kind === "loadCache") {

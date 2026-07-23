@@ -19,9 +19,14 @@ export class EngineClient {
   private latestWanted = 0;
   private nextSolveId = 1;
   private latestSolve = 0;
+  private nextProbeId = 1;
+  private latestProbe = 0;
   onResult: ((r: GradeResult) => void) | null = null;
   /** a background LST re-solve finished (the road ahead from a deviation) */
   onSolved: ((moves: SolvedLineMove[], solved: boolean) => void) | null = null;
+  /** a "verify" probe finished: does a clean continuation still exist from the
+   * just-solved window's end-state? (only `solved` is used) */
+  onProbe: ((solved: boolean) => void) | null = null;
 
   constructor() {
     this.worker = new Worker(new URL("../engine/worker.ts", import.meta.url), { type: "module" });
@@ -45,6 +50,11 @@ export class EngineClient {
           return; // superseded by a newer re-solve
         }
         this.onSolved?.(e.data.moves ?? [], e.data.solved ?? false);
+      } else if (e.data.kind === "probe") {
+        if (e.data.id !== this.latestProbe) {
+          return; // superseded (a newer window / undo / reset)
+        }
+        this.onProbe?.(e.data.solved ?? false);
       } else if (e.data.kind === "cacheDump" && e.data.json) {
         this.persistCache(e.data.json);
       }
@@ -89,9 +99,26 @@ export class EngineClient {
     this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth });
   }
 
-  /** Drop any in-flight re-solve result. */
+  /** Fire a "verify" aliveness probe from a projected end-state, off-thread.
+   * Routed back via onProbe so it never disturbs the live plan (onSolved). */
+  probe(
+    rows: number[],
+    queue: PieceType[],
+    hold: PieceType | null,
+    target: number,
+    budgetMs: number,
+    allowQuad: boolean,
+    szReserve = 0,
+  ): void {
+    const id = this.nextProbeId++;
+    this.latestProbe = id;
+    this.worker.postMessage({ kind: "solve", probe: true, id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth: false });
+  }
+
+  /** Drop any in-flight re-solve or probe result. */
   cancelSolve(): void {
     this.latestSolve = 0;
+    this.latestProbe = 0;
   }
 
   gradeLock(
