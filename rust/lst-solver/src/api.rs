@@ -21,6 +21,7 @@ struct ApiOpts {
     allow_quad: Option<bool>,
     sz_reserve: Option<i64>,
     partial_health: Option<bool>,
+    left_o_cap_horizon: Option<i32>,
 }
 
 impl ApiOpts {
@@ -38,6 +39,7 @@ impl ApiOpts {
             allow_quad: self.allow_quad.unwrap_or(d.allow_quad),
             sz_reserve: self.sz_reserve.unwrap_or(d.sz_reserve),
             partial_health: self.partial_health.unwrap_or(d.partial_health),
+            left_o_cap_horizon: self.left_o_cap_horizon.unwrap_or(d.left_o_cap_horizon),
         }
     }
 }

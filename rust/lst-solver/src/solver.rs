@@ -70,6 +70,10 @@ pub struct Opts {
     /// then lowest stack-side imbalance); see TS SolveOptions.partialHealth.
     /// Changes only which line is remembered, never the search itself.
     pub partial_health: bool,
+    /// LST left-side rule (0 = off); see TS SolveOptions.leftOCapHorizon. Forbid
+    /// a bare O on the outer-left wall (cols 0-1) unless an L is coming within
+    /// this many upcoming pieces (or is in hold) to cap it (the OL double-up).
+    pub left_o_cap_horizon: i32,
 }
 
 impl Default for Opts {
@@ -86,6 +90,7 @@ impl Default for Opts {
             allow_quad: false,
             sz_reserve: 0,
             partial_health: false,
+            left_o_cap_horizon: 0,
         }
     }
 }
@@ -112,6 +117,25 @@ fn is_tsd(p: &Placement) -> bool {
 }
 fn is_quad(p: &Placement) -> bool {
     p.piece == PieceType::I && p.lines_cleared == 4
+}
+/// Is an L available to cap an O on the outer-left wall (the OL double-up) - in
+/// hold now, or within the next `horizon` upcoming pieces? See TS lCapAvailable.
+fn l_cap_available(
+    queue: &[PieceType],
+    next_qi: usize,
+    next_hold: Option<PieceType>,
+    horizon: i32,
+) -> bool {
+    if next_hold == Some(PieceType::L) {
+        return true;
+    }
+    let end = (next_qi + horizon as usize).min(queue.len());
+    for &p in &queue[next_qi.min(queue.len())..end] {
+        if p == PieceType::L {
+            return true;
+        }
+    }
+    false
 }
 fn is_clear(p: &Placement, allow_quad: bool) -> bool {
     is_tsd(p) || (allow_quad && is_quad(p))
@@ -415,6 +439,18 @@ fn candidates(
         let mut x = -s.min_dx;
         while x < BOARD_W - s.max_dx {
             if x + s.min_dx <= LST_SPIN_COL && x + s.max_dx >= LST_SPIN_COL {
+                x += 1;
+                continue;
+            }
+            // LST left-side rule: the outer-left wall (cols 0-1) is reserved for
+            // the OL double-up. A bare O there is only allowed if an L is coming
+            // to cap it (in hold, or within left_o_cap_horizon upcoming pieces);
+            // otherwise the O strands the column. See TS SolveOptions.leftOCapHorizon.
+            if opts.left_o_cap_horizon > 0
+                && piece == PieceType::O
+                && x + s.min_dx == 0
+                && !l_cap_available(queue, next_qi, next_hold, opts.left_o_cap_horizon)
+            {
                 x += 1;
                 continue;
             }

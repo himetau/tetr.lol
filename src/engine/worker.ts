@@ -35,6 +35,7 @@ function trySolveWasm(msg: {
   allowQuad: boolean;
   szReserve: number;
   partialHealth: boolean;
+  leftOCapHorizon: number;
 }): { moves: SolvedLineMove[]; solved: boolean } | null {
   try {
     const out = solveLstWasm(
@@ -50,6 +51,7 @@ function trySolveWasm(msg: {
           allowQuad: msg.allowQuad,
           szReserve: msg.szReserve,
           partialHealth: msg.partialHealth,
+          leftOCapHorizon: msg.leftOCapHorizon,
         },
       }),
     );
@@ -81,6 +83,7 @@ export type WorkerMsg =
       allowQuad: boolean;
       szReserve: number;
       partialHealth: boolean;
+      leftOCapHorizon: number;
       // a "verify" probe (not a plan): same solve, but the result is routed back
       // as kind:"probe" so the main thread can use it only to test aliveness of a
       // solved window's end-state, without disturbing the live plan.
@@ -127,6 +130,7 @@ self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
         allowQuad: msg.allowQuad,
         szReserve: msg.szReserve,
         partialHealth: msg.partialHealth,
+        leftOCapHorizon: msg.leftOCapHorizon,
       });
       moves = res ? res.moves.map((m) => ({ piece: m.piece, cells: m.cells, spin: m.spin })) : [];
       solved = res?.solved ?? false;

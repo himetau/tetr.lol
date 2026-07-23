@@ -73,6 +73,19 @@ const tierA: Case[] = [
     targetTotal: 20,
     opts: { budgetMs: 60000, nodeBudget: 300_000, tailFree: 3, partialHealth: true },
   },
+  // leftOCapHorizon path: the hard left-side O rule removes placements from
+  // move-gen, so it changes node counts - TS and Rust must reject the identical
+  // O-at-cols-0-1 candidates and stay byte-identical. Quad on to reach depth.
+  {
+    seed: 10,
+    targetTotal: 20,
+    opts: { budgetMs: 60000, nodeBudget: 300_000, tailFree: 3, allowQuad: true, leftOCapHorizon: 1 },
+  },
+  {
+    seed: 165,
+    targetTotal: 20,
+    opts: { budgetMs: 60000, nodeBudget: 300_000, tailFree: 3, szReserve: 150, leftOCapHorizon: 6 },
+  },
 ];
 
 const tierB: Case[] = [

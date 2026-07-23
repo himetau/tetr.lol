@@ -32,6 +32,8 @@ struct OptsDump {
     sz_reserve: i64,
     #[serde(rename = "partialHealth", default)]
     partial_health: bool,
+    #[serde(rename = "leftOCapHorizon", default)]
+    left_o_cap_horizon: i32,
 }
 
 #[derive(Deserialize)]
@@ -110,6 +112,7 @@ fn solve_lst_run_matches_ts() {
             allow_quad: o.allow_quad,
             sz_reserve: o.sz_reserve,
             partial_health: o.partial_health,
+            left_o_cap_horizon: o.left_o_cap_horizon,
         };
 
         let t0 = std::time::Instant::now();

@@ -93,10 +93,11 @@ export class EngineClient {
     allowQuad: boolean,
     szReserve = 0,
     partialHealth = false,
+    leftOCapHorizon = 0,
   ): void {
     const id = this.nextSolveId++;
     this.latestSolve = id;
-    this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth });
+    this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth, leftOCapHorizon });
   }
 
   /** Fire a "verify" aliveness probe from a projected end-state, off-thread.
@@ -109,10 +110,11 @@ export class EngineClient {
     budgetMs: number,
     allowQuad: boolean,
     szReserve = 0,
+    leftOCapHorizon = 0,
   ): void {
     const id = this.nextProbeId++;
     this.latestProbe = id;
-    this.worker.postMessage({ kind: "solve", probe: true, id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth: false });
+    this.worker.postMessage({ kind: "solve", probe: true, id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth: false, leftOCapHorizon });
   }
 
   /** Drop any in-flight re-solve or probe result. */

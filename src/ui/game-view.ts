@@ -117,6 +117,12 @@ const LST_PARTIAL_COMMIT_CYCLES = 2;
 // to LST_PARTIAL_COMMIT_CYCLES (least-poison) so the tail is never played.
 const LST_PROBE_TARGET = 6;
 const LST_PROBE_BUDGET = 1500;
+// LST left-side rule (SolveOptions.leftOCapHorizon): forbid a bare O on the
+// outer-left wall (cols 0-1) unless an L is capping it right away (the OL
+// double-up). Horizon 1 (L next / in hold) measured to lift walled unpooled-quad
+// seeds to target where a looser horizon did nothing (tools/lst-window-driver.ts,
+// SOLVER=ts LEFTO A/B). 0 disables. See src/engine/lst-solver.ts.
+const LST_LEFT_O_CAP_HORIZON = 1;
 // On a dead probe, drop this many trailing clear-cycles of the solved window
 // (the poison tail) and re-solve from the healthier midpoint with fresh
 // lookahead. Matches the driver's measured retreat (~1 boundary) with margin.
@@ -925,7 +931,7 @@ export class GameView {
     // continuable across windows - measured to lift live-sim reach on off-pool
     // seeds without regressing (offline full-queue solving leaves it 0). See
     // SolveOptions.szReserve / tools/lst-live-sim.ts.
-    this.engine.solve(rows, queue, this.game.hold, window, budget, this.quadMode, LST_WINDOW_SZ_RESERVE, LST_WINDOW_PARTIAL_HEALTH);
+    this.engine.solve(rows, queue, this.game.hold, window, budget, this.quadMode, LST_WINDOW_SZ_RESERVE, LST_WINDOW_PARTIAL_HEALTH, LST_LEFT_O_CAP_HORIZON);
   }
 
   /** Adopt a freshly re-solved continuation as the drill's plan, anchored at
@@ -974,7 +980,7 @@ export class GameView {
         const keep = Math.max(LST_PARTIAL_COMMIT_CYCLES, cycles - LST_SOLVED_DROP_CYCLES);
         this.probeGen = this.lstPlanGen;
         this.probeCutLen = this.truncateToClearCycles(moves, keep).length;
-        this.engine.probe(end.rows, end.queue, end.hold, LST_PROBE_TARGET, LST_PROBE_BUDGET, this.quadMode, LST_WINDOW_SZ_RESERVE);
+        this.engine.probe(end.rows, end.queue, end.hold, LST_PROBE_TARGET, LST_PROBE_BUDGET, this.quadMode, LST_WINDOW_SZ_RESERVE, LST_LEFT_O_CAP_HORIZON);
       }
     }
   }
