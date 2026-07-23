@@ -81,10 +81,12 @@ export class EngineClient {
     target: number,
     budgetMs: number,
     allowQuad: boolean,
+    szReserve = 0,
+    partialHealth = false,
   ): void {
     const id = this.nextSolveId++;
     this.latestSolve = id;
-    this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad });
+    this.worker.postMessage({ kind: "solve", id, rows, queue, hold, target, budgetMs, allowQuad, szReserve, partialHealth });
   }
 
   /** Drop any in-flight re-solve result. */

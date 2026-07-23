@@ -14,6 +14,8 @@ import {
   LST_SPIN_COL,
   lstHoles,
   isLstState,
+  hasStartResidue,
+  profileValley,
   type EvalBreakdown,
 } from "./eval";
 import {
@@ -311,9 +313,27 @@ export function gradePlacement(
     pruned.push(planCand);
   }
 
+  // Free-play grading only: nudge ranking + verdict toward the validated LST
+  // laws the base eval is blind to - the 2-tall residue on cols 0/5 and a
+  // single-mountain profile (no interior valley). Skipped when a verified plan
+  // drives the drill (the plan is the authority there). Self-correcting: when
+  // every candidate breaks the residue (opener / double-up rebuild) the toll is
+  // uniform and does not distort the ranking; a residue-preserving move only
+  // outranks when one actually exists.
+  const RESIDUE_TOLL = 180;
+  const VALLEY_TOLL = 120;
+  const structuralToll = (after: Board): number => {
+    if (!bias || planActive) return 0;
+    let t = 0;
+    if (!hasStartResidue(after)) t += RESIDUE_TOLL;
+    const v = profileValley(after);
+    if (v >= 2) t += VALLEY_TOLL * (v - 1);
+    return t;
+  };
+
   for (const c of pruned) {
     const line = searchBestLine(c.placement.after, c.queueAfter, 0, c.holdAfter, true, opts);
-    c.total = c.immediateReward + line.score;
+    c.total = c.immediateReward + line.score - structuralToll(c.placement.after);
     c.pv = line.placements;
   }
 
@@ -336,7 +356,7 @@ export function gradePlacement(
     const deeper: SearchOptions = { ...opts, depth: opts.depth + 2, beamWidth: opts.beamWidth + 4 };
     for (const c of verify) {
       const line = searchBestLine(c.placement.after, c.queueAfter, 0, c.holdAfter, true, deeper);
-      c.total = c.immediateReward + line.score;
+      c.total = c.immediateReward + line.score - structuralToll(c.placement.after);
       c.pv = line.placements;
     }
     pruned.sort((a, b) => (b.total ?? -1e9) - (a.total ?? -1e9));
@@ -487,6 +507,40 @@ export function gradePlacement(
       // non-TSD moves can genuinely "move away" from it
       reasons.push("Moved away from the next TSD - extra cells now needed to rebuild");
       atLeast("inaccuracy");
+    }
+  }
+
+  // LST residue + profile canon (free play only). Both are avoidability-gated:
+  // a residue drop or a valley is only the player's fault when a shown
+  // alternative avoided it - during an opener / double-up rebuild every move
+  // legitimately drops the residue, and those must not be punished.
+  if (bias && !planActive && !userOnBook && userCand && best && userCand !== best) {
+    if (!hasStartResidue(userCand.placement.after) && hasStartResidue(best.placement.after)) {
+      const avoidable = pruned.some(
+        (c) => c !== userCand && hasStartResidue(c.placement.after),
+      );
+      if (avoidable) {
+        reasons.push("Left the LST residue broken - rebuild the 2-tall base on the 1st/5th columns");
+        atLeast("mistake");
+      }
+    }
+    const userValley = profileValley(userCand.placement.after);
+    if (userValley >= 2 && userValley > profileValley(best.placement.after)) {
+      reasons.push("Split the stack into two mountains - keep one contiguous slope");
+      atLeast("inaccuracy");
+    }
+    // The measured death signature: an L/J piece dropped as an overhang while
+    // the residue is broken - papering over a deficit instead of rebuilding it.
+    // Only flag when a shown alternative actually rebuilt the residue.
+    if (
+      (req.userPiece === "L" || req.userPiece === "J") &&
+      !hasStartResidue(board) &&
+      !hasStartResidue(userCand.placement.after) &&
+      userCand.placement.cells.some(([x, y]) => y > 0 && !userCand.placement.after.filled(x, y - 1)) &&
+      pruned.some((c) => c !== userCand && hasStartResidue(c.placement.after))
+    ) {
+      reasons.push("Masked the broken residue with an L/J overhang - rebuild the base instead");
+      atLeast("mistake");
     }
   }
 

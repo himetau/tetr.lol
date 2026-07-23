@@ -34,7 +34,7 @@ import { bestMove, type GradeResult, type Grade, type AltInfo } from "../engine/
 import { matchOpener, chainsToLoop, planOpener, type OpenerPlacement } from "../engine/opener";
 import { bookAdvice } from "../engine/book";
 import { enumeratePlacements, placementKey } from "../engine/enumerate";
-import { lstLoopMove } from "../engine/lst-loop";
+import { lstLoopMove, lstCleanBuildMove } from "../engine/lst-loop";
 import { lstTier } from "../engine/lst-tier";
 import LST_RUNS from "../data/lst-runs.json";
 // the quad pool (?quad=1) is large and only needed for that mode, so it's loaded
@@ -83,6 +83,29 @@ import { btn, panel } from "./dom";
 // off-plan; parking the I or laying it as build filler is fine), and not a
 // single T wasted - every locked T must be a full T-spin double.
 const LST_GOAL_TSDS = 20;
+
+// S/Z-reserve toll for the live bounded-window re-solve (SolveOptions.szReserve).
+// Keeps window lines continuable across seams by not burning S/Z builders on
+// fill; tuned on tools/lst-live-sim.ts (gain plateaus ~150, never regresses).
+const LST_WINDOW_SZ_RESERVE = 150;
+
+// Return the healthiest equal-depth partial from window re-solves
+// (SolveOptions.partialHealth): the mistake diagnostician showed committed
+// partial-line tails are what kill the next window; tuned on
+// tools/lst-window-driver.ts (never regressed a seed).
+const LST_WINDOW_PARTIAL_HEALTH = true;
+
+// Re-solve budget escalation ladder (ms). A window that returns no line is
+// retried from the same position with the next budget before the drill falls
+// to the reactive beam; only genuinely dead boards exhaust the ladder. Tuned on
+// tools/lst-window-driver.ts (the escalation lever lifted unpooled 11.8 -> 17.4).
+const RESOLVE_BUDGETS = [4000, 8000, 16000];
+
+// When a window returns an UNSOLVED partial, commit only this many clear-cycles
+// of it before re-solving from the resulting (healthier) board — the mistake
+// diagnostician showed long partial tails are what poison the next window
+// (tools/lst-mistake-diag.ts). 1 = re-solve every payoff; the least-poison rule.
+const LST_PARTIAL_COMMIT_CYCLES = 2;
 
 const GRADE_LABEL: Record<Grade, string> = {
   best: "★ Best",
@@ -215,6 +238,10 @@ export class GameView {
   // Driven by the "Unpooled seed" setting or ?unpooled=1.
   private unpooled = false;
   private unpooledParam = false;
+  // ?goal=N overrides the clear target for UNPOOLED testing (default 20; use a
+  // high value like 100 with ?quad=1 to watch the live loop chase a long quad
+  // run). Ignored for pooled seeds, whose target is their verified clear count.
+  private goalParam = 0;
   // lazily imported when quadMode (kept out of the initial bundle otherwise)
   private quadPool: QuadPool | null = null;
   private lstQuads = 0;
@@ -224,6 +251,11 @@ export class GameView {
   // drill keeps guiding on the player's own line instead of nagging them back
   private resolving = false;
   private resolveFromRows: number[] | null = null;
+  // bounded-window re-solve escalation: when a window returns no line it may be
+  // budget-starved (not a dead board), so retry from the same position with more
+  // time before dropping to the reactive fallback. Index into RESOLVE_BUDGETS.
+  private resolveWindow = 0;
+  private resolveEscalation = 0;
 
   // last graded context for the paths dock
   private lastLock: LockEvent | null = null;
@@ -269,7 +301,7 @@ export class GameView {
     this.root = this.build();
     this.game.onLock = (ev) => this.onLock(ev);
     this.engine.onResult = (r) => this.onGrade(r);
-    this.engine.onSolved = (moves) => this.adoptResolvedPlan(moves);
+    this.engine.onSolved = (moves, solved) => this.adoptResolvedPlan(moves, solved);
     this.unsubSettings = onSettingsChange(() => this.applySettings());
     // quad mode comes from the "Quad loop" setting or ?quad=1 (a shareable link
     // that forces it on). When on, fetch the large quad pool on demand before the
@@ -277,6 +309,7 @@ export class GameView {
     const urlParams = new URLSearchParams(location.search);
     this.quadParam = urlParams.get("quad") === "1";
     this.unpooledParam = urlParams.get("unpooled") === "1";
+    this.goalParam = Math.max(0, Math.floor(Number(urlParams.get("goal")) || 0));
     this.unpooled = this.wantUnpooled();
     this.quadMode = this.wantQuad();
     if (this.quadMode) {
@@ -623,6 +656,16 @@ export class GameView {
     const seedParam = params.get("seed");
     const runPool = this.quadMode ? (this.quadPool?.runs ?? {}) : LST_RUNS.runs;
     let lstSeeds = this.mode === "lst" ? Object.keys(runPool) : [];
+    // quad drill deals only seeds that reach >=20 TSDs (well quads allowed on
+    // top), so the quad and pure-20 experiences carry the same TSD bar. The full
+    // quad pool stays intact - this only narrows what is dealt.
+    if (this.quadMode && this.quadPool) {
+      const s = this.quadPool.stats as unknown as Record<string, { tsds: number }>;
+      const ge20 = lstSeeds.filter((k) => (s[k]?.tsds ?? 0) >= 20);
+      if (ge20.length > 0) {
+        lstSeeds = ge20;
+      }
+    }
     // ?tier=<warmup|standard|long|showcase> narrows the quad drill to that
     // difficulty bucket (falls back to the whole pool if the tier is empty)
     const tierParam = params.get("tier");
@@ -727,55 +770,6 @@ export class GameView {
     }
   }
 
-  /** Next plan move that can be played right now: the cursor move if its
-   * cells fit the live board, else a later fill of the current cycle (the
-   * user may have played the cursor's move early). The TSD itself never
-   * plays out of order - it needs its cycle complete. Availability is
-   * checked before touching the game so a miss has no side effects. */
-  private lstPlanNextPlayable(): {
-    piece: PieceType;
-    cells: [number, number][];
-    spin: SpinKind;
-  } | null {
-    const plan = this.lstPlan;
-    const active = this.game.active;
-    if (!plan || !active) {
-      return null;
-    }
-    const board = this.game.board;
-    const fits = (cells: [number, number][]): boolean => {
-      let grounded = false;
-      for (const [x, y] of cells) {
-        if (board.filled(x, y)) {
-          return false;
-        }
-        if (y === 0 || board.filled(x, y - 1)) {
-          grounded = true;
-        }
-      }
-      return grounded;
-    };
-    const available = (piece: PieceType): boolean =>
-      piece === active.type ||
-      (this.game.canHold &&
-        (piece === this.game.hold || (this.game.hold === null && piece === this.game.preview()[0])));
-    const end = this.lstPlanSegEnd();
-    const last = Math.min(end, plan.length - 1); // include the cycle's TSD
-    for (let i = this.lstPlanCursor; i <= last; i++) {
-      if (this.lstPlanConsumed.has(i)) {
-        continue;
-      }
-      const mv = plan[i];
-      if (i > this.lstPlanCursor && mv.piece === "T") {
-        break;
-      }
-      if (available(mv.piece) && fits(mv.cells)) {
-        return mv;
-      }
-    }
-    return null;
-  }
-
   /** Per-lock plan bookkeeping: match the locked placement against the plan
    * (in order, or early within the current cycle) and remember whether this
    * lock was a plan move - the grader treats those as best by definition. */
@@ -848,23 +842,57 @@ export class GameView {
     // (measured: ~10 TSDs in ~1s); when it depletes, the next off-plan lock
     // (cursor past the plan end) re-triggers this for the following window - so
     // live play stays on the solver's clean LST instead of the beam.
-    const window = Math.min(remaining, 10);
+    this.resolving = true;
+    this.resolveWindow = Math.min(remaining, 10);
+    this.resolveEscalation = 0;
+    this.issueResolve();
+  }
+
+  /** Fire one bounded-window re-solve from the CURRENT board at the current
+   * escalation budget. Re-invoked by adoptResolvedPlan to climb the budget
+   * ladder when a window comes back empty. */
+  private issueResolve(): void {
+    if (!this.game.active) {
+      this.resolving = false;
+      return;
+    }
+    const window = this.resolveWindow;
     const rows = Array.from(this.game.board.rows);
     const queue = [this.game.active.type, ...this.game.peekQueue(window * 9 + 20)];
-    this.resolving = true;
     this.resolveFromRows = rows;
-    this.engine.solve(rows, queue, this.game.hold, window, 4000, this.quadMode);
+    const budget = RESOLVE_BUDGETS[Math.min(this.resolveEscalation, RESOLVE_BUDGETS.length - 1)];
+    // S/Z reserve toll: a bounded window can win depth by burning an S/Z on fill
+    // and then stall (no builder left for the next overhang), leaving a dead
+    // board for the following window. Tolling S/Z fill keeps the residue
+    // continuable across windows - measured to lift live-sim reach on off-pool
+    // seeds without regressing (offline full-queue solving leaves it 0). See
+    // SolveOptions.szReserve / tools/lst-live-sim.ts.
+    this.engine.solve(rows, queue, this.game.hold, window, budget, this.quadMode, LST_WINDOW_SZ_RESERVE, LST_WINDOW_PARTIAL_HEALTH);
   }
 
   /** Adopt a freshly re-solved continuation as the drill's plan, anchored at
    * the board it was solved from. Empty = no clean continuation exists (the
    * deviation may have hurt the loop); the health grader still guides moves. */
-  private adoptResolvedPlan(moves: SolvedLineMove[]): void {
-    this.resolving = false;
+  private adoptResolvedPlan(moves: SolvedLineMove[], solved: boolean): void {
     const startRows = this.resolveFromRows;
+    // empty window: it may be budget-starved, not a dead board. Climb the budget
+    // ladder from the same position before conceding to the reactive fallback.
+    if (this.mode === "lst" && startRows && moves.length === 0 &&
+        this.resolveEscalation < RESOLVE_BUDGETS.length - 1 && !this.goalDone && !this.goalFail) {
+      this.resolveEscalation++;
+      this.issueResolve();
+      return;
+    }
+    this.resolving = false;
     this.resolveFromRows = null;
     if (this.mode !== "lst" || !startRows || moves.length === 0) {
       return;
+    }
+    // partial window (target not reached): a long tail poisons the next window,
+    // so commit only the first few clear-cycles and let the depletion re-solve
+    // continue from the healthier midpoint (tools/lst-mistake-diag.ts).
+    if (!solved) {
+      moves = this.truncateToClearCycles(moves, LST_PARTIAL_COMMIT_CYCLES);
     }
     const scratch = new Board();
     for (let i = 0; i < startRows.length && i < scratch.rows.length; i++) {
@@ -885,6 +913,23 @@ export class GameView {
       scratch.clearLines();
     }
     this.refreshAll();
+  }
+
+  /** Keep only the first `cycles` TSD-cycles (up to and including each T-spin
+   * double) of a partial line; the rest is the poison tail the diagnostician
+   * flagged. TSDs are the unambiguous cycle marker in SolvedLineMove (which
+   * drops linesCleared); an interspersed well quad rides along inside a kept
+   * cycle. Always keeps >=1 TSD so the loop still advances. */
+  private truncateToClearCycles(moves: SolvedLineMove[], cycles: number): SolvedLineMove[] {
+    let fired = 0;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      if (m.piece === "T" && m.spin === "full") {
+        fired++;
+        if (fired >= cycles) return moves.slice(0, i + 1);
+      }
+    }
+    return moves; // fewer than `cycles` TSDs in the line - keep all of it
   }
 
   /** Grader options that make the paths dock follow the verified run: the
@@ -972,6 +1017,9 @@ export class GameView {
       return;
     }
     if (this.unpooled) {
+      // unpooled testing goal: ?goal=N (default 20). With ?quad=1 a high goal
+      // like 100 chases a long quad run; the bounded-window re-solve drives it.
+      this.lstGoalTarget = this.goalParam > 0 ? this.goalParam : LST_GOAL_TSDS;
       // no shipped line - plan the TKI opener live so the engine can auto-play
       // into a loop; once the opener depletes, maybeResolveOnDeviation re-solves
       // the loop in bounded windows. planOpener finds an opener for ~70% of
@@ -1726,6 +1774,39 @@ export class GameView {
     }
   }
 
+  /** Would locking `piece` with `spin` and `lines` cleared keep the LST goal
+   * alive? Mirrors the three trackLstGoal fail conditions exactly: never a
+   * wasted T (every locked T must be a full TSD), never a back-to-back break
+   * (a 1-3 line no-spin clear), never the I spent on a clear (except a full
+   * well-quad in quad mode). A clean build (no clear) is always legal. Used to
+   * gate the generic engine fallback so it can't silently fail the goal. */
+  private isLstGoalLegal(piece: PieceType, spin: SpinKind, lines: number): boolean {
+    if (piece === "T" && !(spin === "full" && lines >= 2)) {
+      return false;
+    }
+    if (lines > 0 && lines < 4 && spin === "none") {
+      return false;
+    }
+    if (piece === "I" && lines > 0 && !(this.quadMode && lines === 4)) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Simulate a candidate placement to count its line clears, then judge it by
+   * isLstGoalLegal - so the caller can accept the generic engine's move only
+   * when it stays on-goal. */
+  private isLstGoalLegalMove(
+    piece: PieceType,
+    cells: [number, number][],
+    spin: SpinKind,
+  ): boolean {
+    const after = this.game.board.clone();
+    after.place(cells);
+    const lines = after.clearLines().length;
+    return this.isLstGoalLegal(piece, spin, lines);
+  }
+
   private recordGrade(g: Grade): void {
     this.session.grades[g]++;
     this.session.graded++;
@@ -1932,15 +2013,30 @@ export class GameView {
     // move of the cycle that fits. A real deviation falls through to the
     // live assists below.
     if (this.lstPlan) {
-      const exact = this.lstPlanKeys.indexOf(this.game.board.key());
-      if (exact >= 0 && exact < this.lstPlan.length) {
-        this.lstPlanCursor = exact;
-        this.lstPlanConsumed.clear();
-      } else {
-        this.lstPlanAdvance();
+      const key = this.game.board.key();
+      // Locate the current stack in the plan. board.key() encodes only the
+      // stack (not active/hold), so it can *find* the move but must not be
+      // trusted to pick one out of order - the strict in-order application
+      // below is what keeps active/hold in lockstep with the verified line.
+      if (this.lstPlanKeys[this.lstPlanCursor] !== key) {
+        const exact = this.lstPlanKeys.indexOf(key);
+        if (exact >= 0) {
+          this.lstPlanCursor = exact;
+          this.lstPlanConsumed.clear();
+        } else {
+          this.lstPlanAdvance();
+        }
       }
-      const mv = this.lstPlanNextPlayable();
-      if (mv) {
+      // Strict in-order replay: when the stack matches the cursor's expected
+      // board, play THIS move. The verified line respects the one-hold-slot
+      // rule applyMove models, so plan[cursor] is always reachable here, and
+      // playing it keeps hold synced so the next board matches the next key.
+      // The old lstPlanNextPlayable() played the next *available* move, which
+      // reordered fills, drifted hold until the T for the TSD was unreachable,
+      // and dropped the bot off its own line into the book/beam - the "parked
+      // piece" desync in the opener / second bag.
+      if (this.lstPlanCursor < this.lstPlan.length && this.lstPlanKeys[this.lstPlanCursor] === key) {
+        const mv = this.lstPlan[this.lstPlanCursor];
         this.assistWho = "Plan";
         this.taintSession("Plan assist");
         this.botMoving = true;
@@ -1979,12 +2075,37 @@ export class GameView {
       }
     }
     if (!found) {
-      // genuinely off-plan (opener miss, or the loop is unrecoverable): the
-      // plain engine keeps the demo moving even if it can't stay clean
-      this.assistWho = "Engine";
-      const mv = bestMove(Array.from(this.game.board.rows), queue, this.game.hold, true);
-      if (mv) {
-        found = { piece: mv.piece, cells: mv.cells, spin: mv.spin };
+      // opener miss (no book line, no plan) or an unrecoverable loop: keep a
+      // clean, low LST base instead of letting the plain engine drift off the
+      // structure and bury the col-2 well. Takes a ready TSD, else builds flush.
+      const build = lstCleanBuildMove(this.game.board, this.game.active.type);
+      if (build) {
+        this.assistWho = "Loop";
+        found = { piece: build.piece, cells: build.cells, spin: build.spin };
+      } else if (this.game.active.type === "T" && this.game.hold === null) {
+        // park the T for a later TSD rather than wasting it on the stack
+        this.assistWho = "Loop";
+        found = { piece: "T", cells: [], spin: "none", park: true };
+      } else {
+        // genuinely stuck at the structured rungs: fall to the generic engine,
+        // but only accept its move if it stays on-goal (a clean build, a full
+        // TSD, or a well-quad in quad mode). The generic engine is not
+        // goal-aware, so an ungated move here would happily waste a T, break
+        // B2B, or spend the I - silently failing the goal and letting the loop
+        // "die" at 0 rather than honestly stalling at its feasibility wall.
+        const mv = bestMove(Array.from(this.game.board.rows), queue, this.game.hold, true);
+        if (mv && this.isLstGoalLegalMove(mv.piece, mv.cells, mv.spin)) {
+          this.assistWho = "Engine";
+          found = { piece: mv.piece, cells: mv.cells, spin: mv.spin };
+        } else if (this.game.hold === null) {
+          // no goal-legal engine move and the hold slot is free: park the
+          // active piece to defer it (a fresh preview next ply may open a legal
+          // fit) rather than dead-ending on an illegal placement. The T-park
+          // above already handled active===T, so this parks a non-T stuck piece.
+          this.assistWho = "Loop";
+          found = { piece: this.game.active.type, cells: [], spin: "none", park: true };
+        }
+        // else: found stays null -> the stall toast fires (the loop's true wall)
       }
     }
     if (!found) {

@@ -75,6 +75,7 @@ function classify(board: Board, toppedOut: boolean): { cause: string; detail: st
 }
 
 const HORIZON = Number(process.argv[4] ?? 7);
+const RULE_MODE = process.env.RULE === "1"; // hard rule-follower vs soft beam
 
 function runOne(seed: number): Death {
   const rng = mulberry32(seed);
@@ -85,7 +86,7 @@ function runOne(seed: number): Death {
   let tsds = 0;
   for (let step = 0; step < 400; step++) {
     while (queue.length < 14) queue.push(...bag(rng));
-    const mv = lstLoopMove(board, queue, hold, HORIZON, 24, false);
+    const mv = lstLoopMove(board, queue, hold, HORIZON, 24, false, false, RULE_MODE);
     if (!mv) {
       const c = classify(board, false);
       return { tsds, cause: c.cause, board, detail: c.detail };

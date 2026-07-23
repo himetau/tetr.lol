@@ -200,6 +200,123 @@ export function planOpener(queue: PieceType[]): OpenerPlan | null {
   return null;
 }
 
+/**
+ * Guided generative opener planner. The fixed-target planOpener only covers
+ * ~60% of bags because it pins each of a target's 7 letters to exact cells AND
+ * forces the whole sequence (T included) into the bag's delivery order - so a
+ * bag that hands you the T early has to burn its single hold slot parking it and
+ * then dead-ends. This planner keeps the *goal shape* (a known loop-chaining TKI
+ * target, so reaching it is on-book by construction) but relaxes the two rigid
+ * constraints that cost coverage:
+ *   - piece->cell is FREE: any bag piece may fill any sub-region of the shape it
+ *     fits (alternate tetromino tilings of the same shape are allowed), and
+ *   - the T is always LAST: it is parked until the rest of the shape is built,
+ *     then dropped as the finishing T-spin double. Deferring the T is exactly
+ *     what rescues the T-early bags the fixed planner drops.
+ * Because every placement must land inside the (small) target shape, branching
+ * is tiny and a miss fails fast; a wall-clock budget guards the rare deep bag.
+ * Returns the move list in planOpener's shape, or null if no target fills.
+ */
+const GEN_TIME_BUDGET_MS = 250; // the plan is built once per reset; fail fast
+
+export function planOpenerGenerative(
+  queue: PieceType[],
+  timeBudgetMs = GEN_TIME_BUDGET_MS,
+): { moves: { piece: PieceType; cells: [number, number][]; spin: SpinKind }[] } | null {
+  const deadline = Date.now() + timeBudgetMs;
+  const ckey = (cs: readonly (readonly [number, number])[]) =>
+    cs.map(([x, y]) => x * 32 + y).sort((a, b) => a - b).join(",");
+  const targets = TKI_TARGETS.filter(
+    (t) => t.pieces["T"] && Object.keys(t.pieces).length >= 7,
+  ).sort((a, b) => Number(chainsToLoop(b)) - Number(chainsToLoop(a)));
+
+  for (const target of targets) {
+    const tCells = target.pieces["T"]!;
+    const tKeys = new Set(tCells.map(([x, y]) => x * 32 + y));
+    const nonTKeys = new Set<number>();
+    for (const cells of Object.values(target.pieces)) {
+      for (const [x, y] of cells!) {
+        const k = x * 32 + y;
+        if (!tKeys.has(k)) nonTKeys.add(k);
+      }
+    }
+    const fits = (cells: readonly (readonly [number, number])[]) =>
+      cells.every(([x, y]) => nonTKeys.has(x * 32 + y));
+
+    const moves: { piece: PieceType; cells: [number, number][]; spin: SpinKind }[] = [];
+    const seen = new Set<string>();
+
+    const dfs = (board: Board, qi: number, hold: PieceType | null, filled: number): boolean => {
+      if (filled === nonTKeys.size) {
+        // structure complete: drop the parked T as the finishing TSD, exactly on
+        // the target's T cells (a real full-spin double, not a soft drop-in)
+        const hit = enumeratePlacements(board, "T").find(
+          (p) => ckey(p.cells) === ckey(tCells) && p.spin === "full" && p.linesCleared >= 2,
+        );
+        if (hit) {
+          moves.push({
+            piece: "T",
+            cells: hit.cells.map(([a, b]) => [a, b] as [number, number]),
+            spin: hit.spin,
+          });
+          return true;
+        }
+        return false;
+      }
+      if (qi >= queue.length || Date.now() > deadline) {
+        return false;
+      }
+      const sk = `${board.key()}|${qi}|${hold ?? "-"}`;
+      if (seen.has(sk)) {
+        return false;
+      }
+      seen.add(sk);
+
+      const tryPlace = (piece: PieceType, nextHold: PieceType | null, nextQi: number): boolean => {
+        if (piece === "T") {
+          return false; // the T is deferred to the finishing TSD
+        }
+        for (const p of enumeratePlacements(board, piece)) {
+          if (p.linesCleared > 0 || !fits(p.cells)) {
+            continue; // every cell must land inside the (still-empty) shape
+          }
+          moves.push({
+            piece,
+            cells: p.cells.map(([a, b]) => [a, b] as [number, number]),
+            spin: p.spin,
+          });
+          if (dfs(p.after, nextQi, nextHold, filled + p.cells.length)) {
+            return true;
+          }
+          moves.pop();
+        }
+        return false;
+      };
+
+      const cur = queue[qi];
+      if (tryPlace(cur, hold, qi + 1)) {
+        return true;
+      }
+      if (hold && hold !== cur && tryPlace(hold, cur, qi + 1)) {
+        return true;
+      }
+      if (!hold && qi + 1 < queue.length && tryPlace(queue[qi + 1], cur, qi + 2)) {
+        return true;
+      }
+      // park the active piece (this is how the T waits for last)
+      if (!hold && dfs(board, qi + 1, cur, filled)) {
+        return true;
+      }
+      return false;
+    };
+
+    if (dfs(new Board(), 0, null, 0)) {
+      return { moves };
+    }
+  }
+  return null;
+}
+
 const chainMemo = new Map<OpenerTarget, boolean>();
 
 /** Does completing this target (and its TSD) land on the LST loop book?

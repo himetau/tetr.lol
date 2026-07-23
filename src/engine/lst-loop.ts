@@ -10,7 +10,7 @@
 // eventually return null when no legal continuation exists - that is the
 // honest "the loop can't continue from here" signal, not a wasted T.
 
-import { Board } from "../core/board";
+import { Board, BOARD_W } from "../core/board";
 import type { PieceType } from "../core/pieces";
 import type { SpinKind } from "../core/spin";
 import { enumeratePlacements, placementKey, type Placement } from "./enumerate";
@@ -22,6 +22,8 @@ import {
   volumeGap,
   lstHoles,
   quadWellDepth,
+  stackSideImbalance,
+  LST_SPIN_COL,
 } from "./eval";
 import { O_NOTCH_TOLL } from "./search";
 import { bookAdvice } from "./book";
@@ -112,6 +114,7 @@ export function lstLoopMove(
   beamWidth = DEFAULT_BEAM,
   useBook = false,
   allowQuad = false,
+  ruleMode = false,
 ): LoopMove | null {
   if (queue.length === 0) {
     return null;
@@ -141,6 +144,7 @@ export function lstLoopMove(
     },
   ];
   let best: { node: Node; score: number } | null = null;
+  let bestKey: number[] | null = null;
 
   for (let d = 0; d < horizon; d++) {
     const next: Node[] = [];
@@ -213,13 +217,23 @@ export function lstLoopMove(
     if (next.length === 0) {
       break;
     }
-    const scored = next
-      .map((n) => ({ n, score: scoreNode(n, allowQuad) }))
-      .sort((a, b) => b.score - a.score);
-    if (!best || scored[0].score > best.score) {
-      best = { node: scored[0].n, score: scored[0].score };
+    if (ruleMode) {
+      const keyed = next.map((n) => ({ n, key: ruleKey(n) }));
+      keyed.sort((a, b) => cmpRuleKey(a.key, b.key));
+      if (!bestKey || cmpRuleKey(keyed[0].key, bestKey) < 0) {
+        best = { node: keyed[0].n, score: 0 };
+        bestKey = keyed[0].key;
+      }
+      beam = keyed.slice(0, beamWidth).map((x) => x.n);
+    } else {
+      const scored = next
+        .map((n) => ({ n, score: scoreNode(n, allowQuad) }))
+        .sort((a, b) => b.score - a.score);
+      if (!best || scored[0].score > best.score) {
+        best = { node: scored[0].n, score: scored[0].score };
+      }
+      beam = scored.slice(0, beamWidth).map((x) => x.n);
     }
-    beam = scored.slice(0, beamWidth).map((x) => x.n);
   }
 
   if (!best || !best.node.first) {
@@ -235,11 +249,136 @@ export function lstLoopMove(
   };
 }
 
+/**
+ * Fallback opener build for the ~37% of bags planOpener can't set up (and no
+ * book line applies). Instead of handing the board to the plain engine - which
+ * optimises for generic Tetris and drifts the stack off the LST structure,
+ * burying the col-2 well and cutting holes the loop can never continue from -
+ * this keeps a clean, low, single-mountain LST base: it never buries a cell,
+ * keeps the col-2 well clear, prefers moves that leave a ready TSD site, and
+ * takes a genuine TSD the instant one exists. The T is parked (returns null so
+ * the caller stashes it) until it can fire. It won't conjure a TSD from every
+ * bag, but it degrades gracefully instead of wrecking the shape.
+ */
+export function lstCleanBuildMove(board: Board, active: PieceType): LoopMove | null {
+  // the T is the payoff: fire a ready TSD, otherwise signal "park it" (null)
+  if (active === "T") {
+    const tsd = enumeratePlacements(board, "T").find(isTsd);
+    return tsd
+      ? {
+          piece: "T",
+          cells: tsd.cells.map(([a, b]) => [a, b] as [number, number]),
+          spin: tsd.spin,
+          linesCleared: tsd.linesCleared,
+          usesHold: false,
+        }
+      : null;
+  }
+  const bumpiness = (b: Board): number => {
+    let prev = -1;
+    let sum = 0;
+    for (let x = 0; x < BOARD_W; x++) {
+      if (x === LST_SPIN_COL) continue; // the well is a designed notch, not drift
+      const h = b.columnHeight(x);
+      if (prev >= 0) sum += Math.abs(h - prev);
+      prev = h;
+    }
+    return sum;
+  };
+  const baseHoles = lstHoles(board);
+  let best: { score: number; p: Placement } | null = null;
+  for (const p of enumeratePlacements(board, active)) {
+    if (p.linesCleared > 0) continue; // only the T clears (a TSD) during the build
+    if (lstHoles(p.after) > baseHoles) continue; // never bury a cell
+    if (p.cells.some(([x]) => x === LST_SPIN_COL)) continue; // keep the col-2 well clear
+    if (p.after.maxHeight() > 12) continue; // stay in the opener/low band
+    const hasSite = findLstSite(p.after) ? 1 : 0;
+    const score = hasSite * 1000 - p.after.maxHeight() * 10 - bumpiness(p.after);
+    if (!best || score > best.score) {
+      best = { score, p };
+    }
+  }
+  if (!best) {
+    return null;
+  }
+  return {
+    piece: active,
+    cells: best.p.cells.map(([a, b]) => [a, b] as [number, number]),
+    spin: best.p.spin,
+    linesCleared: 0,
+    usesHold: false,
+  };
+}
+
 /** Clears (TSDs + quads) dominate; then keep the stack low and the next site
  * ready. Buried cells and height are the drift the loop must fight. When quads
  * are allowed and volume has out-grown the well, building the quad well (toward
  * a 4-deep drain) is rewarded so the beam actually stacks into a tetris instead
  * of fighting the height and topping out - real LST's volume escape. */
+/** Overstack (fill above the TSD slot) allowed before the volume rule forces a
+ * drain. swng/Kixenon: no-doubleup LST accumulates ~0.7 rows/bag and a doubleup
+ * is due ~every 5-6.7 bags, i.e. once the overstack reaches a few rows. */
+const OVERSTACK_CAP = 3;
+
+/**
+ * HARD rule-follower key (the LST construction policy, not a soft eval),
+ * grounded in the theory (Feltheshovel parity, swng/Kixenon volume). LST's
+ * valid region is narrow, so trading rules against each other (scoreNode's
+ * weighted sum) drifts out of it and can't return - the measured failure of
+ * every soft lever. This ranks candidate lines lexicographically; the top slots
+ * are GATES that read 0 while satisfied (so they never cause procrastination),
+ * and the lower slots optimize within them:
+ *   1. clears fired (the payoff)         - most TSDs/quads
+ *   2. loop alive                        - a col-2 site still exists
+ *   3. clean                             - never bury a cell (lstHoles)
+ *   4. parity gate                       - stack-side CI stays good (never ±2);
+ *                                          this is "keep the residue even" on
+ *                                          the STACK side, the overhang gate
+ *   5. volume gate                       - overstack not run away (forces the
+ *                                          double-up drain on cadence)
+ *   6. progress                          - fewest missing completion cells
+ *   7. low + tight                       - height, then total cells
+ * Higher is better in every slot (negated where lower is better).
+ */
+function ruleKey(n: Node): number[] {
+  const b = n.board;
+  const site = findLstSite(b);
+  // A board with no immediate col-2 site but a still-valid LST shape is a
+  // legitimate mid-double-up state (the notch is being rebuilt higher) - it is
+  // NOT dead and its volume is being actively drained, so we must not prune it.
+  const midMove = !site && isLstState(b);
+  const alive = site !== null || midMove;
+  const overstack = site ? volumeGap(b, site.y) : 0;
+  let cells = 0;
+  for (let y = 0; y < b.maxHeight(); y++) {
+    let r = b.rows[y];
+    while (r) {
+      cells += r & 1;
+      r >>>= 1;
+    }
+  }
+  return [
+    n.tsds + n.quads,
+    alive ? 1 : 0,
+    -lstHoles(b),
+    -(site ? site.missing : 4), // COMPLETE the current site first (fire the TSD)
+    -Math.max(0, Math.abs(stackSideImbalance(b)) - 1), // parity gate
+    -Math.max(0, overstack - OVERSTACK_CAP), // volume gate
+    -b.maxHeight(),
+    -cells,
+  ];
+}
+
+/** Lexicographic descending compare (better key sorts first). */
+function cmpRuleKey(a: number[], b: number[]): number {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return b[i] - a[i];
+    }
+  }
+  return 0;
+}
+
 function scoreNode(n: Node, allowQuad: boolean): number {
   const site = findLstSite(n.board);
   const ev = evaluateBoard(n.board, true).score;

@@ -33,7 +33,7 @@ import { cellsAt, type PieceType, type Rot } from "../core/pieces";
 import type { SpinKind } from "../core/spin";
 import { enumeratePlacements, type Placement } from "./enumerate";
 import { dropY, shape } from "./masks";
-import { findLstSite, LST_SPIN_COL, quadWellDepth } from "./eval";
+import { findLstSite, LST_SPIN_COL, quadWellDepth, stackSideImbalance } from "./eval";
 
 export interface SolvedMove {
   piece: PieceType;
@@ -80,6 +80,25 @@ export interface SolveOptions {
    * TSD ceiling. Off by default: TSD-only solving is byte-identical. When on,
    * `target` counts total clears (TSDs + quads). */
   allowQuad?: boolean;
+  /** S/Z reserve toll (0 = off). Penalizes spending an S/Z as stack-side fill
+   * instead of the well-side overhang: the builder alternation needs an S/Z for
+   * every 2-high overhang, so burning one on flat fill (or a premature "fractal")
+   * forces a stall waiting for the next builder. Soft - a forced S/Z fill still
+   * lands, it just loses to reserving the S/Z (playing a non-builder, holding the
+   * S/Z) when both are legal. Meant for LIVE bounded-window solves, where cross-
+   * window continuability matters more than single-solve depth; left 0 for offline
+   * full-queue pool solving (which commits one coherent plan and slightly prefers
+   * raw depth). Default 0 keeps behavior byte-identical (Rust parity). */
+  szReserve?: number;
+  /** When the target can't be reached, return the HEALTHIEST equal-depth
+   * partial line instead of the first one found: fewest pieces consumed
+   * (more queue left for the next window), then lowest stack-side checker
+   * imbalance (Feltheshovel parity). Only which line is *remembered* changes -
+   * search order, pruning and node counts are untouched, and solved lines are
+   * identical. Meant for LIVE bounded-window solves, where the mistake
+   * diagnostician showed committed partial tails are what kill the next
+   * window. Default false keeps behavior byte-identical (Rust parity). */
+  partialHealth?: boolean;
 }
 
 const DEFAULTS: Required<SolveOptions> = {
@@ -93,6 +112,8 @@ const DEFAULTS: Required<SolveOptions> = {
   maxDisc: 64,
   frontierBand: 4,
   allowQuad: false,
+  szReserve: 0,
+  partialHealth: false,
 };
 
 // Candidate-ranking weights (the heuristic that orders moves in the LDS). The
@@ -379,6 +400,11 @@ function solveCanonical(
   const failedAt = new Map<string, number>();
   let bestLine: Step[] = [];
   let bestTsds = 0;
+  // partialHealth: exit quality of bestLine, lower is better. Pieces consumed
+  // dominate (x64), stack-side parity breaks ties. Integer-valued so the
+  // choice is deterministic under a node budget (the Rust parity contract).
+  let bestHealth = 0;
+  const healthOf = (qi: number, b: Board) => qi * 64 + Math.abs(stackSideImbalance(b));
 
   const nh: number[] = new Array(BOARD_W).fill(0); // per-candidate heights scratch
   const ov = new Map<number, number>(); // per-candidate row overlay scratch
@@ -644,6 +670,15 @@ function solveCanonical(
           piece === "O" && (x === LST_SPIN_COL - 2 || x === LST_SPIN_COL + 1)
             ? O_NOTCH_COST
             : 0;
+        // S/Z reserve: an S/Z that adds a notch void beside the well IS the
+        // 2-high overhang (the builder doing its job); one that adds no notch
+        // void is stack-side fill - a burned builder that forces a later stall
+        // waiting for the next S/Z. Toll the fill case so the search prefers to
+        // reserve the S/Z (play a non-builder, hold the S/Z for the overhang).
+        const szFill =
+          opts.szReserve && (piece === "S" || piece === "Z") && notch <= audit0.notch
+            ? opts.szReserve
+            : 0;
         const cost =
           bump * RANK_WEIGHTS.bump +
           max * RANK_WEIGHTS.max +
@@ -651,7 +686,8 @@ function solveCanonical(
           site.missing * missingW +
           misfit * RANK_WEIGHTS.misfit +
           canyons * RANK_WEIGHTS.canyon +
-          oNotch -
+          oNotch +
+          szFill -
           (site.roofReady ? RANK_WEIGHTS.roof : 0);
         out.push({
           p: null,
@@ -894,6 +930,13 @@ function solveCanonical(
       if (tsds + 1 > bestTsds) {
         bestTsds = tsds + 1;
         bestLine = line.slice();
+        if (opts.partialHealth) bestHealth = healthOf(sol.qi, sol.board);
+      } else if (opts.partialHealth && tsds + 1 === bestTsds) {
+        const h = healthOf(sol.qi, sol.board);
+        if (h < bestHealth) {
+          bestHealth = h;
+          bestLine = line.slice();
+        }
       }
       if (run(sol.board, sol.qi, sol.hold, tsds + 1, disc - cost)) {
         return true;
@@ -939,8 +982,10 @@ function solveCacheKey(
   hold: PieceType | null,
   target: number,
   allowQuad: boolean,
+  szReserve: number,
+  partialHealth: boolean,
 ): string {
-  return `${board.key()}|${queue.join("")}|${hold ?? "-"}|${target}|${allowQuad ? "q" : "t"}`;
+  return `${board.key()}|${queue.join("")}|${hold ?? "-"}|${target}|${allowQuad ? "q" : "t"}|${szReserve}|${partialHealth ? "h" : "-"}`;
 }
 
 /** Serialize the cache (for persistence across sessions/scans). */
@@ -984,7 +1029,7 @@ export function solveLstRun(
   options: SolveOptions = {},
 ): SolveResult | null {
   const opts = { ...DEFAULTS, ...options };
-  const ck = solveCacheKey(board, queue, hold, target, opts.allowQuad);
+  const ck = solveCacheKey(board, queue, hold, target, opts.allowQuad, opts.szReserve, opts.partialHealth);
   const cached = SOLVE_CACHE.get(ck);
   if (cached) {
     return { ...cached, moves: cached.moves };

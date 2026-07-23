@@ -27,6 +27,7 @@ export function harvestSeed(
   target: number,
   budgetMs: number,
   minClears: number,
+  allowQuad = true,
 ): { line: RunMove[]; stat: Stat } | null {
   const game = new Game(seed);
   const plan = planOpener([game.active!.type, ...game.peekQueue(9)]);
@@ -46,7 +47,7 @@ export function harvestSeed(
     budgetMs,
     nodeBudget: 200_000_000,
     tailFree: 3,
-    allowQuad: true,
+    allowQuad,
   });
   if (!res || res.moves.length === 0) return null;
 

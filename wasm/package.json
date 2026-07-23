@@ -1,0 +1,17 @@
+{
+  "name": "lst-solver",
+  "type": "module",
+  "description": "Rust/wasm port of the tetr-ai LST full-queue solver (solveLstRun).",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "lst_solver_bg.wasm",
+    "lst_solver.js",
+    "lst_solver.d.ts"
+  ],
+  "main": "lst_solver.js",
+  "types": "lst_solver.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

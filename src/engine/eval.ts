@@ -402,6 +402,42 @@ export function isLstState(board: Board): boolean {
   );
 }
 
+/**
+ * The true-LST residue invariant: a correct loop carries a 2-tall base residue
+ * on the 1st and 5th columns (cols 0 and 4). Since TSDs clear full rows and the
+ * stack shifts down, that residue always sits at the bottom, so rows 0-1 are the
+ * absolute test. NOTE this is a health *tendency*, not a strict every-step law -
+ * verified 20-TSD lines drop it ~7% of the time during openers / double-up
+ * rebuilds - so it must be used with avoidability gating (only a violation when
+ * an alternative kept it), never as an unconditional per-move rule.
+ */
+export function hasStartResidue(board: Board): boolean {
+  return board.filled(0, 0) && board.filled(0, 1) && board.filled(4, 0) && board.filled(4, 1);
+}
+
+/**
+ * Depth of the worst interior "valley" in the surface profile - a column lower
+ * than the stacks on BOTH sides of it (the "two separated mountains" a broken
+ * LST profile shows). The well column is excluded (its emptiness is by design).
+ * 0 = a single clean mountain / monotonic slope; the LST profile law wants 0.
+ */
+export function profileValley(board: Board): number {
+  const h: number[] = [];
+  for (let x = 0; x < BOARD_W; x++) {
+    if (x === LST_SPIN_COL) continue; // the well is a designed notch, not a valley
+    h.push(board.columnHeight(x));
+  }
+  let worst = 0;
+  for (let i = 1; i < h.length - 1; i++) {
+    let leftMax = 0;
+    for (let j = 0; j < i; j++) leftMax = Math.max(leftMax, h[j]);
+    let rightMax = 0;
+    for (let j = i + 1; j < h.length; j++) rightMax = Math.max(rightMax, h[j]);
+    worst = Math.max(worst, Math.min(leftMax, rightMax) - h[i]);
+  }
+  return worst;
+}
+
 /** Checkerboard imbalance (Feltheshovel parity theory): overlay ±1 on the
  * board with (0,0) = +1, sum over filled cells. CI = 0 is perfectly flat
  * stacking; good LST parity keeps |CI| small (<= 1). Only the T is
@@ -414,6 +450,31 @@ export function checkerImbalance(board: Board): number {
   for (let y = 0; y < h; y++) {
     const r = rows[y];
     for (let x = 0; x < BOARD_W; x++) {
+      if ((r >>> x) & 1) {
+        ci += ((x + y) & 1) === 0 ? 1 : -1;
+      }
+    }
+  }
+  return ci;
+}
+
+/**
+ * Checkerboard imbalance of the STACK SIDE only - the flat fill zone right of
+ * the notch (cols LST_SPIN_COL+2 .. 9). Feltheshovel's LST parity theory: the
+ * well-side overhangs legitimately swing GLOBAL CI, so global |CI| penalizes
+ * the required structure; what must stay controlled is the STACK-SIDE CI, which
+ * a perfect LST loop keeps in the pattern 0,+1,0,-1 by (TSDs mod 4) and never
+ * lets reach ±2 (the jaggedness that can no longer accommodate L/J/O). This is
+ * the correct measure of "keep the residue even" - on the stack side, not the
+ * overhang side. Use max(0,|it|-1) as the hard parity rule.
+ */
+export function stackSideImbalance(board: Board): number {
+  let ci = 0;
+  const rows = board.rows;
+  const h = board.maxHeight();
+  for (let y = 0; y < h; y++) {
+    const r = rows[y];
+    for (let x = LST_SPIN_COL + 2; x < BOARD_W; x++) {
       if ((r >>> x) & 1) {
         ci += ((x + y) & 1) === 0 ? 1 : -1;
       }
