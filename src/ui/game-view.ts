@@ -725,6 +725,15 @@ export class GameView {
     }
     this.loadLstPlan(seed);
     this.openerPhase = this.mode === "lst";
+    // unpooled opener-miss: planOpener found no opener, so no scripted TSD will
+    // ever flip openerPhase and the solver-driven loop gate (which needs
+    // !openerPhase) would never engage - the loop would sit reactive at 0. Start
+    // straight in the loop; reactive build bootstraps a site, then the solver
+    // takes over via bookPlay's wait-for-solver gate.
+    if (this.mode === "lst" && this.unpooled && !this.lstPlan) {
+      this.openerPhase = false;
+    }
+    this.resolveConcededAt = null;
     this.combo = 0;
     this.maxCombo = 0;
     this.thunder.reset();

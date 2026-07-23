@@ -10,7 +10,12 @@ import { chromium } from "playwright";
 const RUNS = Number(process.argv[2] ?? 3);
 const PRESSES = Number(process.argv[3] ?? 400);
 const GOAL = Number(process.argv[4] ?? 100);
-const STEP_MS = 60;
+// The unpooled loop is now SOLVER-DRIVEN: off-plan, the bot waits for a bounded
+// window solve (~1-4s) rather than drifting on reactive moves. So the step must
+// give the async solver time, and "stall" means PIECES stop advancing (a true
+// jam), not clears (which legitimately hold flat for seconds during a solve).
+const STEP_MS = Number(process.env.STEP_MS ?? 140);
+const STALL_SAMPLES = Number(process.env.STALL ?? 60);
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
@@ -23,11 +28,14 @@ async function sample() {
     const chip = document.querySelector(".grade-chip")?.textContent ?? "";
     const who = chip.split("·")[0].trim();
     const body = document.body.innerText;
-    const m = body.match(/(\d+)\s*\/\s*(\d+)\s*clears/i);
+    // DOM shows the label BEFORE the value: "CLEARS 0/100" (not "0/100 clears").
+    const m = body.match(/CLEARS\s+(\d+)\s*\/\s*(\d+)/i);
     const clears = m ? Number(m[1]) : -1;
+    const pm = body.match(/PIECES\s+(\d+)/i);
+    const pieces = pm ? Number(pm[1]) : -1;
     const done = /Goal reached/i.test(body);
     const failed = /Goal lost|top ?out|game over/i.test(body);
-    return { who, clears, done, failed };
+    return { who, clears, pieces, done, failed };
   });
 }
 
@@ -37,7 +45,7 @@ for (let r = 0; r < RUNS; r++) {
   await page.mouse.click(750, 500);
   await page.waitForTimeout(600);
 
-  let best = 0, last = -1, stuck = 0, end = "cap";
+  let best = 0, lastPieces = -1, stuck = 0, end = "cap";
   const who = {};
   for (let i = 0; i < PRESSES; i++) {
     await page.keyboard.press("KeyB");
@@ -45,11 +53,11 @@ for (let r = 0; r < RUNS; r++) {
     const s = await sample();
     if (s.who) who[s.who] = (who[s.who] ?? 0) + 1;
     if (s.clears > best) best = s.clears;
-    stuck = s.clears === last ? stuck + 1 : 0;
-    last = s.clears;
+    stuck = s.pieces === lastPieces ? stuck + 1 : 0; // true jam = pieces frozen
+    lastPieces = s.pieces;
     if (s.done) { end = "done"; break; }
     if (s.failed) { end = "failed"; break; }
-    if (stuck > 90) { end = "stalled"; break; }
+    if (stuck > STALL_SAMPLES) { end = "stalled"; break; }
   }
   const attr = Object.entries(who).map(([k, v]) => `${k}:${v}`).join(" ");
   console.log(`run ${r + 1}: reached ${best}/${GOAL} clears | ${end} | ${attr}`);
