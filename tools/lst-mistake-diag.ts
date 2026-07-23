@@ -54,6 +54,15 @@ const PHEALTH = Number(process.env.PHEALTH ?? 1) > 0; // matches live LST_WINDOW
 // default: both the live windows AND the oracle allow well-quads, so the oracle
 // judges the quad loop on the quad loop's own terms (a "clear" = TSD or quad).
 const ALLOWQUAD = Number(process.env.QUAD ?? 1) > 0;
+// VERIFY: drive the loop with the window-driver's `verify` policy (probe each
+// window's end-state, retreat to the latest alive clear-boundary on a dead
+// verdict, escalate budget on an empty window) so the diagnostic walls where
+// the LIVE verify loop walls (~23-33 clears on quad) and pinpoints THAT killer,
+// not the naive whole-line-commit death. Mirrors tools/lst-window-driver.ts.
+const VERIFY = Number(process.env.VERIFY ?? 1) > 0;
+const PROBET = Number(process.env.PROBET ?? 6);
+const PROBENODES = Number(process.env.PROBENODES ?? 800_000);
+const MAX_RETREAT = 4;
 
 interface WasmMove {
   piece: string; cells: [number, number][]; spin: string;
@@ -125,10 +134,12 @@ const snapQ = (game: Game) => [game.active!.type, ...game.peekQueue(ORACLET * 9 
 
 /** Faithful unpooled loop (lst-live-sim), wasm-driven, with a full per-move trace. */
 function run(seed: number): RunTrace | null {
-  const game = new Game(seed);
+  let game = new Game(seed);
   const plan = planOpener([game.active!.type, ...game.peekQueue(9)]);
   if (!plan) return null; // opener miss: nothing to diagnose
   const steps: Step[] = [];
+  const committed: { piece: PieceType; cells: [number, number][]; spin: string }[] = [];
+  const cuts: { len: number; tsds: number }[] = []; // committed-length at each clear boundary
   let tsds = 0;
   let m0 = metrics(game.board);
 
@@ -143,16 +154,46 @@ function run(seed: number): RunTrace | null {
     if (!ev) return "unreachable placement";
     // a "clear" is a full TSD or (in quad mode) a well-quad; tsds counts both so
     // it matches the solver's target semantics (res.tsds = total loop clears).
-    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) tsds++;
-    else if (ALLOWQUAD && ev.linesCleared === 4) tsds++;
+    let cleared = false;
+    if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) { tsds++; cleared = true; }
+    else if (ALLOWQUAD && ev.linesCleared === 4) { tsds++; cleared = true; }
     st.after = m0 = metrics(game.board);
     steps.push(st); // push even on violation so the boundary search can blame this move
+    committed.push(mv);
+    if (cleared) cuts.push({ len: committed.length, tsds });
     // goal rules apply to window replay only — the opener legally builds transient covered voids
     if (win > 0) {
       if (ev.piece === "T" && !(ev.spin === "full" && ev.linesCleared >= 2)) return "wasted T";
       if (lstHoles(game.board) > 0) return "hole";
     }
     return null;
+  };
+
+  // Retreat: rebuild the game from the seed through committed[0..len] and trim
+  // the parallel trace. Replay is deterministic, so steps[0..len] stay valid.
+  const replayTo = (len: number): void => {
+    const g = new Game(seed);
+    let t = 0;
+    for (let i = 0; i < len; i++) {
+      const mv = committed[i];
+      const ev = g.applyMove(mv.piece, mv.cells, mv.spin as "none" | "mini" | "full");
+      if (!ev) break;
+      if (ev.piece === "T" && ev.spin === "full" && ev.linesCleared >= 2) t++;
+      else if (ALLOWQUAD && ev.linesCleared === 4) t++;
+    }
+    game = g;
+    tsds = t;
+    steps.length = len;
+    committed.length = len;
+    while (cuts.length && cuts[cuts.length - 1].len > len) cuts.pop();
+    m0 = metrics(game.board);
+  };
+
+  const probeAlive = (): boolean => {
+    const t = Math.min(TARGET - tsds, PROBET);
+    if (t <= 0) return true;
+    const r = wasmSolve(Array.from(game.board.rows), snapQ(game), game.hold, t, { nodeBudget: PROBENODES, budgetMs: 60_000, allowQuad: ALLOWQUAD });
+    return !!(r && r.solved);
   };
 
   for (const mv of plan.moves) {
@@ -163,12 +204,21 @@ function run(seed: number): RunTrace | null {
 
   let win = 0;
   let note = "reached target";
+  let bestLen = committed.length; // deepest commit reached; used to detect a no-progress wall
+  let stall = 0;
   while (tsds < TARGET) {
     const wTarget = Math.min(TARGET - tsds, WINDOW);
-    const queue = [game.active!.type, ...game.peekQueue(wTarget * 9 + 20)] as PieceType[];
-    const res = wasmSolve(Array.from(game.board.rows), queue, game.hold, wTarget, { nodeBudget: WINNODES, budgetMs: 60_000, szReserve: SZFILL, partialHealth: PHEALTH, allowQuad: ALLOWQUAD });
+    const solveQ = [game.active!.type, ...game.peekQueue(wTarget * 9 + 20)] as PieceType[];
+    let res = wasmSolve(Array.from(game.board.rows), solveQ, game.hold, wTarget, { nodeBudget: WINNODES, budgetMs: 60_000, szReserve: SZFILL, partialHealth: PHEALTH, allowQuad: ALLOWQUAD });
     win++;
+    if ((!res || res.moves.length === 0) && VERIFY) {
+      for (const [mult, sz] of [[4, SZFILL], [16, SZFILL], [16, 0]] as const) {
+        res = wasmSolve(Array.from(game.board.rows), solveQ, game.hold, wTarget, { nodeBudget: WINNODES * mult, budgetMs: 60_000, szReserve: sz, partialHealth: PHEALTH, allowQuad: ALLOWQUAD });
+        if (res && res.moves.length > 0) break;
+      }
+    }
     if (!res || res.moves.length === 0) { note = `window ${win} returned no line`; break; }
+    const winStartLen = committed.length;
     let broke = "";
     for (let i = 0; i < res.moves.length && tsds < TARGET; i++) {
       const m = res.moves[i];
@@ -178,6 +228,26 @@ function run(seed: number): RunTrace | null {
     }
     if (broke) { note = broke; break; }
     if (game.board.maxHeight() >= 20) { note = "topped out"; break; }
+    // verify: the committed window's end-state must probe alive, else retreat to
+    // the latest alive clear-boundary within it (replay from seed); if none, drop
+    // to the window's first boundary. The poison tail is thereby never kept.
+    if (VERIFY && tsds < TARGET && !probeAlive()) {
+      const winCuts = cuts.filter((c) => c.len > winStartLen && c.len < committed.length)
+        .map((c) => c.len).reverse().slice(0, MAX_RETREAT - 1);
+      let rescued = false;
+      for (const cutLen of winCuts) {
+        replayTo(cutLen);
+        if (probeAlive()) { rescued = true; break; }
+      }
+      if (!rescued) {
+        const first = cuts.find((c) => c.len > winStartLen);
+        if (first && first.len < committed.length) replayTo(first.len);
+        else { note = `window ${win} end dead, no retreat`; break; }
+      }
+    }
+    // no-progress wall: verify keeps retreating without ever committing deeper
+    if (committed.length > bestLen) { bestLen = committed.length; stall = 0; }
+    else if (++stall > 3) { note = `verify wall @ ${tsds} (no progress past ${bestLen} moves)`; break; }
   }
   return { seed, tsds, note, steps, openerEnd, finalRows: game.board.rows.slice(), finalQueue: snapQ(game), finalHold: game.hold };
 }
