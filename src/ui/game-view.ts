@@ -84,6 +84,11 @@ import { btn, panel } from "./dom";
 // single T wasted - every locked T must be a full T-spin double.
 const LST_GOAL_TSDS = 20;
 
+// Quad-loop goal: with the well quad breaking the ~20-TSD volume ceiling, the
+// quad button chases a long run - 100 clears (TSDs + quads). Applies whenever
+// quad mode is on (pooled or unpooled); ?goal=N still overrides for testing.
+const LST_QUAD_GOAL = 100;
+
 // S/Z-reserve toll for the live bounded-window re-solve (SolveOptions.szReserve).
 // Keeps window lines continuable across seams by not burning S/Z builders on
 // fill; tuned on tools/lst-live-sim.ts (gain plateaus ~150, never regresses).
@@ -1177,9 +1182,10 @@ export class GameView {
       return;
     }
     if (this.unpooled) {
-      // unpooled testing goal: ?goal=N (default 20). With ?quad=1 a high goal
-      // like 100 chases a long quad run; the bounded-window re-solve drives it.
-      this.lstGoalTarget = this.goalParam > 0 ? this.goalParam : LST_GOAL_TSDS;
+      // unpooled goal: ?goal=N overrides; else quad mode chases 100 clears, pure
+      // TSD mode 20. The bounded-window re-solve drives the long quad run.
+      this.lstGoalTarget =
+        this.goalParam > 0 ? this.goalParam : this.quadMode ? LST_QUAD_GOAL : LST_GOAL_TSDS;
       // no shipped line - plan the TKI opener live so the engine can auto-play
       // into a loop; once the opener depletes, maybeResolveOnDeviation re-solves
       // the loop in bounded windows. planOpener finds an opener for ~70% of
@@ -1215,11 +1221,10 @@ export class GameView {
       return;
     }
     if (this.quadMode) {
-      // goal target is this seed's verified clear count (TSDs + quads)
-      const stat = (
-        this.quadPool!.stats as unknown as Record<string, { clears: number }>
-      )[String(seed)];
-      this.lstGoalTarget = stat?.clears ?? LST_GOAL_TSDS;
+      // quad button chases 100 clears (TSDs + quads); ?goal=N overrides. The
+      // shipped line reaches this seed's verified count, then the bounded-window
+      // re-solve drives the rest of the run toward the goal.
+      this.lstGoalTarget = this.goalParam > 0 ? this.goalParam : LST_QUAD_GOAL;
     }
     const scratch = new Board();
     this.lstPlan = run.map((m) => ({
