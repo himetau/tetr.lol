@@ -443,16 +443,23 @@ fn candidates(
                 continue;
             }
             // LST left-side rule: the outer-left wall (cols 0-1) is reserved for
-            // the OL double-up. A bare O there is only allowed if an L is coming
-            // to cap it (in hold, or within left_o_cap_horizon upcoming pieces);
-            // otherwise the O strands the column. See TS SolveOptions.leftOCapHorizon.
-            if opts.left_o_cap_horizon > 0
-                && piece == PieceType::O
-                && x + s.min_dx == 0
-                && !l_cap_available(queue, next_qi, next_hold, opts.left_o_cap_horizon)
-            {
-                x += 1;
-                continue;
+            // the LST vocabulary (L, S, I, J, and the OL double-up). A Z touching
+            // cols 0-1 is the general-2-7 leak (a Z capping the left O instead of
+            // the L); a bare O there is only allowed if an L is coming to cap it.
+            // (T never reaches this loop.) See TS SolveOptions.leftOCapHorizon.
+            if opts.left_o_cap_horizon > 0 {
+                let leftmost = x + s.min_dx;
+                if piece == PieceType::Z && leftmost <= 1 {
+                    x += 1;
+                    continue;
+                }
+                if piece == PieceType::O
+                    && leftmost == 0
+                    && !l_cap_available(queue, next_qi, next_hold, opts.left_o_cap_horizon)
+                {
+                    x += 1;
+                    continue;
+                }
             }
             let y = drop_y(b, piece, rot, x);
             let top = y + s.spans.iter().map(|sp| sp.dy).max().unwrap_or(0);

@@ -588,16 +588,24 @@ function solveCanonical(
           continue; // nothing but the T ever touches the well
         }
         // LST left-side rule: the outer-left wall (cols 0-1) is reserved for the
-        // OL double-up. A bare O there is only allowed if an L is coming to cap
-        // it (in hold, or within leftOCapHorizon upcoming pieces); otherwise the
-        // O strands the column and drops the build out of LST. See SolveOptions.
-        if (
-          opts.leftOCapHorizon > 0 &&
-          piece === "O" &&
-          x + s.minDx === 0 &&
-          !lCapAvailable(queue, nextQi, nextHold, opts.leftOCapHorizon)
-        ) {
-          continue;
+        // LST vocabulary (L, S, I, J, and the OL double-up). Two rejects:
+        //  - a Z touching cols 0-1 is the general-2-7 leak (a Z capping the left
+        //    O instead of the L) - never part of the left build;
+        //  - a bare O at cols 0-1 is only allowed if an L is coming to cap it
+        //    (in hold, or within leftOCapHorizon upcoming pieces), else it strands.
+        // (T never reaches this loop - it is only ever the well TSD.) See SolveOptions.
+        if (opts.leftOCapHorizon > 0) {
+          const leftmost = x + s.minDx;
+          if (piece === "Z" && leftmost <= 1) {
+            continue;
+          }
+          if (
+            piece === "O" &&
+            leftmost === 0 &&
+            !lCapAvailable(queue, nextQi, nextHold, opts.leftOCapHorizon)
+          ) {
+            continue;
+          }
         }
         const y = dropY(b, piece, rot, x);
         // frontier discipline: build at the site, not above it - the loop
