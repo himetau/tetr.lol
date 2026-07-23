@@ -245,6 +245,12 @@ const DIAG_OVERHANG_COST = 30;
 // search.ts O_NOTCH_TOLL. Soft: re-ranks lines, never blocks a solve.
 const O_NOTCH_COST = 60;
 
+// Heavy toll for a bare O on the outer-left wall (cols 0-1) with no L coming to
+// cap it (the OL double-up). Big enough to dominate normal surface costs so the
+// solver avoids it whenever a legal alternative exists, but finite so a window
+// that genuinely needs it can still solve. See SolveOptions.leftOCapHorizon.
+const LEFT_O_UNCAPPED_COST = 400;
+
 /** Is an L available to cap an O on the outer-left wall (the OL double-up) -
  * sitting in hold now, or arriving within the next `horizon` upcoming pieces?
  * Used by the leftOCapHorizon left-side rule. */
@@ -587,25 +593,16 @@ function solveCanonical(
         if (x + s.minDx <= LST_SPIN_COL && x + s.maxDx >= LST_SPIN_COL) {
           continue; // nothing but the T ever touches the well
         }
-        // LST left-side rule: the outer-left wall (cols 0-1) is reserved for the
-        // LST vocabulary (L, S, I, J, and the OL double-up). Two rejects:
-        //  - a Z touching cols 0-1 is the general-2-7 leak (a Z capping the left
-        //    O instead of the L) - never part of the left build;
-        //  - a bare O at cols 0-1 is only allowed if an L is coming to cap it
-        //    (in hold, or within leftOCapHorizon upcoming pieces), else it strands.
-        // (T never reaches this loop - it is only ever the well TSD.) See SolveOptions.
-        if (opts.leftOCapHorizon > 0) {
-          const leftmost = x + s.minDx;
-          if (piece === "Z" && leftmost <= 1) {
-            continue;
-          }
-          if (
-            piece === "O" &&
-            leftmost === 0 &&
-            !lCapAvailable(queue, nextQi, nextHold, opts.leftOCapHorizon)
-          ) {
-            continue;
-          }
+        // LST left-side rule (opts.leftOCapHorizon): the outer-left wall (cols
+        // 0-1) is reserved for the LST vocabulary (L, S, I, J, and the OL
+        // double-up). A Z there is the general-2-7 leak (a Z capping the left O
+        // instead of the L) and is NEVER part of the left build, so HARD-PRUNE it
+        // - don't even score a Z on cols 0-1 (saves search). The subtler
+        // uncapped-O case is a heavy SOFT toll in the cost below, so a window
+        // that genuinely needs the O there can still solve (T never reaches this
+        // loop - it is only the well TSD). See SolveOptions.
+        if (opts.leftOCapHorizon > 0 && piece === "Z" && x + s.minDx <= 1) {
+          continue;
         }
         const y = dropY(b, piece, rot, x);
         // frontier discipline: build at the site, not above it - the loop
@@ -729,6 +726,18 @@ function solveCanonical(
           opts.szReserve && (piece === "S" || piece === "Z") && notch <= audit0.notch
             ? opts.szReserve
             : 0;
+        // uncapped-O soft toll: a bare O on the outer-left wall (cols 0-1) with no
+        // L coming to cap it (the OL double-up) drops the build out of LST. Heavy
+        // toll, not a hard reject - the solver avoids it whenever a legal
+        // alternative exists (so in practice it stops), but can still fall back
+        // when a window would otherwise be unsolvable. See SolveOptions.leftOCapHorizon.
+        const leftOUncapped =
+          opts.leftOCapHorizon > 0 &&
+          piece === "O" &&
+          x + s.minDx === 0 &&
+          !lCapAvailable(queue, nextQi, nextHold, opts.leftOCapHorizon)
+            ? LEFT_O_UNCAPPED_COST
+            : 0;
         const cost =
           bump * RANK_WEIGHTS.bump +
           max * RANK_WEIGHTS.max +
@@ -737,7 +746,8 @@ function solveCanonical(
           misfit * RANK_WEIGHTS.misfit +
           canyons * RANK_WEIGHTS.canyon +
           oNotch +
-          szFill -
+          szFill +
+          leftOUncapped -
           (site.roofReady ? RANK_WEIGHTS.roof : 0);
         out.push({
           p: null,

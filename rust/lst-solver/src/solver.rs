@@ -23,6 +23,9 @@ const MAX_PIECES_PER_CYCLE: i32 = 16;
 const MAX_NOTCH_HOLES: i32 = 4;
 const DIAG_OVERHANG_COST: i64 = 30;
 const O_NOTCH_COST: i64 = 60;
+// Heavy toll for a bare O on the outer-left wall with no L to cap it (the OL
+// double-up); see TS lst-solver.ts LEFT_O_UNCAPPED_COST.
+const LEFT_O_UNCAPPED_COST: i64 = 400;
 
 const WELL_BIT: u32 = 1 << LST_SPIN_COL;
 const SLOT_BITS: u32 = 0b111 << (LST_SPIN_COL - 1);
@@ -442,24 +445,15 @@ fn candidates(
                 x += 1;
                 continue;
             }
-            // LST left-side rule: the outer-left wall (cols 0-1) is reserved for
-            // the LST vocabulary (L, S, I, J, and the OL double-up). A Z touching
-            // cols 0-1 is the general-2-7 leak (a Z capping the left O instead of
-            // the L); a bare O there is only allowed if an L is coming to cap it.
+            // LST left-side rule (opts.left_o_cap_horizon): the outer-left wall
+            // (cols 0-1) is reserved for the LST vocabulary (L, S, I, J, OL). A Z
+            // there is the general-2-7 leak (a Z capping the left O instead of the
+            // L), NEVER part of the left build, so HARD-PRUNE it (don't even score
+            // it). The uncapped-O case is a heavy SOFT toll in the cost below.
             // (T never reaches this loop.) See TS SolveOptions.leftOCapHorizon.
-            if opts.left_o_cap_horizon > 0 {
-                let leftmost = x + s.min_dx;
-                if piece == PieceType::Z && leftmost <= 1 {
-                    x += 1;
-                    continue;
-                }
-                if piece == PieceType::O
-                    && leftmost == 0
-                    && !l_cap_available(queue, next_qi, next_hold, opts.left_o_cap_horizon)
-                {
-                    x += 1;
-                    continue;
-                }
+            if opts.left_o_cap_horizon > 0 && piece == PieceType::Z && x + s.min_dx <= 1 {
+                x += 1;
+                continue;
             }
             let y = drop_y(b, piece, rot, x);
             let top = y + s.spans.iter().map(|sp| sp.dy).max().unwrap_or(0);
@@ -587,6 +581,19 @@ fn candidates(
             } else {
                 0
             };
+            // uncapped-O soft toll: a bare O on the outer-left wall (cols 0-1)
+            // with no L coming to cap it (the OL double-up). Heavy but finite, so
+            // the solver avoids it whenever a legal alternative exists but can
+            // still fall back. See TS SolveOptions.leftOCapHorizon.
+            let left_o_uncapped = if opts.left_o_cap_horizon > 0
+                && piece == PieceType::O
+                && x + s.min_dx == 0
+                && !l_cap_available(queue, next_qi, next_hold, opts.left_o_cap_horizon)
+            {
+                LEFT_O_UNCAPPED_COST
+            } else {
+                0
+            };
             let cost = bump * W.bump
                 + max * W.max
                 + (notch as i64) * W.notch
@@ -595,6 +602,7 @@ fn candidates(
                 + canyons * W.canyon
                 + o_notch
                 + sz_fill
+                + left_o_uncapped
                 - if s_roof { W.roof } else { 0 };
             out.push(Candidate {
                 p: None,
